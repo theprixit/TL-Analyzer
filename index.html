@@ -118,6 +118,71 @@
           </svg>
         </div>
       </div>
+      <!-- STANDALONE PHOTO SAG TRACKER PANEL -->
+      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem;">
+          <span>📷 Photo Sag Tracker — Client-Side Visual Measurement Tool</span>
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Upload front-view span photo · Click points · Extract sag via pixel scaling</span>
+        </h2>
+        <p class="subtitle" style="margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--text-muted);">
+          Take a straight front-view photo of the transmission span from an opposite vantage point (e.g. opposite ridge in mountains). Click key points on the image to mark tower hooks, base, and conductor low point. The tool calculates real-world sag by pixel-to-meter calibration.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+          <!-- Left: Controls -->
+          <div>
+            <!-- Calibration selection -->
+            <div class="form-section" style="margin-bottom: 1rem;">
+              <div class="form-section-title" style="font-size: 0.82rem;">Calibration Settings</div>
+              <div class="input-grid-2" style="margin-bottom: 0.8rem;">
+                <div class="form-group no-margin">
+                  <label style="font-weight: bold; color: var(--success);">Image Calibration Method:</label>
+                  <select id="photo-cal-method" onchange="handlePhotoCalibChange()">
+                    <option value="chord" selected>Chord Calibration (requires L and h)</option>
+                    <option value="tower">Tower Height Calibration (Hook to base)</option>
+                  </select>
+                </div>
+                <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
+                  <input type="number" id="photo-cal-tower-h" value="40.00" step="0.1">
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Control buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
+                📁 Upload Span Photo
+              </button>
+              <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
+                🔄 Reset Points
+              </button>
+            </div>
+
+            <!-- Instruction Banner -->
+            <div class="canvas-instructions" id="photo-tracker-instructions" style="font-size: 0.88rem; padding: 0.8rem;">
+              No photo loaded. Click "Upload Span Photo" to begin.
+            </div>
+
+            <!-- Solved results overlay -->
+            <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(16, 185, 129, 0.04); border-left: 3px solid var(--success); padding: 0.8rem; margin-top: 1rem; border-radius: 0 8px 8px 0; color: var(--success); display: none;">
+              Solving...
+            </div>
+
+            <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
+              Apply Solved Sag &amp; Coordinates to Primary Inputs
+            </button>
+          </div>
+
+          <!-- Right: Canvas Workspace -->
+          <div>
+            <div class="canvas-workspace" style="min-height: 300px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-input);">
+              <canvas id="photo-tracker-canvas" width="0" height="0"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- MAIN DASHBOARD CONTENT GRID -->
       <div class="dashboard-grid">
@@ -264,18 +329,25 @@
             </div>
 
             <!-- Custom Conductor parameters -->
-            <div class="input-grid-3" id="tp-custom-fields" style="display: none;">
-              <div class="form-group">
-                <label for="tp-custom-w">Weight w (N/m):</label>
-                <input type="number" id="tp-custom-w" value="15.91" step="0.01" oninput="calculateThreePoint()">
+            <div id="tp-custom-fields" style="display: none;">
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label for="tp-custom-name">Custom Conductor Name / Code:</label>
+                <input type="text" id="tp-custom-name" value="My Custom ACSR" placeholder="e.g. ACSR Moose 795 MCM">
+                <span class="field-tooltip">Enter a descriptive name for this conductor. This will appear in reports and exported project files.</span>
               </div>
-              <div class="form-group">
-                <label for="tp-custom-mass">Mass m (kg/m):</label>
-                <input type="number" id="tp-custom-mass" value="1.62" step="0.01">
-              </div>
-              <div class="form-group">
-                <label for="tp-custom-uts">UTS Strength (kN):</label>
-                <input type="number" id="tp-custom-uts" value="130.3" step="0.1" oninput="calculateThreePoint()">
+              <div class="input-grid-3">
+                <div class="form-group">
+                  <label for="tp-custom-w">Weight w (N/m):</label>
+                  <input type="number" id="tp-custom-w" value="15.91" step="0.01" oninput="calculateThreePoint()">
+                </div>
+                <div class="form-group">
+                  <label for="tp-custom-mass">Mass m (kg/m):</label>
+                  <input type="number" id="tp-custom-mass" value="1.62" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="tp-custom-uts">UTS Strength (kN):</label>
+                  <input type="number" id="tp-custom-uts" value="130.3" step="0.1" oninput="calculateThreePoint()">
+                </div>
               </div>
             </div>
           </div>
@@ -623,62 +695,8 @@
               </div>
             </div>
 
-            <!-- CLIENT-SIDE CANVAS PHOTO SAG TRACKER FIELD HELPER -->
-            <div style="margin-bottom: 1.5rem;">
-              <button type="button" class="gps-toggle-btn" style="font-size: 0.82rem; font-weight: 700; color: var(--success); display: flex; align-items: center; gap: 0.3rem;" onclick="toggleGpsHelper('tp-photo-tracker')">
-                📷 Advanced Field Tool: Client-Side Photo Sag Tracker (Parabolic Curve Fit)...
-              </button>
-              <div id="tp-photo-tracker" class="gps-helper-panel" style="margin-top: 0.6rem; border: 1px dashed var(--success); padding: 1rem; border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
-                <div class="subtitle" style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.45;">
-                  Upload a straight front-view photo of the transmission span. Click key points to extract the exact conductor sag using pixel scaling.
-                </div>
 
-                <!-- Calibration selection -->
-                <div class="input-grid-2" style="margin-bottom: 0.8rem;">
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem; font-weight: bold; color: var(--success);">Select Image Calibration Method:</label>
-                    <select id="photo-cal-method" onchange="handlePhotoCalibChange()" style="font-size: 0.78rem; padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);">
-                      <option value="chord" selected>Chord Calibration (requires L and h)</option>
-                      <option value="tower">Tower Height Calibration (Hook to base)</option>
-                    </select>
-                  </div>
-                  <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
-                    <label style="font-size: 0.76rem; font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
-                    <input type="number" id="photo-cal-tower-h" value="40.00" step="0.1" style="border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);">
-                  </div>
-                </div>
 
-                <!-- Canvas Control buttons -->
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.6rem; font-size: 0.76rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
-                    📁 Upload Span Photo
-                  </button>
-                  <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
-                  <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.6rem; font-size: 0.76rem;" onclick="resetPhotoTracker()">
-                    🔄 Reset Points
-                  </button>
-                </div>
-
-                <!-- Instruction Banner -->
-                <div class="canvas-instructions" id="photo-tracker-instructions">
-                  No photo loaded. Click the button above to upload a span image.
-                </div>
-
-                <!-- HTML5 Canvas Workspace -->
-                <div class="canvas-workspace">
-                  <canvas id="photo-tracker-canvas" width="0" height="0"></canvas>
-                </div>
-
-                <!-- Solved results overlay -->
-                <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(16, 185, 129, 0.04); border-left: 2px solid var(--success); padding: 0.5rem; margin-top: 0.8rem; border-radius: 0 6px 6px 0; color: var(--success); display: none;">
-                  Solving...
-                </div>
-
-                <button type="button" class="btn btn-success btn-block" style="padding: 0.4rem; font-size: 0.8rem; margin-top: 0.6rem;" onclick="applyPhotoTrackerReadings()">
-                  Apply Solved Sag & Coordinates to Primary Inputs
-                </button>
-              </div>
-            </div>
 
             <!-- MODE A: Direct Raw coordinates -->
             <div id="tp-z-coords-div">

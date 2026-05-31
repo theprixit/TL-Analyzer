@@ -123,8 +123,10 @@ function getConductorSpecs(calcType) {
     const customW = parseFloat(document.getElementById(`${prefix}-custom-w`).value) || 0;
     const customMass = parseFloat(document.getElementById(`${prefix}-custom-mass`).value) || 0;
     const customUTS = (parseFloat(document.getElementById(`${prefix}-custom-uts`).value) || 0) * 1000; // to Newtons
+    const nameEl = document.getElementById(`${prefix}-custom-name`);
+    const customName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : "Custom Conductor";
     
-    return { name: "Custom Conductor", w: customW, mass: customMass, uts: customUTS };
+    return { name: customName, w: customW, mass: customMass, uts: customUTS };
   } else {
     return conductorDatabase[selectKey];
   }
@@ -1570,7 +1572,9 @@ function exportProjectJSON() {
   const data = {
     // Primary Inputs
     tpConductor: document.getElementById('tp-conductor').value,
+    tpCustomName: document.getElementById('tp-custom-name') ? document.getElementById('tp-custom-name').value : "",
     tpCustomW: document.getElementById('tp-custom-w') ? document.getElementById('tp-custom-w').value : "",
+    tpCustomMass: document.getElementById('tp-custom-mass') ? document.getElementById('tp-custom-mass').value : "",
     tpCustomUts: document.getElementById('tp-custom-uts') ? document.getElementById('tp-custom-uts').value : "",
     tpSpan: document.getElementById('tp-span').value,
     tpXp: document.getElementById('tp-xp').value,
@@ -1669,8 +1673,14 @@ function importProjectJSON(event) {
       };
 
       setVal('tp-conductor', data.tpConductor);
+      if (data.tpCustomName && document.getElementById('tp-custom-name')) {
+        document.getElementById('tp-custom-name').value = data.tpCustomName;
+      }
       if (data.tpCustomW && document.getElementById('tp-custom-w')) {
         document.getElementById('tp-custom-w').value = data.tpCustomW;
+      }
+      if (data.tpCustomMass && document.getElementById('tp-custom-mass')) {
+        document.getElementById('tp-custom-mass').value = data.tpCustomMass;
       }
       if (data.tpCustomUts && document.getElementById('tp-custom-uts')) {
         document.getElementById('tp-custom-uts').value = data.tpCustomUts;
