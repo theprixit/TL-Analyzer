@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transmission Line Sag & Tension Visualizer</title>
+  <!-- Modern Font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #f1f5f9;       /* soft gray-blue */
+      --bg-card: #ffffff;      /* crisp white panels */
+      --text-main: #0f172a;     /* dark slate primary */
+      --text-muted: #475569;    /* medium slate secondary */
+      --primary: #1e40af;       /* deep structural blue */
+      --primary-glow: rgba(30, 64, 175, 0.12);
+      --accent-neon: #0f766e;       /* deep teal green for safe indicators */
+      --accent-glow: rgba(15, 118, 110, 0.15);
+      --accent-orange: #b45309;       /* dark amber for cautions */
+      --accent-orange-glow: rgba(180, 83, 9, 0.15);
+      --border-color: #cbd5e1;        /* crisp slate border */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #1e40af, #0f766e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Tab Layout for the Three Methods */
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .tab-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      border-color: var(--primary);
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Grid Layout for visualizer cards */
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 968px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--accent-neon));
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+    }
+
+    /* Interactive Visualizer Canvas Area */
+    .visualizer-area {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      position: relative;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);
+    }
+
+    .interactive-svg {
+      width: 100%;
+      height: 320px;
+      border-radius: 8px;
+      background: #fafafa;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Controls Panel */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+      width: 100%;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .control-group label {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-group label span.val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #cbd5e1;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--primary-glow);
+      transition: all 0.2s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Interactive Calculators */
+    .calculator {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .calc-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .input-field label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .input-field input, .input-field select {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .input-field input:focus, .input-field select:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 5px var(--primary-glow);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn:hover {
+      box-shadow: 0 4px 15px var(--primary-glow);
+      opacity: 0.95;
+    }
+
+    .btn-orange {
+      background: var(--accent-orange);
+    }
+    .btn-orange:hover {
+      box-shadow: 0 4px 15px var(--accent-orange-glow);
+    }
+
+    /* Math & Output Boxes */
+    .output-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .output-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--accent-neon);
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .output-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .math-steps {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+      white-space: pre-line;
+    }
+
+    /* Explanation Text Area */
+    .explanation-panel {
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+
+    .explanation-panel p {
+      margin-bottom: 1rem;
+    }
+
+    .explanation-panel ul {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .explanation-panel li strong {
+      color: var(--primary);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge-blue { background: rgba(30, 64, 175, 0.08); color: var(--primary); border: 1px solid var(--primary-glow); }
+    .badge-neon { background: rgba(15, 118, 110, 0.08); color: var(--accent-neon); border: 1px solid var(--accent-glow); }
+    .badge-orange { background: rgba(180, 83, 9, 0.08); color: var(--accent-orange); border: 1px solid var(--accent-orange-glow); }
+
+    .glow-box {
+      border: 1px solid var(--accent-neon);
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Transmission Line Sag & Tension Visualizer</h1>
+    <p>Understand the physics, mathematics, and field application of sag measurement methods</p>
+  </header>
+
+  <div class="container">
+    
+    <!-- Tab Controls -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('target-method', this)">1. Sighting Target Method</button>
+      <button class="tab-btn" onclick="switchTab('wave-method', this)">2. Return Wave Method</button>
+      <button class="tab-btn" onclick="switchTab('threepoint-method', this)">3. Three-Point Survey Method</button>
+    </div>
+
+    <!-- METHOD 1: SIGHTING TARGET METHOD -->
+    <div id="target-method" class="tab-content active">
+      <div class="panel-grid">
+        
+        <!-- Interactive Simulator -->
+        <div class="card">
+          <span class="badge badge-orange">Interactive Simulation</span>
+          <h2>Visual Sag Board Sighting</h2>
+          <p class="subtitle">Manually clamp visual boards on both towers to sight the bottom curve tangent.</p>
+          
+          <div class="visualizer-area">
+            <svg id="svg-target" class="interactive-svg" viewBox="0 0 800 320" style="background: #fafafa; border: 1px solid var(--border-color);">
+              <!-- Sky & Ground -->
+              <rect x="0" y="0" width="100%" height="100%" fill="#fafafa"/>
+              <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" fill="#e2e8f0"/>
+              
+              <!-- Grid lines -->
+              <line x1="0" y1="200" x2="800" y2="200" stroke="#e2e8f0" stroke-dasharray="5,5"/>
+              
+              <!-- Tower A (Left, Lower) -->
+              <line x1="80" y1="120" x2="80" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <line x1="80" y1="120" x2="60" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <line x1="80" y1="120" x2="100" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <circle cx="80" cy="120" r="4" fill="#dc2626"/> <!-- Left support point -->
+              
+              <!-- Tower B (Right, Higher) -->
+              <line x1="680" y1="70" x2="680" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <line x1="680" y1="70" x2="660" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <line x1="680" y1="70" x2="700" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <circle cx="680" cy="70" r="4" fill="#dc2626"/> <!-- Right support point -->
+
+              <!-- Visual Target Clamps (Clamped at target sag of 80px below support points) -->
+              <!-- Sag Target A (Left): y = 120 + 80 = 200 -->
+              <rect id="target-clamp-a" x="65" y="200" width="30" height="6" fill="#b45309" rx="2"/>
+              <text x="50" y="195" fill="#b45309" font-size="10" font-weight="bold">Board A</text>
+              
+              <!-- Sag Target B (Right): y = 70 + 80 = 150 -->
+              <rect id="target-clamp-b" x="665" y="150" width="30" height="6" fill="#b45309" rx="2"/>
+              <text x="705" y="145" fill="#b45309" font-size="10" font-weight="bold">Board B</text>
+
+              <!-- Sighting Line of Sight (Dashed) -->
+              <line id="sight-line" x1="80" y1="203" x2="680" y2="153" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+              <!-- Conductor Path -->
+              <path id="conductor-target" d="M 80,120 Q 380,240 680,70" fill="none" stroke="#475569" stroke-width="3"/>
+              
+              <!-- Success Indicator Glow -->
+              <circle id="target-success-glow" cx="380" cy="138" r="10" fill="rgba(15,118,110,0)" />
+
+              <!-- Gravity horizontal/vertical CAD-style visual references -->
+              <g id="target-dimensions" stroke="#475569" stroke-width="1">
+                <!-- Gravity Horizontal Datum Line -->
+                <line x1="40" y1="280" x2="760" y2="280" stroke="#cbd5e1" stroke-dasharray="4,4"/>
+                <text x="45" y="275" fill="#475569" font-size="8" letter-spacing="0.05em">GRAVITY HORIZONTAL DATUM PLANE</text>
+                
+                <!-- Span L Dimension -->
+                <line x1="80" y1="300" x2="680" y2="300" stroke="#1e40af" stroke-dasharray="2,2"/>
+                <path d="M 80,295 L 80,305 M 680,295 L 680,305" stroke="#1e40af"/>
+                <text x="380" y="312" fill="#1e40af" font-size="9" text-anchor="middle" font-weight="bold">L (Horizontal Span w.r.t. Gravity)</text>
+
+                <!-- Board A Sag Dimension -->
+                <line x1="110" y1="120" x2="110" y2="200" stroke="#b45309" stroke-dasharray="2,2"/>
+                <path d="M 105,120 L 115,120 M 105,200 L 115,200" stroke="#b45309"/>
+                <text x="120" y="165" fill="#b45309" font-size="8" font-weight="bold">Target Sag (d)</text>
+
+                <!-- Board B Sag Dimension -->
+                <line x1="650" y1="70" x2="650" y2="150" stroke="#b45309" stroke-dasharray="2,2"/>
+                <path d="M 645,70 L 655,70 M 645,150 L 655,150" stroke="#b45309"/>
+                <text x="600" y="115" fill="#b45309" font-size="8" font-weight="bold">Target Sag (d)</text>
+              </g>
+            </svg>
+
+            <div class="controls">
+              <div class="control-group">
+                <label>Adjust Conductor Sag (Tension): <span id="target-sag-label" class="val">50.0 m</span></label>
+                <input type="range" id="slider-target-tension" min="110" max="230" value="180" oninput="updateTargetSimulation()">
+              </div>
+            </div>
+          </div>
+          
+          <div id="target-success-banner" class="output-box" style="border-color: var(--border-color);">
+            <div class="output-title" id="target-status-title" style="color: var(--text-muted);">
+              🔴 Conductor Out of Alignment
+            </div>
+            <p id="target-status-desc">Adjust the tension slider. The lowest point of the conductor must touch the yellow dashed line of sight between the two target boards clamped to the towers.</p>
+          </div>
+        </div>
+
+        <!-- Explanations & Math -->
+        <div class="explanation-panel card">
+          <span class="badge badge-orange">The Physics</span>
+          <h2>Target Sighting Method</h2>
+          <p>This is a mechanical, direct visual sagging method that dates back to early line construction, but remains widely used due to its simplicity.</p>
+          
+          <h3>How it Works:</h3>
+          <ul>
+            <li><strong>Step 1: Calculate Target Sag:</strong> Engineers compute the required sag for the given temperature and span, using sag-tension tables.</li>
+            <li><strong>Step 2: Place Sighting Boards:</strong> Clamps or target boards are placed on both towers at a vertical distance exactly equal to the target sag **below** the conductor support point.</li>
+            <li><strong>Step 3: Direct Sighting:</strong> A lineman stands on Tower A, placing their eye in line with Board A, and sights across to Board B. This visual axis forms a dashed sight line tangent to the target catenary curve.</li>
+            <li><strong>Step 4: Pull to Tangency:</strong> The ground crew tensions the conductor. As it rises, the bottom of the loop climbs. When it is perfectly aligned with the sight line, tension is clamped off.</li>
+          </ul>
+
+          <div class="calculator">
+            <h3>Quick Target Sag Calculator</h3>
+            <div class="input-field">
+              <label>Choose Conductor:</label>
+              <select id="calc-target-cond" onchange="calcTargetTension()">
+                <option value="15.912" selected>ACSR Zebra (15.91 N/m)</option>
+                <option value="19.600">ACSR Moose (19.60 N/m)</option>
+                <option value="9.555">ACSR Panther (9.56 N/m)</option>
+                <option value="7.122">ACSR Wolf (7.12 N/m)</option>
+                <option value="3.865">ACSR Dog (3.87 N/m)</option>
+              </select>
+            </div>
+            <div class="calc-row">
+              <div class="input-field">
+                <label>Span L (meters):</label>
+                <input type="number" id="calc-target-span" value="300" oninput="calcTargetTension()">
+              </div>
+              <div class="input-field">
+                <label>Target Sag D (meters):</label>
+                <input type="number" id="calc-target-sag" value="9.2" step="0.1" oninput="calcTargetTension()">
+              </div>
+            </div>
+            <div class="output-box">
+              <div class="output-title">Required Pull Tension</div>
+              <div class="output-val" id="calc-target-result">19.45 kN</div>
+              <div class="math-steps" id="calc-target-steps">
+                T = (w * L^2) / (8 * D)
+                T = (15.912 * 300^2) / (8 * 9.2)
+                T = 1,432,080 / 73.6 = 19,457.6 N
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- METHOD 2: RETURN WAVE METHOD -->
+    <div id="wave-method" class="tab-content">
+      <div class="panel-grid">
+        
+        <!-- Interactive Simulator -->
+        <div class="card">
+          <span class="badge badge-blue">Interactive Simulation</span>
+          <h2>Return Wave Timing</h2>
+          <p class="subtitle">Kick the wire, time the reflection travels with a stopwatch, and extract tension.</p>
+          
+          <div class="visualizer-area">
+            <svg id="svg-wave" class="interactive-svg" viewBox="0 0 800 320" style="background: #fafafa; border: 1px solid var(--border-color);">
+              <rect x="0" y="0" width="100%" height="100%" fill="#fafafa"/>
+              <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" fill="#e2e8f0"/>
+              
+              <!-- Towers -->
+              <line x1="80" y1="120" x2="80" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <line x1="680" y1="120" x2="680" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <circle cx="80" cy="120" r="4" fill="#dc2626"/>
+              <circle cx="680" cy="120" r="4" fill="#dc2626"/>
+
+              <!-- Conductor Path with Wave Pulse -->
+              <path id="conductor-wave" d="M 80,120 Q 380,220 680,120" fill="none" stroke="#475569" stroke-width="3"/>
+              
+              <!-- Animated Pulse Dot -->
+              <circle id="wave-pulse" cx="80" cy="120" r="6" fill="#0f766e" style="display: none; filter: drop-shadow(0 0 8px var(--accent-glow));" />
+
+              <!-- Lineman Figure on Left Tower -->
+              <circle cx="70" cy="100" r="6" fill="#475569"/>
+              <line x1="70" y1="106" x2="70" y2="120" stroke="#475569" stroke-width="2"/>
+              <line x1="70" y1="110" x2="80" y2="114" stroke="#475569" stroke-width="1.5"/> <!-- Hand hitting conductor -->
+
+              <!-- Gravity horizontal/vertical CAD-style visual references -->
+              <g id="wave-dimensions" stroke="#475569" stroke-width="1">
+                <!-- Gravity Horizontal Datum Line -->
+                <line id="wave-datum-line" x1="40" y1="260" x2="760" y2="260" stroke="#cbd5e1" stroke-dasharray="4,4"/>
+                <text id="wave-datum-label" x="45" y="255" fill="#475569" font-size="8" letter-spacing="0.05em">GRAVITY HORIZONTAL DATUM PLANE</text>
+                
+                <!-- Span L Dimension -->
+                <line id="wave-dim-L" x1="80" y1="280" x2="680" y2="280" stroke="#1e40af" stroke-dasharray="2,2"/>
+                <path id="wave-dim-L-ticks" d="M 80,275 L 80,285 M 680,275 L 680,285" stroke="#1e40af"/>
+                <text id="wave-dim-L-text" x="380" y="292" fill="#1e40af" font-size="9" text-anchor="middle" font-weight="bold">L (Horizontal Span w.r.t. Gravity)</text>
+
+                <!-- Mid-span Sag d Dimension -->
+                <line id="wave-dim-d" x1="380" y1="120" x2="380" y2="180" stroke="#b45309" stroke-width="1.5" stroke-dasharray="2,2"/>
+                <text id="wave-dim-d-text" x="390" y="150" fill="#b45309" font-size="9" font-weight="bold">d (Mid-span Sag w.r.t. Gravity)</text>
+              </g>
+            </svg>
+
+            <!-- Stopwatch UI -->
+            <div style="display: flex; gap: 2rem; align-items: center; background: #ffffff; border: 1px solid var(--border-color); padding: 0.8rem 2rem; border-radius: 50px; margin-top: 1rem; width: 90%; justify-content: space-between;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Stopwatch</span>
+                <span id="stopwatch-display" style="font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: bold; color: var(--primary);">0.00s</span>
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Returns</span>
+                <span id="returns-count" style="font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: bold; color: var(--accent-neon);">0 / 3</span>
+              </div>
+              <button class="btn" id="kick-btn" onclick="startWaveSimulation()">Kick Cable</button>
+            </div>
+
+            <div class="controls">
+              <div class="control-group">
+                <label>Set Cable Tension: <span id="wave-tension-label" class="val">25.0 kN</span></label>
+                <input type="range" id="slider-wave-tension" min="15" max="60" value="25" oninput="changeWaveTension()">
+              </div>
+            </div>
+          </div>
+
+          <div class="output-box" style="border-color: var(--border-color);">
+            <div class="output-title">Wave Timing Calculation Output</div>
+            <p>Click "Kick Cable" to initiate a wave. The time it takes for 3 return trips will allow us to calculate both the sag and the tension.</p>
+          </div>
+        </div>
+
+        <!-- Explanations & Math -->
+        <div class="explanation-panel card">
+          <span class="badge badge-blue">The Physics</span>
+          <h2>Return Wave Method</h2>
+          <p>The Return Wave Method relies on the physics of **transverse wave propagation** through a tensioned string. It is highly accurate and requires zero optical survey instruments.</p>
+          
+          <h3>The Physics Equations:</h3>
+          <ul>
+            <li><strong>Wave Velocity:</strong> A physical pulse travels along a cable at a velocity ($v$) that depends entirely on its tension ($T$) and mass per unit length ($m$):
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">v = sqrt( Tension / mass )</div>
+            </li>
+            <li><strong>Loop Distance:</strong> A round trip from one tower to the other and back covers a distance of exactly `2 * Span` ($2 \cdot L$). For $N$ complete return trips, the total travel distance is `2 * N * L`.</li>
+            <li><strong>Stopwatch Relation:</strong> By measuring the total time ($t$) for $N$ returns:
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">v = (2 * N * L) / t</div>
+            </li>
+            <li><strong>Direct Sag Extract:</strong> By substituting the velocity equation into the standard level-span sag formula, we get the elegant direct stopwatch relationship:
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">Sag = (g * t^2) / (32 * N^2)</div>
+              Where `g = 9.81 m/s²`.
+            </li>
+          </ul>
+
+          <div class="calculator">
+            <h3>Wave Stopwatch Calculator</h3>
+            <div class="input-field">
+              <label>Conductor Type:</label>
+              <select id="calc-wave-cond" onchange="calcWaveTension()">
+                <option value="1.622" selected>ACSR Zebra (1.622 kg/m)</option>
+                <option value="1.998">ACSR Moose (1.998 kg/m)</option>
+                <option value="0.974">ACSR Panther (0.974 kg/m)</option>
+                <option value="0.726">ACSR Wolf (0.726 kg/m)</option>
+                <option value="0.394">ACSR Dog (0.394 kg/m)</option>
+              </select>
+            </div>
+            <div class="calc-row">
+              <div class="input-field">
+                <label>Span L (meters):</label>
+                <input type="number" id="calc-wave-span" value="280" oninput="calcWaveTension()">
+              </div>
+              <div class="input-field">
+                <label>Target Return Trips (N):</label>
+                <input type="number" id="calc-wave-returns" value="3" oninput="calcWaveTension()">
+              </div>
+            </div>
+            <div class="input-field">
+              <label>Stopwatch Time t (seconds):</label>
+              <input type="number" id="calc-wave-time" value="15.8" step="0.1" oninput="calcWaveTension()">
+            </div>
+            <div class="output-box">
+              <div class="output-title">Calculated Sag & Tension</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">SAG:</span>
+                  <div class="output-val" id="calc-wave-sag-val" style="color: var(--accent-neon);">8.51 m</div>
+                </div>
+                <div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">TENSION:</span>
+                  <div class="output-val" id="calc-wave-tens-val" style="color: var(--primary);">18.29 kN</div>
+                </div>
+              </div>
+              <div class="math-steps" id="calc-wave-steps">
+                Sag = (9.81 * t^2) / (32 * N^2)
+                Sag = (9.81 * 15.8^2) / (32 * 3^2) = 2448.97 / 288 = 8.50 m
+                
+                Tension = (mass * g * L^2) / (8 * Sag)
+                T = (1.622 * 9.81 * 280^2) / (8 * 8.50) = 18,290 N = 18.29 kN
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- METHOD 3: THREE-POINT SURVEY METHOD -->
+    <div id="threepoint-method" class="tab-content">
+      <div class="panel-grid">
+        
+        <!-- Interactive Simulator -->
+        <div class="card">
+          <span class="badge badge-neon">Interactive Simulation</span>
+          <h2>Three-Point Coordinate Sighting</h2>
+          <p class="subtitle">Shoot a laser to both tower support tips and any arbitrary point on the wire.</p>
+          
+          <div class="visualizer-area">
+            <svg id="svg-threepoint" class="interactive-svg" viewBox="0 0 800 320" style="background: #fafafa; border: 1px solid var(--border-color);">
+              <rect x="0" y="0" width="100%" height="100%" fill="#fafafa"/>
+              <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" fill="#e2e8f0"/>
+              
+              <!-- Towers -->
+              <!-- Tower A (Left, Lower) -->
+              <line x1="80" y1="140" x2="80" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <line x1="80" y1="140" x2="60" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <line x1="80" y1="140" x2="100" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <circle cx="80" cy="140" r="4" fill="#dc2626"/> <!-- Support A -->
+              <text x="60" y="135" fill="#0f172a" font-size="10">A (0, yA)</text>
+              
+              <!-- Tower B (Right, Higher) with dynamic structural members -->
+              <line id="tower-b-center" x1="680" y1="60" x2="680" y2="280" stroke="#1e40af" stroke-width="4"/>
+              <line id="tower-b-leg-l" x1="680" y1="60" x2="660" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <line id="tower-b-leg-r" x1="680" y1="60" x2="700" y2="280" stroke="#1e40af" stroke-width="2"/>
+              <circle cx="680" cy="60" r="4" fill="#dc2626"/> <!-- Support B -->
+              <text x="685" y="55" fill="#0f172a" font-size="10">B (L, yB)</text>
+ 
+               <!-- Chord line (Dashed Black) -->
+               <line x1="80" y1="140" x2="680" y2="60" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+ 
+               <!-- Conductor Path -->
+               <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" stroke="#10b981" stroke-width="3"/>
+               
+               <!-- Total Station on Ground -->
+               <polygon points="340,280 360,280 350,250" fill="#d97706"/> <!-- Tripod -->
+               <circle cx="350" cy="245" r="5" fill="#1e40af"/> <!-- Total Station -->
+               
+               <!-- Laser Sighting Lines -->
+               <!-- Sight Line to Support A -->
+               <line id="laser-a" x1="350" y1="245" x2="80" y2="140" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
+               <!-- Sight Line to Support B -->
+               <line id="laser-b" x1="350" y1="245" x2="680" y2="60" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
+               <!-- Sight Line to Conductor Point P -->
+               <line id="laser-p" x1="350" y1="245" x2="380" y2="150" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
+               
+               <!-- Sighted point P -->
+               <circle id="point-p" cx="380" cy="150" r="5" fill="#10b981" />
+               <text id="label-point-p" x="390" y="145" fill="#0f172a" font-size="10">P (xp, yp)</text>
+ 
+               <!-- Chord height indicator at xp -->
+               <line id="chord-line-offset" x1="380" y1="100" x2="380" y2="150" stroke="#b91c1c" stroke-width="2" stroke-dasharray="2,2"/>
+               <text id="label-sag-offset" x="390" y="125" fill="#b91c1c" font-size="10" font-weight="bold">D(xp)</text>
+ 
+               <!-- Gravity horizontal/vertical CAD-style visual references -->
+               <g id="tp-dimensions" stroke="#64748b" stroke-width="1">
+                 <!-- Gravity Horizontal Datum Line -->
+                 <line id="tp-datum-line" x1="40" y1="280" x2="760" y2="280" stroke="#cbd5e1" stroke-dasharray="4,4"/>
+                 <text id="tp-datum-label" x="400" y="274" fill="#475569" font-size="8" letter-spacing="0.05em" text-anchor="middle">GRAVITY HORIZONTAL DATUM PLANE</text>
+                 
+                 <!-- Span L Dimension -->
+                 <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" stroke="#1e40af" stroke-dasharray="2,2"/>
+                 <path id="tp-dim-L-ticks" d="M 80,295 L 80,305 M 680,295 L 680,305" stroke="#1e40af"/>
+                 <text id="tp-dim-L-text" x="380" y="312" fill="#1e40af" font-size="9" text-anchor="middle" font-weight="bold">L = 300.0 m</text>
+ 
+                 <!-- Position xp Dimension -->
+                 <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" stroke="#1d4ed8" stroke-dasharray="2,2"/>
+                 <path id="tp-dim-xp-ticks" d="M 80,280 L 80,290 M 280,280 L 280,290" stroke="#1d4ed8"/>
+                 <text id="tp-dim-xp-text" x="180" y="297" fill="#1d4ed8" font-size="9" text-anchor="middle">xp = 100.0 m</text>
+ 
+                 <!-- Vertical Height Diff h Dimension -->
+                 <line id="tp-dim-h" x1="720" y1="140" x2="720" y2="60" stroke="#b45309" stroke-dasharray="2,2"/>
+                 <path id="tp-dim-h-ticks" d="M 715,140 L 725,140 M 715,60 L 725,60" stroke="#b45309"/>
+                 <!-- Extension lines from towers to vertical dimension -->
+                 <line id="tp-ext-A" x1="80" y1="140" x2="730" y2="140" stroke="#94a3b8" stroke-dasharray="3,3"/>
+                 <line id="tp-ext-B" x1="680" y1="60" x2="730" y2="60" stroke="#94a3b8" stroke-dasharray="3,3"/>
+                 <text id="tp-dim-h-text" x="735" y="105" fill="#b45309" font-size="9" text-anchor="start">h = 35.00 m</text>
+               </g>
+             </svg>
+
+            <div class="controls">
+              <div class="control-group">
+                <label>Slide Measurement Point along conductor (xp): <span id="label-xp" class="val">300.0 m</span></label>
+                <input type="range" id="slider-3pt-xp" min="150" max="610" value="380" oninput="update3ptSimulation()">
+              </div>
+              <div class="control-group">
+                <label>Set Elevation Difference (h): <span id="label-height-diff" class="val">40.0 m</span></label>
+                <input type="range" id="slider-3pt-h" min="0" max="80" value="40" oninput="update3ptSimulation()">
+              </div>
+            </div>
+          </div>
+
+          <div class="output-box" style="border-color: var(--border-color);">
+            <div class="output-title">Survey calculations at point P</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+              <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">xp Pos:</span>
+                <div class="output-val" id="val-xp-pos" style="font-size: 1.2rem;">300.0 m</div>
+              </div>
+              <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Chord y:</span>
+                <div class="output-val" id="val-chord-y" style="font-size: 1.2rem;">100.0 m</div>
+              </div>
+              <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Chord-Sag D(xp):</span>
+                <div class="output-val" id="val-chord-sag" style="font-size: 1.2rem; color: #ef4444;">8.50 m</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanations & Math -->
+        <div class="explanation-panel card">
+          <span class="badge badge-neon">The Physics</span>
+          <h2>Three-Point Survey Method</h2>
+          <p>By capturing three 3D coordinate points along a single span, a total station survey instrument can mathematically model the conductor's parabolic catenary curve in space, automatically determining both the sag and internal horizontal tension.</p>
+          
+          <blockquote style="background: rgba(59, 130, 246, 0.05); border-left: 3px solid var(--primary); padding: 0.8rem 1.2rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem; font-size: 0.92rem;">
+            <strong>⚠️ GEOMETRICAL REFERENCE CLARIFICATION:</strong><br>
+            In all transmission line sag-tension analysis, the <strong>Span Length (L)</strong> and the <strong>Measurement Position (xp)</strong> are strictly the <strong>horizontal projections w.r.t. gravity</strong> (measured along a horizontal datum plane, e.g., using a Total Station or GPS map projection), <strong>NOT</strong> the sloped linear slant distance between tower hooks. The <strong>Elevation Difference (h)</strong> and <strong>Sag Offsets (D)</strong> are strictly the <strong>vertical projections</strong> parallel to the vector of gravity (absolute elevation sea level differences).
+          </blockquote>
+          
+          <h3>The Mathematical Derivation:</h3>
+          <ul>
+            <li><strong>1. Reference the Chord Line:</strong> Connect support A at `(0, yA)` and support B at `(L, yB)` with a straight line. At any position `xp`, the height of this chord is:
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">y_chord(xp) = yA + (h / L) * xp</div>
+            </li>
+            <li><strong>2. Measure Sag Offset:</strong> The vertical sag offset `D(xp)` is the difference between the chord line and the measured wire height `yp`:
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">D(xp) = y_chord(xp) - yp</div>
+            </li>
+            <li><strong>3. Solve the Quadratic:</strong> Because the conductor fits the parabolic curve equation `y = a*x^2 + b*x + c` with `a = w / (2*T)`, fitting the points yields the universal tension equation:
+              <div style="font-family: 'JetBrains Mono', monospace; background: #05070c; padding: 0.4rem; border-radius: 6px; margin: 0.5rem 0;">Tension (T) = (w * xp * (L - xp)) / (2 * D(xp))</div>
+            </li>
+            <li><strong>Universal Result:</strong> Regardless of elevation difference `h` or tower slopes, measuring the offset `D` at any distance `xp` solves the horizontal tension `T` instantly.</li>
+          </ul>
+
+          <div class="calculator">
+            <h3>Three-Point Surveyor Calculator</h3>
+            <div class="input-field">
+              <label>Choose Conductor Weight (w):</label>
+              <select id="calc-3pt-cond" onchange="calc3ptTension()">
+                <option value="15.912" selected>ACSR Zebra (15.91 N/m)</option>
+                <option value="19.600">ACSR Moose (19.60 N/m)</option>
+                <option value="9.555">ACSR Panther (9.56 N/m)</option>
+                <option value="7.122">ACSR Wolf (7.12 N/m)</option>
+                <option value="3.865">ACSR Dog (3.87 N/m)</option>
+              </select>
+            </div>
+            <div class="calc-row">
+              <div class="input-field">
+                <label>Span L (meters):</label>
+                <input type="number" id="calc-3pt-span" value="300" oninput="calc3ptTension()">
+              </div>
+              <div class="input-field">
+                <label>Elevation Diff h (meters):</label>
+                <input type="number" id="calc-3pt-h" value="35" oninput="calc3ptTension()">
+              </div>
+            </div>
+            <div class="calc-row">
+              <div class="input-field">
+                <label>Measure Pos xp (meters):</label>
+                <input type="number" id="calc-3pt-xp" value="100" oninput="calc3ptTension()">
+              </div>
+              <div class="input-field">
+                <label>Measured Offset D(xp) (m):</label>
+                <input type="number" id="calc-3pt-offset" value="5.3" step="0.1" oninput="calc3ptTension()">
+              </div>
+            </div>
+            <div class="output-box">
+              <div class="output-title" style="color: var(--accent-neon);">Calculated Horizontal Tension</div>
+              <div class="output-val" id="calc-3pt-result">30.02 kN</div>
+              <div class="math-steps" id="calc-3pt-steps">
+                T = (w * xp * (L - xp)) / (2 * D(xp))
+                T = (15.912 * 100 * (300 - 100)) / (2 * 5.3)
+                T = (15.912 * 100 * 200) / 10.6
+                T = 318,240 / 10.6 = 30,022.6 N = 30.02 kN
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab switching logic
+    function switchTab(tabId, btn) {
+      // Hide all contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      // Deactivate all buttons
+      document.querySelectorAll('.tab-btn').forEach(button => {
+        button.classList.remove('active');
+      });
+
+      // Show targeted tab
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+
+      // Trigger redraws of animations if needed
+      if (tabId === 'target-method') {
+        updateTargetSimulation();
+      } else if (tabId === 'wave-method') {
+        changeWaveTension();
+      } else if (tabId === 'threepoint-method') {
+        update3ptSimulation();
+      }
+    }
+
+    // ==========================================
+    // METHOD 1: VISUAL SIGHT TARGET SIMULATION
+    // ==========================================
+    function updateTargetSimulation() {
+      const slider = document.getElementById('slider-target-tension');
+      const val = parseFloat(slider.value);
+      
+      // Calculate actual sag on screen
+      const screenSag = val - 100;
+      
+      // Update label
+      document.getElementById('target-sag-label').innerText = (screenSag / 10).toFixed(1) + " m";
+
+      // Draw the conductor as a mathematically accurate parabola hanging down
+      // y = yA + (yB - yA)*ratio + 4*screenSag*ratio*(1 - ratio)
+      let pathStr = "M 80,120 ";
+      for (let x = 80; x <= 680; x += 10) {
+        const ratio = (x - 80) / 600;
+        const y = 120 + (70 - 120) * ratio + 4 * screenSag * ratio * (1 - ratio);
+        pathStr += `L ${x},${y} `;
+      }
+      document.getElementById('conductor-target').setAttribute('d', pathStr);
+
+      // Check for alignment target intersection
+      // Sighting line connects Board A (80, 120 + targetSag) and Board B (680, 70 + targetSag)
+      // Since targetSag = 80 (visual pixels), the boards are at 200 and 150 respectively.
+      // Sighting line Y at mid-span (x = 380) is (200 + 150) / 2 = 175.
+      // Conductor Y at mid-span (x = 380) is 120 - 25 + screenSag = 95 + screenSag.
+      // For tangency at mid-span, conductor Y must be exactly 175, so screenSag = 80.
+      const y_mid = 95 + screenSag;
+      const target_y_mid = 175; // 95 + 80
+      const diff = Math.abs(y_mid - target_y_mid);
+
+      const statusBox = document.getElementById('target-success-banner');
+      const statusTitle = document.getElementById('target-status-title');
+      const statusDesc = document.getElementById('target-status-desc');
+      const glow = document.getElementById('target-success-glow');
+
+      // Update success indicator position to trace the wire's actual midpoint
+      glow.setAttribute('cx', '380');
+      glow.setAttribute('cy', y_mid);
+
+      if (diff < 2) {
+        // perfect alignment!
+        statusBox.classList.add('glow-box');
+        statusBox.style.borderColor = 'var(--accent-neon)';
+        statusTitle.innerHTML = '🟢 Target Sighted Successfully! (CORRECT TENSION)';
+        statusTitle.style.color = 'var(--accent-neon)';
+        statusDesc.innerText = 'The conductor loop\'s lowest edge is perfectly tangent with the optical sight line between the boards. The conductor tension is correct and ready to clamp.';
+        glow.setAttribute('fill', 'rgba(16,185,129,0.3)');
+        glow.setAttribute('r', '25');
+      } else {
+        statusBox.classList.remove('glow-box');
+        statusBox.style.borderColor = 'var(--border-color)';
+        glow.setAttribute('fill', 'rgba(16,185,129,0)');
+        
+        if (y_mid < target_y_mid) {
+          statusTitle.innerHTML = '🔴 Conductor Over-Tensioned (Sag too high off visual target)';
+          statusTitle.style.color = 'var(--accent-orange)';
+          statusDesc.innerText = 'The conductor is pulled too tight. Ease off the tension pull (move slider to the right) to drop the conductor loop into the line of sight.';
+        } else {
+          statusTitle.innerHTML = '🔴 Conductor Under-Tensioned (Sag too low)';
+          statusTitle.style.color = 'var(--primary)';
+          statusDesc.innerText = 'The conductor has sagged too low below the optical line of sight. Pull tighter (move slider to the left) to raise the conductor loop.';
+        }
+      }
+    }
+
+    function calcTargetTension() {
+      const w = parseFloat(document.getElementById('calc-target-cond').value);
+      const L = parseFloat(document.getElementById('calc-target-span').value);
+      const D = parseFloat(document.getElementById('calc-target-sag').value);
+
+      const T = (w * L * L) / (8 * D);
+      const T_kN = T / 1000;
+
+      document.getElementById('calc-target-result').innerText = T_kN.toFixed(2) + " kN";
+      document.getElementById('calc-target-steps').innerText = 
+        `Tension (T) = (w * L^2) / (8 * D)\n` +
+        `T = (${w} * ${L}^2) / (8 * ${D})\n` +
+        `T = (${w} * ${L*L}) / ${8*D}\n` +
+        `T = ${(w * L * L).toFixed(1)} / ${8*D} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN`;
+    }
+
+
+    // ==========================================
+    // METHOD 2: RETURN WAVE METHOD
+    // ==========================================
+    let isWaveRunning = false;
+    let waveAnimId = null;
+    let waveStartTime = 0;
+    let waveTension = 25.0; // kN
+    let currentWaveSagOnScreen = 60; // dynamic mapping from sag to screen pixels
+    const waveMassMap = {
+      "1.622": "ACSR Zebra (1.622 kg/m)",
+      "1.998": "ACSR Moose (1.998 kg/m)",
+      "0.974": "ACSR Panther (0.974 kg/m)",
+      "0.726": "ACSR Wolf (0.726 kg/m)",
+      "0.394": "ACSR Dog (0.394 kg/m)"
+    };
+
+    function changeWaveTension() {
+      const val = parseFloat(document.getElementById('slider-wave-tension').value);
+      waveTension = val;
+      document.getElementById('wave-tension-label').innerText = val.toFixed(1) + " kN";
+      
+      // Predict standard return time for selected conductor
+      const mass = parseFloat(document.getElementById('calc-wave-cond').value);
+      const g = 9.81;
+      const w = mass * g;
+      const L = parseFloat(document.getElementById('calc-wave-span').value);
+      const N = parseFloat(document.getElementById('calc-wave-returns').value);
+      
+      const T_n = val * 1000;
+      const sag = (w * L * L) / (8 * T_n);
+      const t = Math.sqrt((sag * 32 * N * N) / g);
+      
+      document.getElementById('calc-wave-time').value = t.toFixed(2);
+      
+      // Update screen sag visually: Map physical sag (e.g. 5m to 25m) to screen pixels (e.g. 30px to 150px)
+      // Standard scale: 1 meter sag = 6 pixels on screen
+      currentWaveSagOnScreen = Math.max(20, Math.min(180, sag * 6));
+      // Redraw conductor curve to visually match the tension setting
+      let pathStr = "M 80,120 ";
+      for (let x = 80; x <= 680; x += 10) {
+        const ratio = (x - 80) / 600;
+        const y = 120 + 4 * currentWaveSagOnScreen * ratio * (1 - ratio);
+        pathStr += `L ${x},${y} `;
+      }
+      document.getElementById('conductor-wave').setAttribute('d', pathStr);
+
+      // Dynamic dimension updates in explanations.html for Wave method
+      document.getElementById('wave-dim-L-text').textContent = `L = ${L.toFixed(1)} m (Horizontal Span w.r.t. Gravity)`;
+      document.getElementById('wave-dim-d').setAttribute('y2', 120 + currentWaveSagOnScreen);
+      document.getElementById('wave-dim-d-text').setAttribute('y', 120 + currentWaveSagOnScreen / 2 + 3);
+      document.getElementById('wave-dim-d-text').textContent = `d = ${sag.toFixed(2)} m (Mid-span Sag)`;
+
+      calcWaveTension();
+    }
+
+    function startWaveSimulation() {
+      if (isWaveRunning) return;
+      isWaveRunning = true;
+      document.getElementById('kick-btn').disabled = true;
+
+      const pulse = document.getElementById('wave-pulse');
+      pulse.style.display = 'block';
+
+      const totalReturns = parseFloat(document.getElementById('calc-wave-returns').value) || 3;
+      let currentReturns = 0;
+      
+      const mass = parseFloat(document.getElementById('calc-wave-cond').value);
+      const L = parseFloat(document.getElementById('calc-wave-span').value);
+      const T = waveTension * 1000; // in Newtons
+      
+      const velocity = Math.sqrt(T / mass); 
+      const timePerTrip = (2 * L) / velocity;
+      const totalTimeRequired = timePerTrip * totalReturns;
+
+      waveStartTime = performance.now();
+      
+      function animateWave(now) {
+        const elapsed = (now - waveStartTime) / 1000; // seconds
+        
+        if (elapsed >= totalTimeRequired) {
+          document.getElementById('stopwatch-display').innerText = totalTimeRequired.toFixed(2) + "s";
+          document.getElementById('returns-count').innerText = `${totalReturns} / ${totalReturns}`;
+          pulse.style.display = 'none';
+          isWaveRunning = false;
+          document.getElementById('kick-btn').disabled = false;
+          
+          document.getElementById('calc-wave-time').value = totalTimeRequired.toFixed(2);
+          calcWaveTension();
+          return;
+        }
+
+        document.getElementById('stopwatch-display').innerText = elapsed.toFixed(2) + "s";
+        currentReturns = Math.floor(elapsed / timePerTrip);
+        document.getElementById('returns-count').innerText = `${currentReturns} / ${totalReturns}`;
+
+        const localElapsed = elapsed % timePerTrip;
+        const halfTrip = timePerTrip / 2;
+        let xRatio = 0;
+        
+        if (localElapsed < halfTrip) {
+          xRatio = localElapsed / halfTrip;
+        } else {
+          xRatio = 1 - ((localElapsed - halfTrip) / halfTrip);
+        }
+
+        const pulseX = 80 + xRatio * 600;
+        // Pulse Y rides perfectly on the dynamic conductor curve
+        const pulseY = 120 + (4 * currentWaveSagOnScreen * xRatio * (1 - xRatio));
+
+        pulse.setAttribute('cx', pulseX);
+        pulse.setAttribute('cy', pulseY);
+
+        waveAnimId = requestAnimationFrame(animateWave);
+      }
+
+      requestAnimationFrame(animateWave);
+    }
+
+    function calcWaveTension() {
+      const mass = parseFloat(document.getElementById('calc-wave-cond').value);
+      const L = parseFloat(document.getElementById('calc-wave-span').value);
+      const N = parseFloat(document.getElementById('calc-wave-returns').value);
+      const t = parseFloat(document.getElementById('calc-wave-time').value);
+      const g = 9.81;
+
+      const sag = (g * t * t) / (32 * N * N);
+      const w = mass * g;
+      const T = (w * L * L) / (8 * sag);
+      const T_kN = T / 1000;
+
+      document.getElementById('calc-wave-sag-val').innerText = sag.toFixed(2) + " m";
+      document.getElementById('calc-wave-tens-val').innerText = T_kN.toFixed(2) + " kN";
+
+      // Dynamically update curve and visualizer dimensions when stopwatch is changed
+      currentWaveSagOnScreen = Math.max(20, Math.min(180, sag * 6));
+      let pathStr = "M 80,120 ";
+      for (let x = 80; x <= 680; x += 10) {
+        const ratio = (x - 80) / 600;
+        const y = 120 + 4 * currentWaveSagOnScreen * ratio * (1 - ratio);
+        pathStr += `L ${x},${y} `;
+      }
+      document.getElementById('conductor-wave').setAttribute('d', pathStr);
+
+      document.getElementById('wave-dim-L-text').textContent = `L = ${L.toFixed(1)} m (Horizontal Span w.r.t. Gravity)`;
+      document.getElementById('wave-dim-d').setAttribute('y2', 120 + currentWaveSagOnScreen);
+      document.getElementById('wave-dim-d-text').setAttribute('y', 120 + currentWaveSagOnScreen / 2 + 3);
+      document.getElementById('wave-dim-d-text').textContent = `d = ${sag.toFixed(2)} m (Mid-span Sag)`;
+
+      document.getElementById('calc-wave-steps').innerText = 
+        `Sag = (g * t^2) / (32 * N^2)\n` +
+        `Sag = (9.81 * ${t}^2) / (32 * ${N}^2) = ${(9.81 * t * t).toFixed(1)} / ${32 * N * N} = ${sag.toFixed(2)} m\n\n` +
+        `Tension (T) = (mass * g * L^2) / (8 * Sag)\n` +
+        `T = (${mass} * 9.81 * ${L}^2) / (8 * ${sag.toFixed(2)})\n` +
+        `T = ${(mass * g).toFixed(3)} * ${L*L} / ${(8 * sag).toFixed(2)}\n` +
+        `T = ${(w * L * L).toFixed(1)} / ${(8 * sag).toFixed(1)} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN`;
+    }
+
+
+    // ==========================================
+    // METHOD 3: THREE-POINT SURVEY METHOD
+    // ==========================================
+    function update3ptSimulation() {
+      const xpSlider = document.getElementById('slider-3pt-xp');
+      const hSlider = document.getElementById('slider-3pt-h');
+      
+      const xpVal = parseFloat(xpSlider.value);
+      const hVal = parseFloat(hSlider.value);
+
+      document.getElementById('label-xp').innerText = (xpVal / 2).toFixed(1) + " m";
+      document.getElementById('label-height-diff').innerText = (hVal / 2).toFixed(1) + " m";
+
+      // Support levels
+      const supportA_Y = 140;
+      const supportB_Y = 140 - hVal;
+
+      // Update Tower B on screen (including stretching support legs)
+      document.getElementById('tower-b-center').setAttribute('y1', supportB_Y);
+      document.getElementById('tower-b-leg-l').setAttribute('y1', supportB_Y);
+      document.getElementById('tower-b-leg-r').setAttribute('y1', supportB_Y);
+      document.getElementById('svg-threepoint').querySelector('circle[cx="680"]').setAttribute('cy', supportB_Y);
+      document.getElementById('svg-threepoint').querySelector('text[x="685"]').setAttribute('y', supportB_Y - 5);
+
+      // Update Chord line connecting them
+      const chordLine = document.getElementById('svg-threepoint').querySelector('line[stroke-dasharray="6,4"]');
+      chordLine.setAttribute('y1', supportA_Y);
+      chordLine.setAttribute('y2', supportB_Y);
+
+      // Conductor screen sag is kept at a realistic 100 pixels
+      const screenSag = 100;
+      
+      // Parabolic equation: y = supportA_Y + (supportB_Y - supportA_Y)*ratio + 4*screenSag*ratio*(1 - ratio)
+      // Using positive (1 - ratio) to curve downwards in SVG coordinate space
+      let pathStr = `M 80,${supportA_Y} `;
+      for (let x = 80; x <= 680; x += 10) {
+        const ratio = (x - 80) / 600;
+        const y = supportA_Y + (supportB_Y - supportA_Y) * ratio + 4 * screenSag * ratio * (1 - ratio);
+        pathStr += `L ${x},${y} `;
+      }
+      document.getElementById('conductor-3pt').setAttribute('d', pathStr);
+
+      // Calculate positions at measured point P (xp)
+      const ratio_p = (xpVal - 80) / 600;
+      const pY = supportA_Y + (supportB_Y - supportA_Y) * ratio_p + 4 * screenSag * ratio_p * (1 - ratio_p);
+      const chord_pY = supportA_Y + (supportB_Y - supportA_Y) * ratio_p;
+
+      // Move marker dot P on wire
+      const dot = document.getElementById('point-p');
+      dot.setAttribute('cx', xpVal);
+      dot.setAttribute('cy', pY);
+      
+      const labelP = document.getElementById('label-point-p');
+      labelP.setAttribute('x', xpVal + 10);
+      labelP.setAttribute('y', pY - 5);
+
+      // Move lasers
+      document.getElementById('laser-a').setAttribute('y2', supportA_Y);
+      document.getElementById('laser-b').setAttribute('y2', supportB_Y);
+      document.getElementById('laser-p').setAttribute('x2', xpVal);
+      document.getElementById('laser-p').setAttribute('y2', pY);
+
+      // Vertical offset indicator going down from chord line to wire
+      const offsetIndicator = document.getElementById('chord-line-offset');
+      offsetIndicator.setAttribute('x1', xpVal);
+      offsetIndicator.setAttribute('y1', chord_pY);
+      offsetIndicator.setAttribute('x2', xpVal);
+      offsetIndicator.setAttribute('y2', pY);
+
+      const offsetLabel = document.getElementById('label-sag-offset');
+      offsetLabel.setAttribute('x', xpVal + 10);
+      offsetLabel.setAttribute('y', (chord_pY + pY)/2);
+
+      // Update coordinate output card
+      const distance_xp = (xpVal - 80) / 2; // scale factor (width represents 300m horizontal span)
+      const actual_h = hVal / 2;
+      const actual_span = 300;
+      
+      const actual_chordY = (actual_h / actual_span) * distance_xp;
+      const actual_offset = Math.abs(pY - chord_pY) / 2; // scale factor
+
+      document.getElementById('val-xp-pos').innerText = distance_xp.toFixed(1) + " m";
+      document.getElementById('val-chord-y').innerText = actual_chordY.toFixed(1) + " m";
+      document.getElementById('val-chord-sag').innerText = actual_offset.toFixed(1) + " m";
+
+      // Pre-fill fields in calculator
+      document.getElementById('calc-3pt-span').value = actual_span;
+      document.getElementById('calc-3pt-h').value = actual_h;
+      document.getElementById('calc-3pt-xp').value = distance_xp.toFixed(1);
+      document.getElementById('calc-3pt-offset').value = actual_offset.toFixed(1);
+      
+      // Dynamic updates for Gravity-Referenced Dimension overlays in 3-Point Sighting SVG
+      document.getElementById('tp-dim-L-text').textContent = `L = ${actual_span.toFixed(1)} m`;
+
+      const dimXp = document.getElementById('tp-dim-xp');
+      dimXp.setAttribute('x2', xpVal);
+
+      const dimXpTicks = document.getElementById('tp-dim-xp-ticks');
+      dimXpTicks.setAttribute('d', `M 80,280 L 80,290 M ${xpVal},280 L ${xpVal},290`);
+
+      const dimXpText = document.getElementById('tp-dim-xp-text');
+      dimXpText.setAttribute('x', (80 + xpVal) / 2);
+      dimXpText.textContent = `xp = ${distance_xp.toFixed(1)} m`;
+
+      const dimH = document.getElementById('tp-dim-h');
+      dimH.setAttribute('y1', supportA_Y);
+      dimH.setAttribute('y2', supportB_Y);
+
+      const dimHTicks = document.getElementById('tp-dim-h-ticks');
+      dimHTicks.setAttribute('d', `M 715,${supportA_Y} L 725,${supportA_Y} M 715,${supportB_Y} L 725,${supportB_Y}`);
+
+      const extA = document.getElementById('tp-ext-A');
+      extA.setAttribute('y1', supportA_Y);
+      extA.setAttribute('y2', supportA_Y);
+
+      const extB = document.getElementById('tp-ext-B');
+      extB.setAttribute('y1', supportB_Y);
+      extB.setAttribute('y2', supportB_Y);
+
+      const dimHText = document.getElementById('tp-dim-h-text');
+      dimHText.setAttribute('y', (supportA_Y + supportB_Y) / 2 + 3);
+      dimHText.textContent = `h = ${actual_h.toFixed(1)} m`;
+
+      calc3ptTension();
+    }
+
+    function calc3ptTension() {
+      const w = parseFloat(document.getElementById('calc-3pt-cond').value);
+      const L = parseFloat(document.getElementById('calc-3pt-span').value);
+      const xp = parseFloat(document.getElementById('calc-3pt-xp').value);
+      const offset = parseFloat(document.getElementById('calc-3pt-offset').value);
+
+      if (offset <= 0) return;
+
+      const T = (w * xp * (L - xp)) / (2 * offset);
+      const T_kN = T / 1000;
+
+      document.getElementById('calc-3pt-result').innerText = T_kN.toFixed(2) + " kN";
+      
+      document.getElementById('calc-3pt-steps').innerText = 
+        `Tension (T) = (w * xp * (L - xp)) / (2 * D(xp))\n` +
+        `T = (${w} * ${xp} * (${L} - ${xp})) / (2 * ${offset})\n` +
+        `T = (${w} * ${xp} * ${L - xp}) / ${2 * offset}\n` +
+        `T = ${(w * xp * (L - xp)).toFixed(1)} / ${2 * offset} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN`;
+    }
+
+    // Initial triggers on load
+    window.onload = function() {
+      updateTargetSimulation();
+      changeWaveTension();
+      update3ptSimulation();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TL-SAG | Transmission Line Sag & Tension Analyzer</title>
+  
+  <!-- Modern Font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet Link -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Professional Engineering Header -->
+    <header>
+      <div class="header-title">
+        <h1>TL-SAG</h1>
+        <p>Professional Overhead Line Sag-Tension Safety & Compliance Calculator</p>
+      </div>
+      <div class="header-actions">
+        <a href="explanations.html" target="_blank" class="btn btn-outline">Open Sandbox Visualizer</a>
+        <button class="btn btn-success" onclick="printEngineeringReport()">Print Engineering Report</button>
+      </div>
+    </header>
+
+    <!-- Focus Label -->
+    <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.4rem;">
+      📊 FLAGSHIP FIELD METHOD: THREE-POINT SURVEYOR SIGHTING
+    </div>
+
+      <!-- TOP SECTION: MASSIVE VISUALIZER CANVAS CARD -->
+      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.35rem;">
+          <span>📐 Live Structural Catenary Visualizer (Three-Point Geometry)</span>
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Real-time visual CAD model w.r.t. gravity references</span>
+        </h2>
+        <div class="visualizer-area" style="width: 100%; height: auto;">
+          <svg id="svg-threepoint" class="interactive-svg" viewBox="0 0 800 320" style="background: #fafafa; border: 1px solid var(--border); border-radius: 8px;">
+            <defs>
+              <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <!-- Grid background -->
+            <rect x="0" y="0" width="100%" height="100%" fill="url(#cad-grid)"/>
+            <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" fill="#e2e8f0" opacity="0.6"/>
+            
+            <!-- Towers -->
+            <!-- Tower A (Left, Lower) -->
+            <line x1="80" y1="140" x2="80" y2="280" stroke="#1e40af" stroke-width="4"/>
+            <line x1="80" y1="140" x2="60" y2="280" stroke="#1e40af" stroke-width="2"/>
+            <line x1="80" y1="140" x2="100" y2="280" stroke="#1e40af" stroke-width="2"/>
+            <circle cx="80" cy="140" r="4" fill="#dc2626"/>
+            <text x="60" y="135" fill="#0f172a" font-size="10">A (0, yA)</text>
+            
+            <!-- Tower B (Right, Higher) with dynamic structural legs -->
+            <line id="tower-b-center" x1="680" y1="60" x2="680" y2="280" stroke="#1e40af" stroke-width="4"/>
+            <line id="tower-b-leg-l" x1="680" y1="60" x2="660" y2="280" stroke="#1e40af" stroke-width="2"/>
+            <line id="tower-b-leg-r" x1="680" y1="60" x2="700" y2="280" stroke="#1e40af" stroke-width="2"/>
+            <circle cx="680" cy="60" r="4" fill="#dc2626"/>
+            <text x="685" y="55" fill="#0f172a" font-size="10">B (L, yB)</text>
+            
+            <!-- Chord line (Dashed Black) -->
+            <line id="chord-line-3pt" x1="80" y1="140" x2="680" y2="60" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+            <!-- Conductor Path -->
+            <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" stroke="#10b981" stroke-width="3"/>
+            
+            <!-- Total Station on Ground -->
+            <polygon points="340,280 360,280 350,250" fill="#d97706"/>
+            <circle cx="350" cy="245" r="5" fill="#1e40af"/>
+            
+            <!-- Laser Sighting Lines -->
+            <line id="laser-a" x1="350" y1="245" x2="80" y2="140" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
+            <line id="laser-b" x1="350" y1="245" x2="680" y2="60" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
+            <line id="laser-p" x1="350" y1="245" x2="380" y2="150" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
+            
+            <!-- Sighted point P -->
+            <circle id="point-p" cx="380" cy="150" r="5" fill="#10b981" />
+            <text id="label-point-p" x="390" y="145" fill="#0f172a" font-size="10">P (xp, yp)</text>
+
+            <!-- Chord height indicator at xp -->
+            <line id="chord-line-offset" x1="380" y1="100" x2="380" y2="150" stroke="#b91c1c" stroke-width="2" stroke-dasharray="2,2"/>
+            <text id="label-sag-offset" x="390" y="125" fill="#b91c1c" font-size="10" font-weight="bold">D(xp) Offset</text>
+
+            <!-- Gravity horizontal/vertical CAD-style visual references -->
+            <g id="tp-dimensions" stroke="#64748b" stroke-width="1">
+              <!-- Gravity Horizontal Datum Line -->
+              <line id="tp-datum-line" x1="40" y1="280" x2="760" y2="280" stroke="#94a3b8" stroke-dasharray="4,4"/>
+              <text id="tp-datum-label" x="400" y="274" fill="#475569" font-size="8" letter-spacing="0.05em" text-anchor="middle">GRAVITY HORIZONTAL DATUM PLANE</text>
+              
+              <!-- Span L Dimension -->
+              <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" stroke="#1e40af" stroke-dasharray="2,2"/>
+              <path id="tp-dim-L-ticks" d="M 80,295 L 80,305 M 680,295 L 680,305" stroke="#1e40af"/>
+              <text id="tp-dim-L-text" x="380" y="312" fill="#1e40af" font-size="9" text-anchor="middle" font-weight="bold">L = 300.0 m</text>
+
+              <!-- Position xp Dimension -->
+              <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" stroke="#1d4ed8" stroke-dasharray="2,2"/>
+              <path id="tp-dim-xp-ticks" d="M 80,280 L 80,290 M 280,280 L 280,290" stroke="#1d4ed8"/>
+              <text id="tp-dim-xp-text" x="180" y="297" fill="#1d4ed8" font-size="9" text-anchor="middle">xp = 100.0 m</text>
+
+              <!-- Vertical Height Diff h Dimension -->
+              <line id="tp-dim-h" x1="720" y1="140" x2="720" y2="60" stroke="#b45309" stroke-dasharray="2,2"/>
+              <path id="tp-dim-h-ticks" d="M 715,140 L 725,140 M 715,60 L 725,60" stroke="#b45309"/>
+              <!-- Extension lines from towers to vertical dimension -->
+              <line id="tp-ext-A" x1="80" y1="140" x2="730" y2="140" stroke="#94a3b8" stroke-dasharray="3,3"/>
+              <line id="tp-ext-B" x1="680" y1="60" x2="730" y2="60" stroke="#94a3b8" stroke-dasharray="3,3"/>
+              <text id="tp-dim-h-text" x="735" y="105" fill="#b45309" font-size="9" text-anchor="start">h = 35.00 m</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- MAIN DASHBOARD CONTENT GRID -->
+      <div class="dashboard-grid">
+      
+      <!-- LEFT COLUMN: INPUTS PANEL -->
+      <div class="left-col">
+        
+        <!-- PANEL A: Collapsible Line Infrastructure Specifications -->
+        <button class="collapsible-trigger" id="specs-toggle-btn" onclick="toggleCollapsible('specs-content', 'specs-arrow')">
+          ⚙️ Line Infrastructure & Conductor Specifications <span id="specs-arrow">▼</span>
+        </button>
+        <div id="specs-content" class="collapsible-content">
+          <div class="subtitle" style="margin-bottom: 1rem; font-size: 0.82rem; color: var(--text-muted);">
+            Document transmission line parameters and tower structures for engineering sag records.
+          </div>
+          
+          <div class="form-section">
+            <div class="input-grid-2">
+              <div class="form-group">
+                <label for="line-voltage">Line Voltage Level:</label>
+                <select id="line-voltage">
+                  <option value="66 kV">66 kV</option>
+                  <option value="110 kV">110 kV</option>
+                  <option value="132 kV">132 kV</option>
+                  <option value="220 kV" selected>220 kV</option>
+                  <option value="400 kV">400 kV</option>
+                </select>
+                <span class="field-tooltip">Standard transmission voltage class under analysis (66 kV to 400 kV utility range).</span>
+              </div>
+              <div class="form-group">
+                <label for="line-bundling">Conductor Bundling Configuration:</label>
+                <select id="line-bundling">
+                  <option value="Single Conductor" selected>Single Conductor</option>
+                  <option value="Twin Bundled (2-Bundle)">Twin Bundled</option>
+                  <option value="Quad Bundled (4-Bundle)">Quad Bundled</option>
+                  <option value="Hexa Bundled (6-Bundle)">Hexa Bundled</option>
+                </select>
+                <span class="field-tooltip">Number of physical conductor sub-wires grouped per phase (for individual sub-wire mechanical sag analysis).</span>
+              </div>
+            </div>
+
+            <div class="input-grid-2">
+              <div class="form-group">
+                <label for="tower-a-id">Tower A (Lower ID):</label>
+                <input type="text" id="tower-a-id" value="Tower 45" placeholder="e.g. AP 45">
+                <span class="field-tooltip">Reference name of the lower-elevation support tower.</span>
+              </div>
+              <div class="form-group">
+                <label for="tower-b-id">Tower B (Higher ID):</label>
+                <input type="text" id="tower-b-id" value="Tower 46" placeholder="e.g. AP 46">
+                <span class="field-tooltip">Reference name of the higher-elevation support tower.</span>
+              </div>
+            </div>
+
+            <div class="input-grid-2">
+              <div class="form-group">
+                <label for="line-circuits">Number of Circuits:</label>
+                <select id="line-circuits">
+                  <option value="Single Circuit">Single Circuit</option>
+                  <option value="Double Circuit" selected>Double Circuit</option>
+                  <option value="Multi-Circuit">Multi-Circuit</option>
+                </select>
+                <span class="field-tooltip">Number of independent three-phase circuits hung on the towers.</span>
+              </div>
+              <div class="form-group">
+                <label for="line-config">Circuits Spacing Configuration:</label>
+                <select id="line-config">
+                  <option value="Vertical Configuration" selected>Vertical Configuration</option>
+                  <option value="Horizontal Configuration">Horizontal Configuration</option>
+                  <option value="Delta/Triangular Configuration">Delta/Triangular Configuration</option>
+                </select>
+                <span class="field-tooltip">Visual orientation of the phase conductors on the crossarms.</span>
+              </div>
+            </div>
+
+            <div class="input-grid-3">
+              <div class="form-group">
+                <label for="line-peaks">Number of Earth Peaks:</label>
+                <select id="line-peaks">
+                  <option value="1 Peak">1 Peak</option>
+                  <option value="2 Peaks" selected>2 Peaks</option>
+                </select>
+                <span class="field-tooltip">Number of lightning shield peaks at the tower top.</span>
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label for="line-opgw-size">Earthwire / OPGW Spec:</label>
+                <input type="text" id="line-opgw-size" value="7/3.15 mm Galvanized Steel (or OPGW)" placeholder="e.g. OPGW 24-Core 90mm²">
+                <span class="field-tooltip">Conductor specification of the overhead shield ground wire or OPGW cable.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GPS Coordinates (Optional Section) -->
+          <div class="form-section" style="border-top: 1px solid var(--border); padding-top: 1.2rem; margin-bottom: 0;">
+            <div class="form-section-title">Tower Geographic Coordinates (Optional)</div>
+            <div class="input-grid-3">
+              <div class="form-group">
+                <label>Tower A Lat:</label>
+                <input type="text" id="tower-a-lat" value="30.27408" placeholder="e.g. 30.274">
+                <span class="field-tooltip">GPS Latitude of Tower A.</span>
+              </div>
+              <div class="form-group">
+                <label>Tower A Long:</label>
+                <input type="text" id="tower-a-lon" value="78.00214" placeholder="e.g. 78.002">
+                <span class="field-tooltip">GPS Longitude of Tower A.</span>
+              </div>
+              <div class="form-group">
+                <label>Tower A Elev (Z):</label>
+                <input type="number" id="tower-a-elev" value="642.5" placeholder="meters">
+                <span class="field-tooltip">Absolute elevation (vertical w.r.t. gravity) above sea level datum.</span>
+              </div>
+            </div>
+            <div class="input-grid-3" style="margin-bottom: 0;">
+              <div class="form-group no-margin">
+                <label>Tower B Lat:</label>
+                <input type="text" id="tower-b-lat" value="30.27552" placeholder="e.g. 30.275">
+                <span class="field-tooltip">GPS Latitude of Tower B.</span>
+              </div>
+              <div class="form-group no-margin">
+                <label>Tower B Long:</label>
+                <input type="text" id="tower-b-lon" value="78.00398" placeholder="e.g. 78.003">
+                <span class="field-tooltip">GPS Longitude of Tower B.</span>
+              </div>
+              <div class="form-group no-margin">
+                <label>Tower B Elev (Z):</label>
+                <input type="number" id="tower-b-elev" value="682.0" placeholder="meters">
+                <span class="field-tooltip">Absolute elevation (vertical w.r.t. gravity) above sea level datum.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL B1: Tab calculator for Three-Point Sighting Method -->
+        <div id="threepoint-pane" class="tab-pane active panel">
+          <h2>Three-Point Coordinate Sighting Input</h2>
+          <p class="subtitle" style="margin-bottom: 1.2rem;">Calculate tension by providing surveyor elevations at Tower A, Tower B, and the conductor wire.</p>
+          
+          <div class="form-section">
+            <div class="form-group">
+              <label for="tp-conductor">Select Conductor Code Name:</label>
+              <select id="tp-conductor" onchange="handleConductorChange('tp')">
+                <!-- Populated dynamically via JS -->
+              </select>
+            </div>
+
+            <!-- Custom Conductor parameters -->
+            <div class="input-grid-3" id="tp-custom-fields" style="display: none;">
+              <div class="form-group">
+                <label for="tp-custom-w">Weight w (N/m):</label>
+                <input type="number" id="tp-custom-w" value="15.91" step="0.01" oninput="calculateThreePoint()">
+              </div>
+              <div class="form-group">
+                <label for="tp-custom-mass">Mass m (kg/m):</label>
+                <input type="number" id="tp-custom-mass" value="1.62" step="0.01">
+              </div>
+              <div class="form-group">
+                <label for="tp-custom-uts">UTS Strength (kN):</label>
+                <input type="number" id="tp-custom-uts" value="130.3" step="0.1" oninput="calculateThreePoint()">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section" style="border-top: 1px solid var(--border); padding-top: 1.2rem;">
+            <div class="input-grid-2">
+              <div class="form-group">
+                <label for="tp-span">Horizontal Span Length L (m):</label>
+                <input type="number" id="tp-span" value="300" oninput="calculateThreePoint()">
+                <span class="field-tooltip">Horizontal projection distance between tower centers (measured w.r.t. gravity, NOT the straight sloped slant distance).</span>
+              </div>
+              <div class="form-group">
+                <label for="tp-xp">Measurement Point Pos xp (m): <span class="unit-label">(Dist from Tower A)</span></label>
+                <input type="number" id="tp-xp" value="100" oninput="calculateThreePoint()">
+                <span class="field-tooltip">Horizontal projection distance from Tower A to point P (measured w.r.t. gravity, NOT along the sloped slant wire).</span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label for="tp-input-mode">Choose Sighting Input Mode:</label>
+              <select id="tp-input-mode" onchange="toggleInputMode()">
+                <option value="z-coords" selected>Direct Total Station Readings (Z Elevation Coordinates)</option>
+                <option value="direct-offset">Pre-Calculated Slopes & Chord-Sag Offsets</option>
+              </select>
+            </div>
+
+            <!-- RANGEFINDER FIELD HELPER -->
+            <div style="margin-bottom: 1.5rem;">
+              <button type="button" class="gps-toggle-btn" style="font-size: 0.82rem; font-weight: 700; color: var(--warning); display: flex; align-items: center; gap: 0.3rem;" onclick="toggleGpsHelper('tp-rangefinder-helper')">
+                📷 Practical Field Tool: Laser Rangefinder / Sighter Trigonometric Helper...
+              </button>
+              <div id="tp-rangefinder-helper" class="gps-helper-panel" style="margin-top: 0.6rem; border: 1px dashed var(--warning); padding: 1rem; border-radius: 12px; background: rgba(180, 83, 9, 0.02);">
+                <div class="subtitle" style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.4;">
+                  Don't have a Total Station? Set up a simple handheld Laser Rangefinder anywhere between the towers to get Hook elevations, Span, and Measurement position!
+                </div>
+                <div class="input-grid-2">
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Hook A Horiz Dist HDA (m):</label>
+                    <input type="number" id="rf-hda" value="100.00" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Hook A Vert Height VDA (m):</label>
+                    <input type="number" id="rf-vda" value="40.00" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                </div>
+                <div class="input-grid-2" style="margin-top: 0.6rem;">
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Hook B Horiz Dist HDB (m):</label>
+                    <input type="number" id="rf-hdb" value="200.00" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Hook B Vert Height VDB (m):</label>
+                    <input type="number" id="rf-vdb" value="75.00" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                </div>
+                <div class="input-grid-2" style="margin-top: 0.6rem;">
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Sighted P Horiz Dist HDP (m):</label>
+                    <input type="number" id="rf-hdp" value="0.00" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem;">Sighted P Vert Height VDP (m):</label>
+                    <input type="number" id="rf-vdp" value="46.40" step="0.1" oninput="calculateRangefinder()">
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; margin-bottom: 0.6rem;">
+                  <input type="checkbox" id="rf-p-towards-b" checked onchange="calculateRangefinder()" style="width: auto;">
+                  <label for="rf-p-towards-b" style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Sighted Point P is towards Tower B (from instrument)</label>
+                </div>
+                
+                <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-bottom: 0.8rem; background: #ffffff; border-left: 3px solid var(--warning);">
+                  <div style="font-size: 1.2rem;">📐</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
+                    <strong>Visual Sighter Cue:</strong> Setup anywhere between towers.<br>
+                    • <code>HDA, HDB</code>: horizontal offsets of Tower A & B w.r.t sighter<br>
+                    • <code>VDA, VDB</code>: vertical heights of attachment hooks w.r.t sighter
+                  </div>
+                </div>
+
+                <div id="rf-solved-text" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(180, 83, 9, 0.04); border-left: 2px solid var(--warning); padding: 0.5rem; margin-bottom: 0.6rem; border-radius: 0 6px 6px 0; color: var(--warning);">
+                  Solving...
+                </div>
+                <button type="button" class="btn btn-outline btn-block" style="padding: 0.4rem; font-size: 0.8rem;" onclick="applyRangefinderReadings()">
+                  Apply Solved Coordinates to Inputs Below
+                </button>
+              </div>
+            </div>
+
+            <!-- MODE A: Direct Raw coordinates -->
+            <div id="tp-z-coords-div">
+              <div class="form-group" style="margin-bottom: 1.2rem; background: rgba(30, 64, 175, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <label for="tp-za" style="font-weight: 700; color: var(--primary);">Tower A Hook Z-Elevation (ZA) (meters):</label>
+                <input type="number" id="tp-za" value="140.000" step="0.001" oninput="calculateThreePoint()">
+                <span class="field-tooltip">Hook A elevation vertically w.r.t. gravity. Enter directly, or calculate below.</span>
+                
+                <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-za-gps')">📍 Field Helper: Calculate ZA from phone GPS + tower drawings...</button>
+                <div id="tp-za-gps" class="gps-helper-panel">
+                  <div class="input-grid-2" style="margin-bottom: 0;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Base GPS Elevation (m):</label>
+                      <input type="number" id="tp-za-gps-base" value="100.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook Height above Base (m):</label>
+                      <input type="number" id="tp-za-gps-height" value="40.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
+                    </div>
+                  </div>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZA = Base GPS Elevation + Hanger Height from ground.</span>
+                  
+                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--primary);">
+                    <div style="font-size: 1.2rem;">🗼</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
+                      <strong>Visual Sighter Cue:</strong> Hook A Elevation Projection<br>
+                      • <code>Base GPS</code>: Absolute ground elevation above sea level datum<br>
+                      • <code>Height</code>: Vertical distance up to the conductor crossarm hanger clamp
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.2rem; background: rgba(30, 64, 175, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <label for="tp-zb" style="font-weight: 700; color: var(--primary);">Tower B Hook Z-Elevation (ZB) (meters):</label>
+                <input type="number" id="tp-zb" value="175.000" step="0.001" oninput="calculateThreePoint()">
+                <span class="field-tooltip">Hook B elevation vertically w.r.t. gravity. Enter directly, or calculate below.</span>
+                
+                <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-zb-gps')">📍 Field Helper: Calculate ZB from phone GPS + tower drawings...</button>
+                <div id="tp-zb-gps" class="gps-helper-panel">
+                  <div class="input-grid-2" style="margin-bottom: 0;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Base GPS Elevation (m):</label>
+                      <input type="number" id="tp-zb-gps-base" value="130.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook Height above Base (m):</label>
+                      <input type="number" id="tp-zb-gps-height" value="45.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
+                    </div>
+                  </div>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZB = Base GPS Elevation + Hanger Height from ground.</span>
+
+                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--primary);">
+                    <div style="font-size: 1.2rem;">🗼</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
+                      <strong>Visual Sighter Cue:</strong> Hook B Elevation Projection<br>
+                      • <code>Base GPS</code>: Absolute ground elevation above sea level datum<br>
+                      • <code>Height</code>: Vertical distance up to the conductor crossarm hanger clamp
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0; background: rgba(16, 185, 129, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                <label for="tp-zp" style="font-weight: 700; color: var(--success);">Sighted Conductor Z-Elevation at xp (ZP) (meters):</label>
+                <input type="number" id="tp-zp" value="146.400" step="0.001" oninput="calculateThreePoint()">
+                <span class="field-tooltip">Direct elevation of conductor wire point P (measured vertically w.r.t. gravity).</span>
+
+                <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-zp-gps')" style="color: var(--success);">📍 Field Helper: Calculate ZP from ground elevation + sighter clearance...</button>
+                <div id="tp-zp-gps" class="gps-helper-panel" style="border-color: var(--success); background: rgba(16, 185, 129, 0.02);">
+                  <div class="input-grid-2" style="margin-bottom: 0;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Ground GPS Elev under xp (m):</label>
+                      <input type="number" id="tp-zp-gps-base" value="130.00" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Measured Clearance to Wire (m):</label>
+                      <input type="number" id="tp-zp-gps-height" value="16.40" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
+                    </div>
+                  </div>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZP = Ground GPS + Measured vertical clearance.</span>
+
+                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--success);">
+                    <div style="font-size: 1.2rem;">📈</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
+                      <strong>Visual Sighter Cue:</strong> Conductor Point P Elevation<br>
+                      • <code>Ground GPS</code>: Elevation of the terrain directly beneath sighted point P<br>
+                      • <code>Clearance</code>: Measured vertical clearance height up to the suspended conductor
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MODE B: Direct sag offset -->
+            <div id="tp-direct-offset-div" style="display: none;">
+              <div class="input-grid-2" style="margin-bottom: 0;">
+                <div class="form-group no-margin">
+                  <label for="tp-height-diff">Hook Elevation Diff h (m): <span class="unit-label">(ZB - ZA)</span></label>
+                  <input type="number" id="tp-height-diff" value="35.000" step="0.001" oninput="calculateThreePoint()">
+                  <span class="field-tooltip">Vertical elevation difference between Hooks B and A (measured vertically w.r.t. gravity, NOT the straight slant distance).</span>
+                </div>
+                <div class="form-group no-margin">
+                  <label for="tp-offset-d">Measured Sag Offset D (m): <span class="unit-label">(from chord)</span></label>
+                  <input type="number" id="tp-offset-d" value="5.300" step="0.001" oninput="calculateThreePoint()">
+                  <span class="field-tooltip">Vertical sag distance (parallel to gravity) from the straight tower-to-tower chord line down to the conductor.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+      </div>
+
+      <!-- RIGHT COLUMN: OUTPUTS & REPORT PANEL -->
+      <div class="right-col">
+        
+        <!-- PANEL C: Results Dashboard & Safety Status Checks -->
+        <div class="panel">
+          <h2>Calculation Results & Safety Checks</h2>
+          <p class="subtitle" style="margin-bottom: 1.2rem;">Real-time engineering values and safety criteria verdicts.</p>
+          
+          <!-- Tab A: Three Point results panel -->
+          <div id="tp-results" class="tab-pane active">
+            <div id="tp-results-error" class="status-card danger" style="display: none; margin-bottom: 0;">
+              <div class="status-badge">ERROR</div>
+              <div class="status-title">Calculation Mismatch</div>
+              <div id="tp-results-error-msg" class="status-desc">Provide valid geometrical and conductor specifications.</div>
+            </div>
+
+            <div id="tp-results-ok">
+              
+              <!-- Horizontal Tension Card -->
+              <div class="results-card">
+                <div class="results-header">Calculated Conductor Tension (T)</div>
+                <div class="results-val" id="tp-val-tension" style="color: var(--primary);">25.32 kN</div>
+                
+                <div class="results-grid">
+                  <div class="result-item">
+                    <div class="result-label">Chord-Sag D(xp)</div>
+                    <div class="result-data" id="tp-val-offset">5.30 m</div>
+                  </div>
+                  <div class="result-item">
+                    <div class="result-label">Equiv Mid-Span Sag</div>
+                    <div class="result-data" id="tp-val-sag">7.07 m</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Safety Status Alert Card -->
+              <div id="tp-status-card" class="status-card">
+                <div class="status-badge">SAFE</div>
+                <div class="status-title">Tension Level: Safe</div>
+                <div class="status-desc">The everyday tension complies fully with safety code guidelines (<20% UTS).</div>
+                
+                <div class="gauge-bar-wrapper">
+                  <div class="gauge-labels">
+                    <span>Tension Load Index</span>
+                    <span class="gauge-val-label" id="tp-val-uts-pct">19.4% of UTS</span>
+                  </div>
+                  <div class="gauge-track">
+                    <div class="gauge-fill"></div>
+                  </div>
+                  <div class="gauge-labels" style="font-size: 0.7rem; margin-top: 0.1rem;">
+                    <span>Safety Factor: <strong id="tp-val-sf">5.15</strong></span>
+                    <span>UTS Limit: 50%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dynamic Sag vs. Tension Chart Card -->
+              <div class="chart-area">
+                <div class="chart-title">
+                  <span>📈 Sag vs. Tension Safety Curve (UTS Clearance)</span>
+                  <span id="chart-overlay-val" style="font-size: 0.8rem; font-weight: bold; color: var(--primary); text-transform: none;">Operating Point: -</span>
+                </div>
+                <svg id="svg-sag-tension-chart" class="chart-svg" viewBox="0 0 500 250">
+                  <defs>
+                    <pattern id="chart-grid" width="40" height="20" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+                    </pattern>
+                  </defs>
+                  
+                  <!-- Grid -->
+                  <rect x="50" y="20" width="420" height="200" fill="url(#chart-grid)"/>
+
+                  <!-- Safety Bands -->
+                  <!-- 20% UTS (Safe: green) -->
+                  <rect id="chart-band-safe" x="50" y="180" width="420" height="40" class="chart-band-safe"/>
+                  <!-- 20% to 25% UTS (Borderline: amber) -->
+                  <rect id="chart-band-caution" x="50" y="170" width="420" height="10" class="chart-band-caution"/>
+                  <!-- 25% to 50% UTS (Caution: orange) -->
+                  <rect id="chart-band-warning" x="50" y="120" width="420" height="50" class="chart-band-warning"/>
+                  <!-- >50% UTS (Unsafe: red) -->
+                  <rect id="chart-band-danger" x="50" y="20" width="420" height="100" class="chart-band-danger"/>
+
+                  <!-- Axes -->
+                  <line x1="50" y1="220" x2="470" y2="220" class="chart-axis"/>
+                  <line x1="50" y1="20" x2="50" y2="220" class="chart-axis"/>
+
+                  <!-- Axes labels & ticks -->
+                  <text x="45" y="224" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">0 kN</text>
+                  <text id="chart-lbl-uts-20" x="45" y="184" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--success)">20% UTS</text>
+                  <text id="chart-lbl-uts-25" x="45" y="174" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--warning)">25% UTS</text>
+                  <text id="chart-lbl-uts-50" x="45" y="124" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--danger)">50% UTS</text>
+                  <text id="chart-lbl-uts-max" x="45" y="24" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">Max kN</text>
+
+                  <!-- Horizontal Limit Lines -->
+                  <line id="line-uts-20" x1="50" y1="180" x2="470" y2="180" stroke="var(--success)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+                  <line id="line-uts-25" x1="50" y1="170" x2="470" y2="170" stroke="var(--warning)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+                  <line id="line-uts-50" x1="50" y1="120" x2="470" y2="120" stroke="var(--danger)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+
+                  <!-- X-Axis labels -->
+                  <text x="50" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
+                  <text x="155" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
+                  <text x="260" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
+                  <text x="365" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
+                  <text x="470" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
+
+                  <!-- Axis Title Labels -->
+                  <text x="260" y="247" font-size="9" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
+                  <text x="15" y="120" font-size="9" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 15 120)">Horizontal Tension T (kN)</text>
+
+                  <!-- Tension Curve Path -->
+                  <path id="chart-curve-path" d="" class="chart-curve"/>
+
+                  <!-- Flashing Active Coordinate Dot -->
+                  <circle id="chart-active-dot" cx="50" cy="220" r="6" class="chart-dot">
+                    <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
+                  </circle>
+                </svg>
+              </div>
+
+              <!-- Dynamic Sensitivity & Accuracy Analysis Card -->
+              <div class="chart-area" style="margin-top: 1.5rem;">
+                <div class="chart-title">
+                  <span>📊 Statistical Accuracy & Sensitivity Analysis</span>
+                  <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Error propagation based on field tolerances</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.45;">
+                  No field survey is absolutely exact. Below is a rigorous error sensitivity analysis showing how typical measurement tolerances propagate into the calculated conductor tension.
+                </div>
+                
+                <table class="report-table" style="font-size: 0.8rem; width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+                  <thead>
+                    <tr style="background: var(--bg-dark);">
+                      <th style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: left; color: var(--text-muted);">Field Measurement</th>
+                      <th style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: center; width: 25%; color: var(--text-muted);">Survey Tolerance</th>
+                      <th style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: right; width: 35%; color: var(--text-muted);">Tension Sensitivity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); font-weight: 600;">Sighted Conductor ZP</td>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: center; font-family: var(--font-mono);">± 0.05 m</td>
+                      <td id="sens-zp" style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: right; font-family: var(--font-mono); color: var(--danger); font-weight: bold;">-</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); font-weight: 600;">Measurement Pos xp</td>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: center; font-family: var(--font-mono);">± 0.50 m</td>
+                      <td id="sens-xp" style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: right; font-family: var(--font-mono); color: var(--warning); font-weight: bold;">-</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); font-weight: 600;">Span Length L</td>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: center; font-family: var(--font-mono);">± 0.20 m</td>
+                      <td id="sens-L" style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: right; font-family: var(--font-mono); color: var(--primary); font-weight: bold;">-</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); font-weight: 600;">Hook Elevations ZA, ZB</td>
+                      <td style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: center; font-family: var(--font-mono);">± 0.10 m</td>
+                      <td id="sens-hooks" style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); text-align: right; font-family: var(--font-mono); color: var(--text-muted); font-weight: bold;">-</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="background: var(--bg-dark); border-radius: 8px; padding: 0.8rem; border-left: 3px solid var(--primary);">
+                  <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-muted); margin-bottom: 0.2rem;">
+                    Statistical Confidence Bounds (95% / ±2σ Interval)
+                  </div>
+                  <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: bold; color: var(--text-main);" id="sens-confidence-range">
+                    - kN to - kN
+                  </div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 0.2rem;" id="sens-verdict">
+                    Tolerances propagate to an RMS error of ± - kN (-%).
+                  </div>
+                </div>
+              </div>
+
+              <!-- Monospaced steps -->
+              <div class="steps-title" style="margin-top: 1.5rem;">Analytical Calculation Steps Log</div>
+              <div class="steps-box" id="tp-steps">
+                Calculating...
+              </div>
+            </div>
+          </div>
+
+
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- PANEL D: Survey guidelines and measurement instructions -->
+    <div class="panel" style="margin-top: 1rem;">
+      <h2>Measurement Guidelines & Survey Procedures</h2>
+      
+      <div class="guide-content">
+        <p>To ensure high-precision calculations, field crews and surveyors must adhere to standardized measurement guidelines. Below are instructions for gathering the input values in the field.</p>
+        
+        <h3>1. Flagship Three-Point Sighting Procedure (Total Station)</h3>
+        <p>The Three-Point Method is highly robust because it utilizes raw trigonometric geometry. The Total Station should be positioned with a clear, unobstructed line of sight to both towers and the conductor loop.</p>
+        
+        <div class="formula-block">
+          Method 3 Core Equation:
+          Tension (T) = (w * xp * (L - xp)) / (2 * D(xp))
+        </div>
+        
+        <ol>
+          <li><strong>Shoot Hook A Z-Elevation (ZA):</strong> Aim the Total Station directly at the conductor attachment clamp on the lower tower (Tower A) and record its Z-coordinate (elevation above datum).</li>
+          <li><strong>Shoot Hook B Z-Elevation (ZB):</strong> Aim the Total Station at the conductor attachment clamp on the higher tower (Tower B) and record its Z-coordinate.</li>
+          <li><strong>Identify measurement point (xp):</strong> Choose a horizontal distance (xp) along the span. (e.g. 100 meters from Tower A). Typically, picking a point near the mid-span or one-third span yields the highest visual stability.</li>
+          <li><strong>Shoot Conductor Z-Elevation (ZP):</strong> Sighting the conductor wire at exactly the horizontal distance (xp) from Tower A, measure and record its Z-elevation.</li>
+          <li><strong>Total Span L:</strong> Verify the horizontal distance (L) between the two tower center-points from geographic coordinate reports or direct survey station lines.</li>
+        </ol>
+
+        <h3>2. Return Wave timing test Procedure (Stopwatch vibration)</h3>
+        <p>This is a convenient visual-timing method that doesn't require optical instrumentation, relying on mechanical pulse velocity equations.</p>
+        
+        <div class="formula-block">
+          Method 2 Core Equations:
+          Conductor Sag (d) = (9.81 * t^2) / (32 * N^2)
+          Conductor Tension (T) = (w * L^2) / (8 * d)
+        </div>
+        
+        <ul>
+          <li><strong>Position:</strong> A lineman stands on one of the towers near the conductor dead-end or suspension pulley block.</li>
+          <li><strong>Generate Wave:</strong> Using a handheld rope or gloved hand, the lineman physically strikes or kicks the conductor to generate a high-amplitude, low-frequency vertical transverse wave loop.</li>
+          <li><strong>Initiate Timer:</strong> The timer starts the stopwatch at the exact moment the lineman strikes the conductor.</li>
+          <li><strong>Count reflections (N):</strong> As the wave travels along the span, it hits the opposite tower clamps, reflects back, and reaches the origin tower. Count each time the wave returns to the starting tower.</li>
+          <li><strong>Stop Timer:</strong> Stop the stopwatch exactly at the 3rd return (or 5th return if the conductor is exceptionally heavy and long, providing high visual stability). Record the elapsed time (t) in seconds.</li>
+        </ul>
+
+        <h3>3. Structural Tension limits & Conductor breaking margins</h3>
+        <p>In overhead power line stringing, control of maximum tension is vital. High mechanical tension causes cyclic bending fatigue failure at support clamps due to high-frequency wind vibrations (Aeolian vibrations). Conversely, excessive low tension causes conductor sag, violating statutory electrical clearance rules (clearance over roads, rivers, or building structures).</p>
+        
+        <ul>
+          <li><strong>Everyday Tension Limit:</strong> Utility guidelines specify that the everyday tension of the conductor (under no-wind, standard temperature conditions, e.g. 32°C) must not exceed <strong>20% to 25% of the Ultimate Tensile Strength (UTS)</strong> of the wire. High tensions within this margin run a high fatigue risk and require installing Stockbridge vibration dampers.</li>
+          <li><strong>Maximum Design Load Limit:</strong> Under statutory worst-case stormy conditions (maximum wind load pressure + minimum temperature + maximum ice thickness), the total mechanical load must never exceed <strong>50% of the conductor UTS</strong>. Crossing this absolute threshold will cause plastic structural deformation, extreme sag slippage, or cable snapping.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Professional Footer -->
+    <footer style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem;">
+      <p>&copy; 2026 TL-SAG Sag-Tension Safety System | Conforms to IS 398 & Utility Construction Codes</p>
+    </footer>
+
+  </div>
+
+  <!-- ==========================================================================
+     OFFICIAL PRINT-READY CALCULATION REPORT SHEET (BROWSER PRINTOUT)
+     ========================================================================== */ -->
+  <div id="printable-report">
+    
+    <div class="report-header">
+      <h1>Transmission Line Sag-Tension Certificate</h1>
+      <p>Official Structural Calculation & Safety Clearance Report</p>
+    </div>
+
+    <div class="report-section">
+      <h2>1. Line & Tower Infrastructure Metadata</h2>
+      <table class="report-table">
+        <tr>
+          <th style="width: 25%;">Line Voltage Level</th>
+          <td style="width: 25%; font-weight: bold;" id="pr-voltage">220 kV</td>
+          <th style="width: 25%;">Line Circuits Config</th>
+          <td style="width: 25%;" id="pr-circuits">Double Circuit</td>
+        </tr>
+        <tr>
+          <th>Lower Tower A ID</th>
+          <td id="pr-tower-a" style="font-weight: bold;">Tower 45</td>
+          <th>Higher Tower B ID</th>
+          <td id="pr-tower-b" style="font-weight: bold;">Tower 46</td>
+        </tr>
+        <tr>
+          <th>Circuits Configuration</th>
+          <td id="pr-config">Vertical Spacing</td>
+          <th>Conductor Bundling</th>
+          <td id="pr-bundling">Single Conductor</td>
+        </tr>
+        <tr>
+          <th>Earth Peaks / Earthwires</th>
+          <td id="pr-peaks">2 Peaks</td>
+          <th>Earthwire/OPGW Spec</th>
+          <td id="pr-opgw">7/3.15 mm Galvanized</td>
+        </tr>
+        <tr>
+          <th>Tower A Coordinates</th>
+          <td id="pr-gps-a">-</td>
+          <th>Tower B Coordinates</th>
+          <td id="pr-gps-b">-</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>2. Conductor Specifications</h2>
+      <table class="report-table">
+        <tr>
+          <th style="width: 25%;">Conductor Code Name</th>
+          <td style="width: 25%; font-weight: bold;" id="pr-cond-name">ACSR Zebra</td>
+          <th style="width: 25%;">Horizontal Span (L)</th>
+          <td style="width: 25%; font-weight: bold;" id="pr-span">300.00 m</td>
+        </tr>
+        <tr>
+          <th>Nominal Unit Weight</th>
+          <td id="pr-cond-w">15.912 N/m</td>
+          <th>Ultimate Tensile Strength (UTS)</th>
+          <td id="pr-cond-uts">130.3 kN</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="report-section">
+      <h2>3. Sag & Tension Calculation Results</h2>
+      <table class="report-table">
+        <tr>
+          <th style="width: 25%;">Measurement Method</th>
+          <td colspan="3" id="pr-method" style="font-weight: bold;">Three-Point Surveyor Method (Direct Coordinate Sighting)</td>
+        </tr>
+        <tr>
+          <th style="width: 25%;">Calculated Tension (T)</th>
+          <td style="width: 25%; font-size: 13pt; font-weight: bold; color: #1e3a8a;" id="pr-calc-tension">25.32 kN</td>
+          <th style="width: 25%;">Calculated Wire Sag (d)</th>
+          <td style="width: 25%; font-weight: bold;" id="pr-calc-sag">7.07 m</td>
+        </tr>
+        <tr>
+          <th>Utility Safety Factor</th>
+          <td id="pr-calc-sf" style="font-weight: bold;">5.15</td>
+          <th>Everyday Tension Ratio</th>
+          <td id="pr-calc-uts-pct" style="font-weight: bold; color: #10b981;">19.4% of UTS</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Official calculation verdict banner -->
+    <div id="pr-verdict-box" class="print-verdict-box print-safe">
+      <h3 id="pr-verdict-title">VERDICT: APPROVED (SAFE TENSION)</h3>
+      <p id="pr-verdict-desc">The measured everyday tension complies fully with safety code guidelines (<20% of Conductor UTS). The conductor tension is safe from long-term wind vibration breakage.</p>
+    </div>
+
+    <div class="report-section" style="page-break-inside: avoid;">
+      <h2>4. Geometrical Math Calculation Logs</h2>
+      <div class="print-math-box" id="pr-math-steps">
+        Three-Point Coordinate Sighting Logic Steps...
+      </div>
+    </div>
+
+    <!-- Official sign-off seals -->
+    <div class="report-section" style="page-break-inside: avoid; margin-top: 3rem;">
+      <div class="signature-block">
+        <div class="sig-line">
+          <strong>Measured / Sighted By</strong><br>
+          <span style="font-size: 8.5pt; color: #555555;">Field Construction Contractor</span><br>
+          Date: ________________________
+        </div>
+        <div class="sig-line">
+          <strong>Calculations Sighted By</strong><br>
+          <span style="font-size: 8.5pt; color: #555555;">Quality Assurance Surveyor</span><br>
+          Date: ________________________
+        </div>
+        <div class="sig-line">
+          <strong>Approved / Cleared By</strong><br>
+          <span style="font-size: 8.5pt; color: #555555;">Superintending Utility Engineer</span><br>
+          Date: ________________________
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 3rem; font-size: 8pt; color: #777777;">
+        Report Generated on: <span id="pr-date">-</span> | TL-SAG Sag-Tension Safety Certificate
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript Application Bundle -->
+  <script src="app.js"></script>
+</body>
+</html>
