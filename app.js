@@ -25,6 +25,10 @@ window.onload = function() {
   calculateRangefinder();
   // Calculate mountain span default values
   calculateMountainSpan();
+  // Initialize photo tracker visibility
+  if (typeof handlePhotoCalibChange === 'function') {
+    handlePhotoCalibChange();
+  }
 };
 
 // Collapsible Section Toggle
@@ -771,56 +775,135 @@ function printEngineeringReport() {
 // ==========================================================================
 // 4. PRACTICAL SURVEYOR FIELD HELPER - LASER RANGEFINDER SOLVER
 // ==========================================================================
+function toggleRangefinderSetup() {
+  const mode = document.getElementById('rf-setup-mode').value;
+  const inplaneDiv = document.getElementById('rf-inplane-div');
+  const obliqueDiv = document.getElementById('rf-oblique-div');
+
+  if (mode === 'in-plane') {
+    inplaneDiv.style.display = 'block';
+    obliqueDiv.style.display = 'none';
+  } else {
+    inplaneDiv.style.display = 'none';
+    obliqueDiv.style.display = 'block';
+  }
+  calculateRangefinder();
+}
+
+// Global sighter solved values cache
+let rfSolvedL = 300.0;
+let rfSolvedXp = 100.0;
+let rfSolvedZa = 140.0;
+let rfSolvedZb = 175.0;
+let rfSolvedZp = 146.4;
+
 function calculateRangefinder() {
-  const hda = parseFloat(document.getElementById('rf-hda').value) || 0;
-  const vda = parseFloat(document.getElementById('rf-vda').value) || 0;
-  const hdb = parseFloat(document.getElementById('rf-hdb').value) || 0;
-  const vdb = parseFloat(document.getElementById('rf-vdb').value) || 0;
-  const hdp = parseFloat(document.getElementById('rf-hdp').value) || 0;
-  const vdp = parseFloat(document.getElementById('rf-vdp').value) || 0;
-  const towardsB = document.getElementById('rf-p-towards-b').checked;
-
-  const L = hda + hdb;
-  const xp = towardsB ? (hda + hdp) : (hda - hdp);
-  const za = vda;
-  const zb = vdb;
-  const zp = vdp;
-
+  const setupMode = document.getElementById('rf-setup-mode').value;
   const solvedDiv = document.getElementById('rf-solved-text');
-  if (solvedDiv) {
-    solvedDiv.innerHTML = 
-      `<strong>Solved Geometry (Instrument Eye Elevation = 0.0m):</strong><br>` +
-      `• Span L = <strong>${L.toFixed(2)} m</strong> (Horiz Projection)<br>` +
-      `• Position xp = <strong>${xp.toFixed(2)} m</strong> (Horiz Projection)<br>` +
-      `• Hook ZA = <strong>${za.toFixed(3)} m</strong> (Vert Projection)<br>` +
-      `• Hook ZB = <strong>${zb.toFixed(3)} m</strong> (Vert Projection)<br>` +
-      `• Conductor ZP = <strong>${zp.toFixed(3)} m</strong> (Vert Projection)`;
+  
+  if (setupMode === 'in-plane') {
+    const hda = parseFloat(document.getElementById('rf-hda').value) || 0;
+    const vda = parseFloat(document.getElementById('rf-vda').value) || 0;
+    const hdb = parseFloat(document.getElementById('rf-hdb').value) || 0;
+    const vdb = parseFloat(document.getElementById('rf-vdb').value) || 0;
+    const hdp = parseFloat(document.getElementById('rf-hdp').value) || 0;
+    const vdp = parseFloat(document.getElementById('rf-vdp').value) || 0;
+    const towardsB = document.getElementById('rf-p-towards-b').checked;
+
+    rfSolvedL = hda + hdb;
+    rfSolvedXp = towardsB ? (hda + hdp) : (hda - hdp);
+    rfSolvedZa = vda;
+    rfSolvedZb = vdb;
+    rfSolvedZp = vdp;
+
+    if (solvedDiv) {
+      solvedDiv.innerHTML = 
+        `<strong>Solved In-Plane Geometry (Eye Elevation = 0m):</strong><br>` +
+        `• Solved Span L = <strong>${rfSolvedL.toFixed(2)} m</strong> (Horiz Projection)<br>` +
+        `• Position xp = <strong>${rfSolvedXp.toFixed(2)} m</strong> (Horiz Projection)<br>` +
+        `• Hook ZA = <strong>${rfSolvedZa.toFixed(3)} m</strong> (Vert Projection)<br>` +
+        `• Hook ZB = <strong>${rfSolvedZb.toFixed(3)} m</strong> (Vert Projection)<br>` +
+        `• Conductor ZP = <strong>${rfSolvedZp.toFixed(3)} m</strong> (Vert Projection)`;
+    }
+  } else {
+    // Oblique Transverse Setup (Valley-to-Valley)
+    const sa = parseFloat(document.getElementById('rf-ob-sa').value) || 0;
+    const thetaA_deg = parseFloat(document.getElementById('rf-ob-theta-a').value) || 0;
+    const sb = parseFloat(document.getElementById('rf-ob-sb').value) || 0;
+    const thetaB_deg = parseFloat(document.getElementById('rf-ob-theta-b').value) || 0;
+    const alpha_deg = parseFloat(document.getElementById('rf-ob-alpha').value) || 0;
+    const sp = parseFloat(document.getElementById('rf-ob-sp').value) || 0;
+    const thetaP_deg = parseFloat(document.getElementById('rf-ob-theta-p').value) || 0;
+    const beta_deg = parseFloat(document.getElementById('rf-ob-beta').value) || 0;
+
+    const radA = thetaA_deg * Math.PI / 180;
+    const radB = thetaB_deg * Math.PI / 180;
+    const radP = thetaP_deg * Math.PI / 180;
+    const radAlpha = alpha_deg * Math.PI / 180;
+    const radBeta = beta_deg * Math.PI / 180;
+
+    // Ground projection distances
+    const da = sa * Math.cos(radA);
+    const db = sb * Math.cos(radB);
+    const dp = sp * Math.cos(radP);
+
+    // Coordinates in horizontal ground plane (O is origin, OA is X axis)
+    const xa = da;
+    const ya = 0;
+    const xb = db * Math.cos(radAlpha);
+    const yb = db * Math.sin(radAlpha);
+    const xp_coord = dp * Math.cos(radBeta);
+    const yp_coord = dp * Math.sin(radBeta);
+
+    // Vertical elevations w.r.t sighter eye level as 0m
+    rfSolvedZa = sa * Math.sin(radA);
+    rfSolvedZb = sb * Math.sin(radB);
+    rfSolvedZp = sp * Math.sin(radP);
+
+    // Horizontal Span L between A and B
+    rfSolvedL = Math.sqrt((xb - xa) * (xb - xa) + (yb - ya) * (yb - ya));
+
+    // Projected position xp of P along the line AB (from A)
+    const dx_ab = xb - xa;
+    const dy_ab = yb - ya;
+    const dx_ap = xp_coord - xa;
+    const dy_ap = yp_coord - ya;
+
+    rfSolvedXp = rfSolvedL > 0 ? (dx_ab * dx_ap + dy_ab * dy_ap) / rfSolvedL : 0;
+    const outOfPlaneY = rfSolvedL > 0 ? Math.abs(dx_ab * dy_ap - dy_ab * dx_ap) / rfSolvedL : 0;
+
+    if (solvedDiv) {
+      solvedDiv.innerHTML = 
+        `<strong>Solved Valley-to-Valley Oblique Geometry:</strong><br>` +
+        `• Solved Span L = <strong>${rfSolvedL.toFixed(2)} m</strong> (Horiz Projection)<br>` +
+        `• Position xp = <strong>${rfSolvedXp.toFixed(2)} m</strong> (Horiz Projection)<br>` +
+        `• Hook ZA = <strong>${rfSolvedZa.toFixed(3)} m</strong> (Vert Projection)<br>` +
+        `• Hook ZB = <strong>${rfSolvedZb.toFixed(3)} m</strong> (Vert Projection)<br>` +
+        `• Conductor ZP = <strong>${rfSolvedZp.toFixed(3)} m</strong> (Vert Projection)<br>` +
+        `• <span style="color: var(--text-muted); font-size: 0.7rem;">Out-of-Plane Wind Sway Dev: ${outOfPlaneY.toFixed(3)} m</span>`;
+    }
   }
 }
 
 function applyRangefinderReadings() {
-  const hda = parseFloat(document.getElementById('rf-hda').value) || 0;
-  const vda = parseFloat(document.getElementById('rf-vda').value) || 0;
-  const hdb = parseFloat(document.getElementById('rf-hdb').value) || 0;
-  const vdb = parseFloat(document.getElementById('rf-vdb').value) || 0;
-  const hdp = parseFloat(document.getElementById('rf-hdp').value) || 0;
-  const vdp = parseFloat(document.getElementById('rf-vdp').value) || 0;
-  const towardsB = document.getElementById('rf-p-towards-b').checked;
+  calculateRangefinder(); // ensure fresh calculation
 
-  const L = hda + hdb;
-  const xp = towardsB ? (hda + hdp) : (hda - hdp);
+  if (rfSolvedL <= 0 || rfSolvedXp <= 0 || rfSolvedXp >= rfSolvedL) {
+    alert("Please input valid rangefinder readings before applying.");
+    return;
+  }
 
   // Apply to primary inputs
-  document.getElementById('tp-span').value = L.toFixed(2);
-  document.getElementById('tp-xp').value = xp.toFixed(2);
+  document.getElementById('tp-span').value = rfSolvedL.toFixed(2);
+  document.getElementById('tp-xp').value = rfSolvedXp.toFixed(2);
   
   // Enforce Z-Coordinates input mode
   document.getElementById('tp-input-mode').value = 'z-coords';
   toggleInputMode();
 
-  document.getElementById('tp-za').value = vda.toFixed(3);
-  document.getElementById('tp-zb').value = vdb.toFixed(3);
-  document.getElementById('tp-zp').value = vdp.toFixed(3);
+  document.getElementById('tp-za').value = rfSolvedZa.toFixed(3);
+  document.getElementById('tp-zb').value = rfSolvedZb.toFixed(3);
+  document.getElementById('tp-zp').value = rfSolvedZp.toFixed(3);
 
   // Recalculate
   calculateThreePoint();
@@ -1075,4 +1158,627 @@ function openDetailedResults() {
   // Open results.html in a new tab
   window.open('results.html', '_blank');
 }
+
+// ==========================================================================
+// 7. CLIENT-SIDE PHOTO SAG TRACKER ENGINE
+// ==========================================================================
+let photoTrackerImg = null;
+let photoClicks = [];
+let photoImgSrc = null; // Base64 representation of loaded image
+let solvedPhotoSag = 0.0;
+let solvedPhotoXp = 0.0;
+let solvedPhotoL = 0.0;
+let solvedPhotoH = 0.0;
+
+function handlePhotoCalibChange() {
+  const method = document.getElementById('photo-cal-method').value;
+  const towerHGroup = document.getElementById('photo-tower-h-group');
+  if (towerHGroup) {
+    if (method === 'tower') {
+      towerHGroup.style.display = 'block';
+    } else {
+      towerHGroup.style.display = 'none';
+    }
+  }
+  // Clear coordinates on calibration method change since clicks need resetting
+  resetPhotoTracker();
+}
+
+function loadPhotoTrackerImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    photoImgSrc = e.target.result;
+    initPhotoTrackerImage(photoImgSrc);
+  };
+  reader.readAsDataURL(file);
+}
+
+function initPhotoTrackerImage(src) {
+  photoTrackerImg = new Image();
+  photoTrackerImg.onload = function() {
+    const canvas = document.getElementById('photo-tracker-canvas');
+    if (!canvas) return;
+    
+    // Set canvas dimensions to exact image natural resolution
+    canvas.width = photoTrackerImg.naturalWidth;
+    canvas.height = photoTrackerImg.naturalHeight;
+    
+    // Bind mouse down action
+    canvas.onmousedown = handleCanvasClick;
+    
+    photoClicks = [];
+    drawPhotoTrackerCanvas();
+    updatePhotoTrackerInstructions();
+  };
+  photoTrackerImg.src = src;
+}
+
+function resetPhotoTracker() {
+  photoClicks = [];
+  drawPhotoTrackerCanvas();
+  updatePhotoTrackerInstructions();
+  const solvedDiv = document.getElementById('photo-solved-text');
+  if (solvedDiv) solvedDiv.style.display = 'none';
+  solvedPhotoSag = 0.0;
+  solvedPhotoXp = 0.0;
+  solvedPhotoL = 0.0;
+  solvedPhotoH = 0.0;
+}
+
+function updatePhotoTrackerInstructions() {
+  const instructions = document.getElementById('photo-tracker-instructions');
+  if (!instructions) return;
+
+  if (!photoTrackerImg) {
+    instructions.innerHTML = "No photo loaded. Click the button above to upload a span image.";
+    instructions.style.color = "var(--warning)";
+    instructions.style.borderColor = "var(--warning)";
+    instructions.style.background = "rgba(180, 83, 9, 0.04)";
+    return;
+  }
+
+  const calMethod = document.getElementById('photo-cal-method').value;
+  const count = photoClicks.length;
+
+  instructions.style.color = "var(--success)";
+  instructions.style.borderColor = "var(--success)";
+  instructions.style.background = "rgba(16, 185, 129, 0.04)";
+
+  if (calMethod === 'chord') {
+    if (count === 0) {
+      instructions.innerHTML = "🎯 <strong>Step 1:</strong> Click directly on <strong>Tower A Hook Point (Anchor ZA)</strong> in the image.";
+    } else if (count === 1) {
+      instructions.innerHTML = "🎯 <strong>Step 2:</strong> Click directly on <strong>Tower B Hook Point (Anchor ZB)</strong> in the image.";
+    } else if (count === 2) {
+      instructions.innerHTML = "🎯 <strong>Step 3:</strong> Click directly on <strong>Conductor Point P</strong> (lowest curve point) in the image.";
+    } else {
+      instructions.innerHTML = "✅ <strong>Calibration Done:</strong> 3 points registered successfully! View mathematical results below and click 'Apply'.";
+    }
+  } else {
+    // Tower Structural Length Calibration
+    if (count === 0) {
+      instructions.innerHTML = "🎯 <strong>Step 1:</strong> Click directly on <strong>Tower A Hook Point (Anchor ZA)</strong> in the image.";
+    } else if (count === 1) {
+      instructions.innerHTML = "🎯 <strong>Step 2:</strong> Click directly on <strong>Tower B Hook Point (Anchor ZB)</strong> in the image.";
+    } else if (count === 2) {
+      instructions.innerHTML = "🎯 <strong>Step 3:</strong> Click directly on <strong>Conductor Point P</strong> (lowest curve point) in the image.";
+    } else if (count === 3) {
+      instructions.innerHTML = "🎯 <strong>Step 4:</strong> Click directly on <strong>Tower A Ground Base</strong> to calibrate the length scale from structural drawings.";
+    } else {
+      instructions.innerHTML = "✅ <strong>Calibration Done:</strong> 4 points registered successfully! View mathematical results below and click 'Apply'.";
+    }
+  }
+}
+
+function handleCanvasClick(event) {
+  if (!photoTrackerImg) return;
+
+  const canvas = document.getElementById('photo-tracker-canvas');
+  const calMethod = document.getElementById('photo-cal-method').value;
+  const maxClicks = calMethod === 'chord' ? 3 : 4;
+
+  if (photoClicks.length >= maxClicks) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const rawX = (event.clientX - rect.left) * scaleX;
+  const rawY = (event.clientY - rect.top) * scaleY;
+
+  photoClicks.push({ x: rawX, y: rawY });
+  
+  drawPhotoTrackerCanvas();
+  updatePhotoTrackerInstructions();
+
+  if (photoClicks.length === maxClicks) {
+    calculatePhotoTrackerSag();
+  }
+}
+
+function drawPhotoTrackerCanvas() {
+  const canvas = document.getElementById('photo-tracker-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!photoTrackerImg) return;
+
+  // Render photographic background
+  ctx.drawImage(photoTrackerImg, 0, 0);
+
+  // Overlay points
+  const colors = [
+    '#3b82f6', // Hook ZA (Blue)
+    '#f59e0b', // Hook ZB (Orange)
+    '#10b981', // Conductor P (Green)
+    '#ec4899'  // Base A (Pink)
+  ];
+  const labels = [
+    'Hook ZA',
+    'Hook ZB',
+    'Point P',
+    'Base A'
+  ];
+
+  photoClicks.forEach((click, idx) => {
+    // Draw outer pulsing indicator
+    ctx.beginPath();
+    ctx.arc(click.x, click.y, 10, 0, 2 * Math.PI);
+    ctx.fillStyle = colors[idx] + '33'; // 20% opacity
+    ctx.fill();
+
+    // Draw inner solid target
+    ctx.beginPath();
+    ctx.arc(click.x, click.y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = colors[idx];
+    ctx.fill();
+
+    // Draw solid white ring
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Text Label Overlay
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = colors[idx];
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3.5;
+    ctx.strokeText(labels[idx], click.x + 14, click.y - 4);
+    ctx.fillText(labels[idx], click.x + 14, click.y - 4);
+  });
+
+  // Render relative Chord vector
+  if (photoClicks.length >= 2) {
+    const ptA = photoClicks[0];
+    const ptB = photoClicks[1];
+
+    ctx.beginPath();
+    ctx.moveTo(ptA.x, ptA.y);
+    ctx.lineTo(ptB.x, ptB.y);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Render Sag measurement indicators
+  if (photoClicks.length >= 3) {
+    const ptA = photoClicks[0];
+    const ptB = photoClicks[1];
+    const ptP = photoClicks[2];
+
+    const dx_px = ptB.x - ptA.x;
+    const dy_px = ptB.y - ptA.y;
+    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
+
+    if (pixelChordSq > 0) {
+      const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
+      const chord_pt = {
+        x: ptA.x + t_p * dx_px,
+        y: ptA.y + t_p * dy_px
+      };
+
+      // Draw projection point on chord
+      ctx.beginPath();
+      ctx.arc(chord_pt.x, chord_pt.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+
+      // Gravity vertical line under standard level photo (constant X equal to ptP.x)
+      let chord_y_at_xp = ptA.y;
+      if (Math.abs(dx_px) > 0.0001) {
+        chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(ptP.x, ptP.y);
+      ctx.lineTo(ptP.x, chord_y_at_xp);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Draw vertical endpoint on chord
+      ctx.beginPath();
+      ctx.arc(ptP.x, chord_y_at_xp, 4.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+    }
+  }
+
+  // Render Tower Height structural reference line
+  if (photoClicks.length >= 4) {
+    const ptA = photoClicks[0];
+    const ptBase = photoClicks[3];
+
+    ctx.beginPath();
+    ctx.moveTo(ptA.x, ptA.y);
+    ctx.lineTo(ptBase.x, ptBase.y);
+    ctx.strokeStyle = '#ec4899';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+}
+
+function calculatePhotoTrackerSag() {
+  const calMethod = document.getElementById('photo-cal-method').value;
+  const solvedDiv = document.getElementById('photo-solved-text');
+  if (!solvedDiv) return;
+
+  if (calMethod === 'chord') {
+    if (photoClicks.length < 3) return;
+    const ptA = photoClicks[0];
+    const ptB = photoClicks[1];
+    const ptP = photoClicks[2];
+
+    const L = parseFloat(document.getElementById('tp-span').value) || 300.0;
+    
+    let h = 0.0;
+    const inputMode = document.getElementById('tp-input-mode').value;
+    if (inputMode === 'z-coords') {
+      const za = parseFloat(document.getElementById('tp-za').value) || 0.0;
+      const zb = parseFloat(document.getElementById('tp-zb').value) || 0.0;
+      h = zb - za;
+    } else {
+      h = parseFloat(document.getElementById('tp-height-diff').value) || 0.0;
+    }
+
+    const dx_px = ptB.x - ptA.x;
+    const dy_px = ptB.y - ptA.y;
+    const pixelChord = Math.sqrt(dx_px * dx_px + dy_px * dy_px);
+    const realChord = Math.sqrt(L * L + h * h);
+
+    if (pixelChord <= 0) return;
+
+    // Scale ratio (meters per pixel)
+    const S = realChord / pixelChord;
+
+    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
+    const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
+
+    // Vertical pixel sag w.r.t gravity
+    let chord_y_at_xp = ptA.y;
+    if (Math.abs(dx_px) > 0.0001) {
+      chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
+    }
+    const sag_px = ptP.y - chord_y_at_xp;
+
+    solvedPhotoL = L;
+    solvedPhotoH = h;
+    solvedPhotoXp = t_p * L;
+    solvedPhotoSag = sag_px * S;
+
+    solvedDiv.style.display = 'block';
+    solvedDiv.innerHTML = 
+      `<strong>Solved Canvas Photo Geometry (Chord Calibration):</strong><br>` +
+      `• Real-World Chord: <strong>${realChord.toFixed(2)} m</strong> (based on span = ${L.toFixed(1)}m)<br>` +
+      `• Calibrated Scale: <strong>${(1/S).toFixed(1)} px/m</strong> (${(S*1000).toFixed(1)} mm/px)<br>` +
+      `• Solved xp Offset: <strong>${solvedPhotoXp.toFixed(2)} m</strong> (from Tower A)<br>` +
+      `• Solved Vertical Sag D(xp): <strong>${solvedPhotoSag.toFixed(3)} m</strong>`;
+
+  } else {
+    // Tower Structural Length Calibration
+    if (photoClicks.length < 4) return;
+    const ptA = photoClicks[0];
+    const ptB = photoClicks[1];
+    const ptP = photoClicks[2];
+    const ptBase = photoClicks[3];
+
+    const H_tower = parseFloat(document.getElementById('photo-cal-tower-h').value) || 40.0;
+
+    const dx_t_px = ptBase.x - ptA.x;
+    const dy_t_px = ptBase.y - ptA.y;
+    const pixelTower = Math.sqrt(dx_t_px * dx_t_px + dy_t_px * dy_t_px);
+
+    if (pixelTower <= 0) return;
+
+    // Calibrated scale factor (meters per pixel)
+    const S = H_tower / pixelTower;
+
+    const dx_px = ptB.x - ptA.x;
+    const dy_px = ptB.y - ptA.y;
+
+    solvedPhotoL = Math.abs(dx_px) * S;
+    solvedPhotoH = (ptA.y - ptB.y) * S; // Canvas y increases downwards
+
+    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
+    const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
+
+    // Vertical pixel sag w.r.t gravity
+    let chord_y_at_xp = ptA.y;
+    if (Math.abs(dx_px) > 0.0001) {
+      chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
+    }
+    const sag_px = ptP.y - chord_y_at_xp;
+
+    solvedPhotoXp = t_p * solvedPhotoL;
+    solvedPhotoSag = sag_px * S;
+
+    solvedDiv.style.display = 'block';
+    solvedDiv.innerHTML = 
+      `<strong>Solved Canvas Photo Geometry (Tower Height Calibration):</strong><br>` +
+      `• Solved Span L: <strong>${solvedPhotoL.toFixed(2)} m</strong> (Auto-solved from image)<br>` +
+      `• Hook Elev Diff h: <strong>${solvedPhotoH.toFixed(3)} m</strong> (Auto-solved from image)<br>` +
+      `• Calibrated Scale: <strong>${(1/S).toFixed(1)} px/m</strong> (based on Tower ZA = ${H_tower}m)<br>` +
+      `• Solved xp Offset: <strong>${solvedPhotoXp.toFixed(2)} m</strong> (from Tower A)<br>` +
+      `• Solved Vertical Sag D(xp): <strong>${solvedPhotoSag.toFixed(3)} m</strong>`;
+  }
+}
+
+function applyPhotoTrackerReadings() {
+  if (solvedPhotoSag <= 0.0 || solvedPhotoXp <= 0.0 || solvedPhotoXp >= solvedPhotoL) {
+    alert("Please load a photo and click the required points to run the solver first.");
+    return;
+  }
+
+  // Update primary span and offset inputs
+  document.getElementById('tp-span').value = solvedPhotoL.toFixed(2);
+  document.getElementById('tp-xp').value = solvedPhotoXp.toFixed(2);
+
+  const inputMode = document.getElementById('tp-input-mode').value;
+  if (inputMode === 'z-coords') {
+    let za = parseFloat(document.getElementById('tp-za').value);
+    if (isNaN(za) || za === 0) {
+      za = 140.0;
+      document.getElementById('tp-za').value = za.toFixed(3);
+    }
+    
+    const zb = za + solvedPhotoH;
+    document.getElementById('tp-zb').value = zb.toFixed(3);
+
+    const zp = za + (solvedPhotoXp / solvedPhotoL) * solvedPhotoH - solvedPhotoSag;
+    document.getElementById('tp-zp').value = zp.toFixed(3);
+  } else {
+    // Direct chord-sag offset mode
+    document.getElementById('tp-height-diff').value = solvedPhotoH.toFixed(3);
+    document.getElementById('tp-offset-d').value = solvedPhotoSag.toFixed(3);
+  }
+
+  // Recalculate
+  calculateThreePoint();
+  alert("Visual photo sag and coordinates applied to inputs below!");
+}
+
+// ==========================================================================
+// 8. LOCAL PROJECT JSON SAVE / RESUME
+// ==========================================================================
+function exportProjectJSON() {
+  const data = {
+    // Primary Inputs
+    tpConductor: document.getElementById('tp-conductor').value,
+    tpCustomW: document.getElementById('tp-custom-w') ? document.getElementById('tp-custom-w').value : "",
+    tpCustomUts: document.getElementById('tp-custom-uts') ? document.getElementById('tp-custom-uts').value : "",
+    tpSpan: document.getElementById('tp-span').value,
+    tpXp: document.getElementById('tp-xp').value,
+    tpInputMode: document.getElementById('tp-input-mode').value,
+    
+    // Z Coords Inputs
+    tpZa: document.getElementById('tp-za').value,
+    tpZaGpsBase: document.getElementById('tp-za-gps-base').value,
+    tpZaGpsHeight: document.getElementById('tp-za-gps-height').value,
+    
+    tpZb: document.getElementById('tp-zb').value,
+    tpZbGpsBase: document.getElementById('tp-zb-gps-base').value,
+    tpZbGpsHeight: document.getElementById('tp-zb-gps-height').value,
+    
+    tpZp: document.getElementById('tp-zp').value,
+    tpZpGpsBase: document.getElementById('tp-zp-gps-base') ? document.getElementById('tp-zp-gps-base').value : "",
+    tpZpGpsHeight: document.getElementById('tp-zp-gps-height') ? document.getElementById('tp-zp-gps-height').value : "",
+    
+    // Direct Offset Inputs
+    tpHeightDiff: document.getElementById('tp-height-diff').value,
+    tpOffsetD: document.getElementById('tp-offset-d').value,
+    
+    // Line Configurations
+    lineVoltage: document.getElementById('line-voltage').value,
+    towerAId: document.getElementById('tower-a-id').value,
+    towerBId: document.getElementById('tower-b-id').value,
+    lineCircuits: document.getElementById('line-circuits').value,
+    lineConfig: document.getElementById('line-config').value,
+    lineBundling: document.getElementById('line-bundling').value,
+    linePeaks: document.getElementById('line-peaks').value,
+    lineOpgwSize: document.getElementById('line-opgw-size').value,
+    
+    // Laser Rangefinder Inputs
+    rfSetupMode: document.getElementById('rf-setup-mode').value,
+    rfHda: document.getElementById('rf-hda').value,
+    rfVda: document.getElementById('rf-vda').value,
+    rfHdb: document.getElementById('rf-hdb').value,
+    rfVdb: document.getElementById('rf-vdb').value,
+    rfHdp: document.getElementById('rf-hdp').value,
+    rfVdp: document.getElementById('rf-vdp').value,
+    rfPTowardsB: document.getElementById('rf-p-towards-b') ? document.getElementById('rf-p-towards-b').checked : true,
+    
+    rfObSa: document.getElementById('rf-ob-sa').value,
+    rfObThetaA: document.getElementById('rf-ob-theta-a').value,
+    rfObSb: document.getElementById('rf-ob-sb').value,
+    rfObThetaB: document.getElementById('rf-ob-theta-b').value,
+    rfObAlpha: document.getElementById('rf-ob-alpha').value,
+    rfObSp: document.getElementById('rf-ob-sp').value,
+    rfObThetaP: document.getElementById('rf-ob-theta-p').value,
+    rfObBeta: document.getElementById('rf-ob-beta').value,
+    
+    // Mountain Span Inputs
+    mtInputMode: document.getElementById('mt-input-mode') ? document.getElementById('mt-input-mode').value : "gps-slant",
+    mtZa: document.getElementById('mt-za') ? document.getElementById('mt-za').value : "",
+    mtZb: document.getElementById('mt-zb') ? document.getElementById('mt-zb').value : "",
+    mtSlant1: document.getElementById('mt-slant-1') ? document.getElementById('mt-slant-1').value : "",
+    mtSlant2: document.getElementById('mt-slant-2') ? document.getElementById('mt-slant-2').value : "",
+    mtAngle: document.getElementById('mt-angle') ? document.getElementById('mt-angle').value : "",
+
+    // Canvas Photo Sag Tracker Inputs
+    photoCalMethod: document.getElementById('photo-cal-method').value,
+    photoCalTowerH: document.getElementById('photo-cal-tower-h').value,
+    photoImgSrc: photoImgSrc, // Base64 photographic source
+    photoClicks: photoClicks, // Click states list
+    
+    timestamp: new Date().toISOString()
+  };
+
+  const jsonString = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `TL-SAG-Project-${data.towerAId || 'TowerA'}-${data.towerBId || 'TowerB'}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importProjectJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null) {
+          el.value = val;
+        }
+      };
+
+      setVal('tp-conductor', data.tpConductor);
+      if (data.tpCustomW && document.getElementById('tp-custom-w')) {
+        document.getElementById('tp-custom-w').value = data.tpCustomW;
+      }
+      if (data.tpCustomUts && document.getElementById('tp-custom-uts')) {
+        document.getElementById('tp-custom-uts').value = data.tpCustomUts;
+      }
+      
+      setVal('tp-span', data.tpSpan);
+      setVal('tp-xp', data.tpXp);
+      setVal('tp-input-mode', data.tpInputMode);
+      
+      setVal('tp-za', data.tpZa);
+      setVal('tp-za-gps-base', data.tpZaGpsBase);
+      setVal('tp-za-gps-height', data.tpZaGpsHeight);
+      
+      setVal('tp-zb', data.tpZb);
+      setVal('tp-zb-gps-base', data.tpZbGpsBase);
+      setVal('tp-zb-gps-height', data.tpZbGpsHeight);
+      
+      setVal('tp-zp', data.tpZp);
+      if (data.tpZpGpsBase && document.getElementById('tp-zp-gps-base')) {
+        document.getElementById('tp-zp-gps-base').value = data.tpZpGpsBase;
+      }
+      if (data.tpZpGpsHeight && document.getElementById('tp-zp-gps-height')) {
+        document.getElementById('tp-zp-gps-height').value = data.tpZpGpsHeight;
+      }
+      
+      setVal('tp-height-diff', data.tpHeightDiff);
+      setVal('tp-offset-d', data.tpOffsetD);
+      
+      setVal('line-voltage', data.lineVoltage);
+      setVal('tower-a-id', data.towerAId);
+      setVal('tower-b-id', data.towerBId);
+      setVal('line-circuits', data.lineCircuits);
+      setVal('line-config', data.lineConfig);
+      setVal('line-bundling', data.lineBundling);
+      setVal('line-peaks', data.linePeaks);
+      setVal('line-opgw-size', data.lineOpgwSize);
+      
+      setVal('rf-setup-mode', data.rfSetupMode);
+      setVal('rf-hda', data.rfHda);
+      setVal('rf-vda', data.rfVda);
+      setVal('rf-hdb', data.rfHdb);
+      setVal('rf-vdb', data.rfVdb);
+      setVal('rf-hdp', data.rfHdp);
+      setVal('rf-vdp', data.rfVdp);
+      
+      const pTowardsB = document.getElementById('rf-p-towards-b');
+      if (pTowardsB && data.rfPTowardsB !== undefined) {
+        pTowardsB.checked = data.rfPTowardsB;
+      }
+      
+      setVal('rf-ob-sa', data.rfObSa);
+      setVal('rf-ob-theta-a', data.rfObThetaA);
+      setVal('rf-ob-sb', data.rfObSb);
+      setVal('rf-ob-theta-b', data.rfObThetaB);
+      setVal('rf-ob-alpha', data.rfObAlpha);
+      setVal('rf-ob-sp', data.rfObSp);
+      setVal('rf-ob-theta-p', data.rfObThetaP);
+      setVal('rf-ob-beta', data.rfObBeta);
+      
+      if (data.mtInputMode && document.getElementById('mt-input-mode')) {
+        document.getElementById('mt-input-mode').value = data.mtInputMode;
+      }
+      if (data.mtZa && document.getElementById('mt-za')) setVal('mt-za', data.mtZa);
+      if (data.mtZb && document.getElementById('mt-zb')) setVal('mt-zb', data.mtZb);
+      if (data.mtSlant1 && document.getElementById('mt-slant-1')) setVal('mt-slant-1', data.mtSlant1);
+      if (data.mtSlant2 && document.getElementById('mt-slant-2')) setVal('mt-slant-2', data.mtSlant2);
+      if (data.mtAngle && document.getElementById('mt-angle')) setVal('mt-angle', data.mtAngle);
+
+      setVal('photo-cal-method', data.photoCalMethod);
+      setVal('photo-cal-tower-h', data.photoCalTowerH);
+
+      // Trigger respective layout refreshes
+      handleConductorChange('tp');
+      toggleInputMode();
+      toggleRangefinderSetup();
+      if (typeof toggleMountainMode === 'function') toggleMountainMode();
+      handlePhotoCalibChange();
+      
+      // Restore photo canvas workspace state
+      if (data.photoImgSrc) {
+        photoImgSrc = data.photoImgSrc;
+        photoClicks = data.photoClicks || [];
+        initPhotoTrackerImage(photoImgSrc);
+      } else {
+        photoClicks = [];
+        photoImgSrc = null;
+        photoTrackerImg = null;
+        const canvas = document.getElementById('photo-tracker-canvas');
+        if (canvas) {
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        resetPhotoTracker();
+      }
+
+      // Re-trigger calculation sheets
+      calculateThreePoint();
+      calculateRangefinder();
+      if (typeof calculateMountainSpan === 'function') calculateMountainSpan();
+
+      alert("Project state imported and restored successfully!");
+    } catch (err) {
+      alert("Failed to parse project JSON file: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  
+  event.target.value = "";
+}
+
 

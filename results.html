@@ -456,46 +456,39 @@
 
       let svgHtml = "";
 
-      // 1. Draw Soft Sloped Terrain shaded base
+      // 1. Draw Unified Baseline representing a clean vertical baseline
       const tAx = getX(0);
-      const tAy = getY(Z_A_base);
-      const tPx = getX(xp);
-      const tPy = getY(Z_P_base);
       const tBx = getX(L);
-      const tBy = getY(Z_B_base);
       const bottomY = height - marginY;
 
-      svgHtml += `<!-- Shaded Terrain -->
-      <polygon points="${tAx},${tAy} ${tPx},${tPy} ${tBx},${tBy} ${tBx},${bottomY} ${tAx},${bottomY}" 
-               class="cad-grid-line" style="fill: var(--bg-dark); fill-opacity: 0.45; stroke: var(--text-muted); stroke-width: 1.5;"/>
-      <text x="${tPx}" y="${tPy + 18}" class="cad-text-muted" font-size="10" text-anchor="middle" font-weight="bold">Terrain Elevation Slope</text>
+      svgHtml += `<!-- Unified Base Reference Line -->
+      <line x1="${tAx - 40}" y1="${bottomY}" x2="${tBx + 40}" y2="${bottomY}" class="cad-line-muted" stroke-width="2"/>
+      <text x="${(tAx + tBx)/2}" y="${bottomY + 16}" class="cad-text-muted" font-size="10" text-anchor="middle" font-weight="bold">Unified Reference Baseline (Datum)</text>
       `;
 
-      // 2. Draw Tower structures
+      // 2. Draw Tower structures down to unified baseline
       // Tower A (Left)
       const hookAy = getY(Z_A);
       svgHtml += `<!-- Tower A structure -->
-      <line x1="${tAx}" y1="${hookAy}" x2="${tAx}" y2="${tAy}" class="cad-line-primary" stroke-width="4"/>
-      <line x1="${tAx}" y1="${hookAy}" x2="${tAx - 15}" y2="${tAy}" class="cad-line-primary" stroke-width="1.5"/>
-      <line x1="${tAx}" y1="${hookAy}" x2="${tAx + 15}" y2="${tAy}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx}" y2="${bottomY}" class="cad-line-primary" stroke-width="4"/>
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx - 15}" y2="${bottomY}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx + 15}" y2="${bottomY}" class="cad-line-primary" stroke-width="1.5"/>
       <!-- Cross bracing -->
-      <line x1="${tAx - 7}" y1="${(hookAy + tAy)/2}" x2="${tAx + 7}" y2="${(hookAy + tAy)/2}" class="cad-line-primary" stroke-width="1"/>
+      <line x1="${tAx - 7}" y1="${(hookAy + bottomY)/2}" x2="${tAx + 7}" y2="${(hookAy + bottomY)/2}" class="cad-line-primary" stroke-width="1"/>
       <circle cx="${tAx}" cy="${hookAy}" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
       <text x="${tAx - 10}" y="${hookAy - 8}" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="end">Hook ZA (${Z_A.toFixed(2)}m)</text>
-      <text x="${tAx - 10}" y="${tAy - 4}" class="cad-text-muted" font-size="9" text-anchor="end">Base A (${Z_A_base.toFixed(1)}m)</text>
       `;
 
       // Tower B (Right)
       const hookBy = getY(Z_B);
       svgHtml += `<!-- Tower B structure -->
-      <line x1="${tBx}" y1="${hookBy}" x2="${tBx}" y2="${tBy}" class="cad-line-primary" stroke-width="4"/>
-      <line x1="${tBx}" y1="${hookBy}" x2="${tBx - 15}" y2="${tBy}" class="cad-line-primary" stroke-width="1.5"/>
-      <line x1="${tBx}" y1="${hookBy}" x2="${tBx + 15}" y2="${tBy}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx}" y2="${bottomY}" class="cad-line-primary" stroke-width="4"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx - 15}" y2="${bottomY}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx + 15}" y2="${bottomY}" class="cad-line-primary" stroke-width="1.5"/>
       <!-- Cross bracing -->
-      <line x1="${tBx - 7}" y1="${(hookBy + tBy)/2}" x2="${tBx + 7}" y2="${(hookBy + tBy)/2}" class="cad-line-primary" stroke-width="1"/>
+      <line x1="${tBx - 7}" y1="${(hookBy + bottomY)/2}" x2="${tBx + 7}" y2="${(hookBy + bottomY)/2}" class="cad-line-primary" stroke-width="1"/>
       <circle cx="${tBx}" cy="${hookBy}" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
       <text x="${tBx + 10}" y="${hookBy - 8}" class="cad-text-primary" font-size="10.5" font-weight="bold">Hook ZB (${Z_B.toFixed(2)}m)</text>
-      <text x="${tBx + 10}" y="${tBy - 4}" class="cad-text-muted" font-size="9">Base B (${Z_B_base.toFixed(1)}m)</text>
       `;
 
       // 3. Draw Catenary curve path
@@ -529,11 +522,6 @@
       <!-- Chord Offset vertical line D(xp) -->
       <line x1="${pPx}" y1="${pChordY}" x2="${pPx}" y2="${pPy}" class="cad-line-danger" stroke-width="2" stroke-dasharray="3,2"/>
       <text x="${pPx - 8}" y="${(pChordY + pPy)/2 + 4}" class="cad-text-danger" font-size="10.5" font-weight="bold" text-anchor="end">Chord Sag D(xp) = ${d.offsetD.toFixed(3)}m</text>
-
-      <!-- Clearance Dimension from Ground Base under Point P -->
-      <line x1="${pPx}" y1="${pPy}" x2="${pPx}" y2="${tPy}" class="cad-line-success" stroke-width="1.5" stroke-dasharray="2,2"/>
-      <path d="M ${pPx - 5},${pPy} L ${pPx + 5},${pPy} M ${pPx - 5},${tPy} L ${pPx + 5},${tPy}" class="cad-line-success" stroke-width="1.5"/>
-      <text x="${pPx + 8}" y="${(pPy + tPy)/2 + 4}" class="cad-text-success" font-size="11" font-weight="bold">Ground Clearance = ${(Z_P - Z_P_base).toFixed(2)}m</text>
       `;
 
       // 6. Draw Horizontal datum lines and dimensions

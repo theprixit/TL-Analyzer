@@ -24,6 +24,9 @@
         <p>Overhead Line Sag-Tension Safety & Compliance Calculator</p>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn btn-outline" onclick="exportProjectJSON()" title="Export all coordinates and settings to a local JSON file">📤 Export Project</button>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('project-file-input').click()" title="Import/Resume a saved project from a local JSON file">📥 Import Project</button>
+        <input type="file" id="project-file-input" style="display: none;" accept=".json" onchange="importProjectJSON(event)">
         <a href="explanations.html" target="_blank" class="btn btn-outline">Open Sandbox Visualizer</a>
         <button class="btn btn-success" onclick="printEngineeringReport()">Print Engineering Report</button>
       </div>
@@ -403,117 +406,276 @@
             <!-- RANGEFINDER FIELD HELPER -->
             <div style="margin-bottom: 1.5rem;">
               <button type="button" class="gps-toggle-btn" style="font-size: 0.82rem; font-weight: 700; color: var(--warning); display: flex; align-items: center; gap: 0.3rem;" onclick="toggleGpsHelper('tp-rangefinder-helper')">
-                📷 Practical Field Tool: Laser Rangefinder / Sighter Trigonometric Helper...
-              </button>
-              <div id="tp-rangefinder-helper" class="gps-helper-panel" style="margin-top: 0.6rem; border: 1px dashed var(--warning); padding: 1rem; border-radius: 12px; background: rgba(180, 83, 9, 0.02);">
+                📷 Practical Field Tool: Laser Rangefinder / Sighter Trig              <div id="tp-rangefinder-helper" class="gps-helper-panel" style="margin-top: 0.6rem; border: 1px dashed var(--warning); padding: 1rem; border-radius: 12px; background: rgba(180, 83, 9, 0.02);">
                 <div class="subtitle" style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.4;">
-                  Don't have a Total Station? Set up a simple handheld Laser Rangefinder anywhere between the towers to get Hook elevations, Span, and Measurement position!
+                  Determine hook coordinates and conductor elevations from an in-plane corridor position, or obliquely from an opposite valley slope.
                 </div>
-                <div class="input-grid-2">
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Hook A Horiz Dist HDA (m):</label>
-                    <input type="number" id="rf-hda" value="100.00" step="0.1" oninput="calculateRangefinder()">
-                  </div>
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Hook A Vert Height VDA (m):</label>
-                    <input type="number" id="rf-vda" value="40.00" step="0.1" oninput="calculateRangefinder()">
-                  </div>
+
+                <!-- Setup Mode Selector -->
+                <div class="form-group" style="margin-bottom: 1rem;">
+                  <label for="rf-setup-mode" style="font-size: 0.76rem; font-weight: 700; color: var(--warning);">Sighter Station Position Setup:</label>
+                  <select id="rf-setup-mode" onchange="toggleRangefinderSetup()" style="font-size: 0.8rem; padding: 0.35rem 0.5rem; border-radius: 6px; width: 100%; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);">
+                    <option value="in-plane" selected>In-Plane Corridor Setup (Surveyor stands directly under line)</option>
+                    <option value="oblique">Oblique Transverse Setup (Valley-to-Valley from opposite ridge)</option>
+                  </select>
                 </div>
-                <div class="input-grid-2" style="margin-top: 0.6rem;">
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Hook B Horiz Dist HDB (m):</label>
-                    <input type="number" id="rf-hdb" value="200.00" step="0.1" oninput="calculateRangefinder()">
+
+                <!-- MODE A: In-Plane Setup Panel -->
+                <div id="rf-inplane-div">
+                  <div class="input-grid-2">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook A Horiz Dist HDA (m):</label>
+                      <input type="number" id="rf-hda" value="100.00" step="0.1" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook A Vert Height VDA (m):</label>
+                      <input type="number" id="rf-vda" value="40.00" step="0.1" oninput="calculateRangefinder()">
+                    </div>
                   </div>
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Hook B Vert Height VDB (m):</label>
-                    <input type="number" id="rf-vdb" value="75.00" step="0.1" oninput="calculateRangefinder()">
+                  <div class="input-grid-2" style="margin-top: 0.6rem;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook B Horiz Dist HDB (m):</label>
+                      <input type="number" id="rf-hdb" value="200.00" step="0.1" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Hook B Vert Height VDB (m):</label>
+                      <input type="number" id="rf-vdb" value="75.00" step="0.1" oninput="calculateRangefinder()">
+                    </div>
                   </div>
-                </div>
-                <div class="input-grid-2" style="margin-top: 0.6rem;">
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Sighted P Horiz Dist HDP (m):</label>
-                    <input type="number" id="rf-hdp" value="0.00" step="0.1" oninput="calculateRangefinder()">
+                  <div class="input-grid-2" style="margin-top: 0.6rem;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Sighted P Horiz Dist HDP (m):</label>
+                      <input type="number" id="rf-hdp" value="0.00" step="0.1" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.76rem;">Sighted P Vert Height VDP (m):</label>
+                      <input type="number" id="rf-vdp" value="46.40" step="0.1" oninput="calculateRangefinder()">
+                    </div>
                   </div>
-                  <div class="form-group no-margin">
-                    <label style="font-size: 0.76rem;">Sighted P Vert Height VDP (m):</label>
-                    <input type="number" id="rf-vdp" value="46.40" step="0.1" oninput="calculateRangefinder()">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; margin-bottom: 0.6rem;">
+                    <input type="checkbox" id="rf-p-towards-b" checked onchange="calculateRangefinder()" style="width: auto;">
+                    <label for="rf-p-towards-b" style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Sighted Point P is towards Tower B (from instrument)</label>
                   </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; margin-bottom: 0.6rem;">
-                  <input type="checkbox" id="rf-p-towards-b" checked onchange="calculateRangefinder()" style="width: auto;">
-                  <label for="rf-p-towards-b" style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Sighted Point P is towards Tower B (from instrument)</label>
-                </div>
+
+                  <!-- Overhauled In-Plane SVG (Zero Overlap) -->
                   <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem; background: var(--bg-panel); border-left: 3px solid var(--warning);">
-                    <div style="font-size: 0.76rem; font-weight: bold; color: var(--warning);">📐 Handheld Laser Rangefinder Geometry Sighter Cue:</div>
-                    <svg width="100%" height="150" viewBox="0 0 460 150" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                    <div style="font-size: 0.76rem; font-weight: bold; color: var(--warning);">📐 Handheld In-Plane Rangefinder Sighter Cue:</div>
+                    <svg width="100%" height="180" viewBox="0 0 500 180" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
                       <!-- Grid background -->
                       <rect width="100%" height="100%" class="cad-grid-bg"/>
-                      <path d="M 0 0 L 460 0 L 460 150 L 0 150 Z M 20 0 L 20 150 M 40 0 L 40 150 M 60 0 L 60 150 M 80 0 L 80 150 M 100 0 L 100 150 M 120 0 L 120 150 M 140 0 L 140 150 M 160 0 L 160 150 M 180 0 L 180 150 M 200 0 L 200 150 M 220 0 L 220 150 M 240 0 L 240 150 M 260 0 L 260 150 M 280 0 L 280 150 M 300 0 L 300 150 M 320 0 L 320 150 M 340 0 L 340 150 M 360 0 L 360 150 M 380 0 L 380 150 M 400 0 L 400 150 M 420 0 L 420 150 M 440 0 L 440 150 M 0 20 L 460 20 M 0 40 L 460 40 M 0 60 L 460 60 M 0 80 L 460 80 M 0 100 L 460 100 M 0 120 L 460 120 M 0 140 L 460 140" class="cad-grid-line" stroke-width="0.75"/>
+                      <path d="M 0 0 L 500 0 L 500 180 L 0 180 Z M 20 0 L 20 180 M 40 0 L 40 180 M 60 0 L 60 180 M 80 0 L 80 180 M 100 0 L 100 180 M 120 0 L 120 180 M 140 0 L 140 180 M 160 0 L 160 180 M 180 0 L 180 180 M 200 0 L 200 180 M 220 0 L 220 180 M 240 0 L 240 180 M 260 0 L 260 180 M 280 0 L 280 180 M 300 0 L 300 180 M 320 0 L 320 180 M 340 0 L 340 180 M 360 0 L 360 180 M 380 0 L 380 180 M 400 0 L 400 180 M 420 0 L 420 180 M 440 0 L 440 180 M 460 0 L 460 180 M 480 0 L 480 180 M 0 20 L 500 20 M 0 40 L 500 40 M 0 60 L 500 60 M 0 80 L 500 80 M 0 100 L 500 100 M 0 120 L 500 120 M 0 140 L 500 140 M 0 160 L 500 160" class="cad-grid-line" stroke-width="0.75"/>
                       
-                      <!-- Ground base line -->
-                      <line x1="10" y1="120" x2="450" y2="120" class="cad-line-muted" stroke-width="1.2"/>
-                      <text x="230" y="134" class="cad-text-muted" font-size="9" font-weight="bold" text-anchor="middle">LASER SIGHTER EYE-LEVEL DATUM PLANE (0.00 m)</text>
+                      <!-- Sighter Datum Baseline (soft opacity) -->
+                      <line x1="10" y1="130" x2="490" y2="130" class="cad-line-muted" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.45"/>
                       
                       <!-- Tower A (Left) -->
-                      <line x1="40" y1="70" x2="40" y2="120" class="cad-line-primary" stroke-width="2.5"/>
-                      <circle cx="40" cy="70" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
-                      <text x="30" y="62" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZA</text>
+                      <line x1="50" y1="80" x2="50" y2="130" class="cad-line-primary" stroke-width="2.5"/>
+                      <circle cx="50" cy="80" r="3.5" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="45" y="72" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="start">Hook ZA</text>
                       
                       <!-- Tower B (Right) -->
-                      <line x1="380" y1="30" x2="380" y2="120" class="cad-line-primary" stroke-width="2.5"/>
-                      <circle cx="380" cy="30" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
-                      <text x="385" y="24" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZB</text>
+                      <line x1="450" y1="40" x2="450" y2="130" class="cad-line-primary" stroke-width="2.5"/>
+                      <circle cx="450" cy="40" r="3.5" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="455" y="32" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="end">Hook ZB</text>
 
                       <!-- Conductor Wire -->
-                      <path d="M 40,70 Q 200,105 380,30" fill="none" class="cad-line-success" stroke-width="2.5"/>
-                      <circle cx="200" cy="76" r="4" class="cad-line-success" style="fill: var(--success);"/>
-                      <text x="208" y="72" class="cad-text-success" font-size="10" font-weight="bold">Wire P (xp, ZP)</text>
+                      <path d="M 50,80 Q 280,120 450,40" fill="none" class="cad-line-success" stroke-width="2.5"/>
+                      <circle cx="280" cy="90" r="4" class="cad-line-success" style="fill: var(--success);"/>
+                      <text x="280" y="80" class="cad-text-success" font-size="10" font-weight="bold" text-anchor="middle">Wire P (xp, ZP)</text>
 
-                      <!-- Sighter Instrument (Tripod) -->
-                      <polygon points="145,120 155,120 150,105" class="cad-line-muted" style="fill: var(--text-muted);"/>
-                      <circle cx="150" cy="102" r="3.5" class="cad-line-warning" style="fill: var(--warning);"/>
-                      <text x="150" y="96" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="middle">Sighter</text>
+                      <!-- Sighter Instrument -->
+                      <polygon points="175,130 185,130 180,118" class="cad-line-muted" style="fill: var(--text-muted);"/>
+                      <circle cx="180" cy="116" r="3" class="cad-line-warning" style="fill: var(--warning);"/>
+                      <text x="180" y="110" class="cad-text-warning" font-size="10" font-weight="bold" text-anchor="middle">Sighter</text>
 
                       <!-- Laser lines (Dashed Amber) -->
-                      <line x1="150" y1="102" x2="40" y2="70" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
-                      <line x1="150" y1="102" x2="380" y2="30" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
-                      <line x1="150" y1="102" x2="200" y2="76" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
+                      <line x1="180" y1="116" x2="50" y2="80" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="2,2"/>
+                      <line x1="180" y1="116" x2="450" y2="40" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="2,2"/>
+                      <line x1="180" y1="116" x2="280" y2="90" class="cad-line-success" stroke-width="1.2" stroke-dasharray="2,2"/>
 
-                      <!-- Horizontal HDA / HDB offset lines -->
-                      <line x1="40" y1="110" x2="150" y2="110" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1.2"/>
-                      <text x="95" y="105" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDA</text>
+                      <!-- Horizontal HDA / HDB offset lines at bottom -->
+                      <line x1="50" y1="160" x2="180" y2="160" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1"/>
+                      <path d="M 50,157 L 50,163 M 180,157 L 180,163" class="cad-line-primary" stroke-width="1"/>
+                      <text x="115" y="154" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDA</text>
                       
-                      <line x1="150" y1="110" x2="380" y2="110" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1.2"/>
-                      <text x="265" y="105" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDB</text>
+                      <line x1="180" y1="160" x2="450" y2="160" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1"/>
+                      <path d="M 180,157 L 180,163 M 450,157 L 450,163" class="cad-line-primary" stroke-width="1"/>
+                      <text x="315" y="154" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDB</text>
 
-                      <line x1="150" y1="90" x2="200" y2="90" class="cad-line-success" stroke-dasharray="2,2" stroke-width="1.2"/>
-                      <text x="175" y="85" class="cad-text-success" font-size="10" font-weight="bold" text-anchor="middle">HDP</text>
+                      <line x1="180" y1="144" x2="280" y2="144" class="cad-line-success" stroke-dasharray="2,2" stroke-width="1"/>
+                      <path d="M 180,141 L 180,147 M 280,141 L 280,147" class="cad-line-success" stroke-width="1"/>
+                      <text x="230" y="139" class="cad-text-success" font-size="10" font-weight="bold" text-anchor="middle">HDP</text>
 
-                      <!-- Vertical VDA, VDB, VDP markers -->
-                      <line x1="28" y1="70" x2="28" y2="120" class="cad-line-danger" stroke-width="1"/>
-                      <path d="M 25,70 L 31,70 M 25,120 L 31,120" class="cad-line-danger" stroke-width="1"/>
-                      <text x="22" y="99" class="cad-text-danger" font-size="10" font-weight="bold" text-anchor="end">VDA (ZA)</text>
+                      <!-- Vertical VDA, VDB, VDP markers (Perfect Separation) -->
+                      <line x1="30" y1="80" x2="30" y2="130" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 27,80 L 33,80 M 27,130 L 33,130" class="cad-line-danger" stroke-width="1"/>
+                      <text x="22" y="109" class="cad-text-danger" font-size="10.5" font-weight="bold" text-anchor="end">VDA (ZA)</text>
 
-                      <line x1="395" y1="30" x2="395" y2="120" class="cad-line-danger" stroke-width="1"/>
-                      <path d="M 392,30 L 398,30 M 392,120 L 398,120" class="cad-line-danger" stroke-width="1"/>
-                      <text x="402" y="78" class="cad-text-danger" font-size="10" font-weight="bold">VDB (ZB)</text>
+                      <line x1="470" y1="40" x2="470" y2="130" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 467,40 L 473,40 M 467,130 L 473,130" class="cad-line-danger" stroke-width="1"/>
+                      <text x="477" y="89" class="cad-text-danger" font-size="10.5" font-weight="bold" text-anchor="start">VDB (ZB)</text>
 
-                      <line x1="215" y1="76" x2="215" y2="120" class="cad-line-danger" stroke-width="1"/>
-                      <path d="M 212,76 L 218,76 M 212,120 L 218,120" class="cad-line-danger" stroke-width="1"/>
-                      <text x="221" y="102" class="cad-text-danger" font-size="10" font-weight="bold">VDP (ZP)</text>
+                      <line x1="298" y1="90" x2="298" y2="130" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 295,90 L 301,90 M 295,130 L 301,130" class="cad-line-danger" stroke-width="1"/>
+                      <text x="304" y="114" class="cad-text-danger" font-size="10.5" font-weight="bold" text-anchor="start">VDP (ZP)</text>
                     </svg>
-                    <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.45;">
-                      • <code>HDA / HDB</code>: Horizontal ranges from sighter instrument to Tower A & B vertical center lines.<br>
-                      • <code>VDA / VDB</code>: Vertical height difference up to attachment hangers ZA & ZB w.r.t sighter eyepoint.<br>
-                      • <code>HDP / VDP</code>: Horizontal spacing and vertical height to conductor sighting point P w.r.t. instrument eye.
+                  </div>
+                </div>
+
+                <!-- MODE B: Oblique Transverse Setup Panel -->
+                <div id="rf-oblique-div" style="display: none;">
+                  <div class="subtitle" style="font-size: 0.74rem; color: var(--warning); font-weight: bold; margin-bottom: 0.5rem;">
+                    Opposite Ridge Azimuth Sighter (Transverse Oblique Triangulation):
+                  </div>
+                  <div class="input-grid-2">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">Tower A Slant Range SA (m):</label>
+                      <input type="number" id="rf-ob-sa" value="250.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
-                  </div>                
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">Tower A Vert Angle θA (°):</label>
+                      <input type="number" id="rf-ob-theta-a" value="-5.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                  </div>
+                  <div class="input-grid-3" style="margin-top: 0.6rem;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">Tower B Slant Range SB (m):</label>
+                      <input type="number" id="rf-ob-sb" value="320.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">Tower B Vert Angle θB (°):</label>
+                      <input type="number" id="rf-ob-theta-b" value="12.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">Sweep Angle α (°): <span class="unit-label">(A to B)</span></label>
+                      <input type="number" id="rf-ob-alpha" value="45.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                  </div>
+                  <div class="input-grid-3" style="margin-top: 0.6rem;">
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--success);">Conductor P Slant SP (m):</label>
+                      <input type="number" id="rf-ob-sp" value="220.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--success);">Conductor P Vert Angle θP (°):</label>
+                      <input type="number" id="rf-ob-theta-p" value="-2.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                    <div class="form-group no-margin">
+                      <label style="font-size: 0.74rem; font-weight: bold; color: var(--success);">Sweep Angle β (°): <span class="unit-label">(A to P)</span></label>
+                      <input type="number" id="rf-ob-beta" value="20.00" step="0.01" oninput="calculateRangefinder()">
+                    </div>
+                  </div>
+
+                  <!-- Oblique valley sighter 3D visual cue -->
+                  <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-top: 0.8rem; background: var(--bg-panel); border-left: 3px solid var(--warning);">
+                    <div style="font-size: 0.76rem; font-weight: bold; color: var(--warning);">📐 Transverse Valley-to-Valley Oblique Sighter Cue:</div>
+                    <svg width="100%" height="180" viewBox="0 0 500 180" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                      <!-- Grid background -->
+                      <rect width="100%" height="100%" class="cad-grid-bg"/>
+                      <path d="M 0 0 L 500 0 L 500 180 L 0 180 Z M 20 0 L 20 180 M 40 0 L 40 180 M 60 0 L 60 180 M 80 0 L 80 180 M 100 0 L 100 180 M 120 0 L 120 180 M 140 0 L 140 180 M 160 0 L 160 180 M 180 0 L 180 180 M 200 0 L 200 180 M 220 0 L 220 180 M 240 0 L 240 180 M 260 0 L 260 180 M 280 0 L 280 180 M 300 0 L 300 180 M 320 0 L 320 180 M 340 0 L 340 180 M 360 0 L 360 180 M 380 0 L 380 180 M 400 0 L 400 180 M 420 0 L 420 180 M 440 0 L 440 180 M 460 0 L 460 180 M 480 0 L 480 180 M 0 20 L 500 20 M 0 40 L 500 40 M 0 60 L 500 60 M 0 80 L 500 80 M 0 100 L 500 100 M 0 120 L 500 120 M 0 140 L 500 140 M 0 160 L 500 160" class="cad-grid-line" stroke-width="0.75"/>
+                      
+                      <!-- Parallelogram representing horizontal reference plane -->
+                      <polygon points="50,150 200,100 480,100 330,150" fill="none" class="cad-grid-line" stroke-dasharray="3,3" opacity="0.6"/>
+                      
+                      <!-- Sighter Station O at bottom center -->
+                      <circle cx="250" cy="140" r="4.5" class="cad-line-warning" style="fill: var(--warning);"/>
+                      <text x="250" y="152" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="middle">Sighter Station O</text>
+
+                      <!-- Tower A hook on left cliff -->
+                      <circle cx="90" cy="65" r="4.0" class="cad-line-primary" style="fill: var(--primary);"/>
+                      <text x="80" y="60" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZA</text>
+
+                      <!-- Tower B hook on right cliff -->
+                      <circle cx="410" cy="45" r="4.0" class="cad-line-primary" style="fill: var(--primary);"/>
+                      <text x="420" y="42" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZB</text>
+
+                      <!-- Conductor Wire Curve -->
+                      <path d="M 90,65 Q 240,110 410,45" fill="none" class="cad-line-success" stroke-width="2"/>
+                      <circle cx="240" cy="88" r="4" class="cad-line-success" style="fill: var(--success);"/>
+                      <text x="240" y="80" class="cad-text-success" font-size="10" font-weight="bold" text-anchor="middle">Wire P (xp)</text>
+
+                      <!-- 3D Laser slant sightlines -->
+                      <line x1="250" y1="140" x2="90" y2="65" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="4,2"/>
+                      <text x="160" y="105" class="cad-text-warning" font-size="9" font-weight="bold" text-anchor="end" transform="rotate(-25 160 105)">Slant SA</text>
+                      
+                      <line x1="250" y1="140" x2="410" y2="45" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="4,2"/>
+                      <text x="340" y="95" class="cad-text-warning" font-size="9" font-weight="bold" text-anchor="start" transform="rotate(-30 340 95)">Slant SB</text>
+                      
+                      <line x1="250" y1="140" x2="240" y2="88" class="cad-line-success" stroke-width="1.2" stroke-dasharray="4,2"/>
+                      <text x="252" y="112" class="cad-text-success" font-size="9" font-weight="bold" transform="rotate(-75 252 112)">Slant SP</text>
+
+                      <!-- Sweep angles in ground plane -->
+                      <path d="M 215,123 A 40,40 0 0,1 278,133" fill="none" class="cad-line-warning" stroke-width="1"/>
+                      <text x="236" y="130" class="cad-text-warning" font-size="10" font-weight="bold">α</text>
+                      
+                      <path d="M 215,123 A 40,40 0 0,1 247,126" fill="none" class="cad-line-success" stroke-width="1"/>
+                      <text x="226" y="118" class="cad-text-success" font-size="9" font-weight="bold">β</text>
+                    </svg>
+                  </div>
+                </div>
 
                 <div id="rf-solved-text" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(180, 83, 9, 0.04); border-left: 2px solid var(--warning); padding: 0.5rem; margin-bottom: 0.6rem; border-radius: 0 6px 6px 0; color: var(--warning);">
                   Solving...
                 </div>
                 <button type="button" class="btn btn-outline btn-block" style="padding: 0.4rem; font-size: 0.8rem;" onclick="applyRangefinderReadings()">
                   Apply Solved Coordinates to Inputs Below
+                </button>
+              </div>
+            </div>
+
+            <!-- CLIENT-SIDE CANVAS PHOTO SAG TRACKER FIELD HELPER -->
+            <div style="margin-bottom: 1.5rem;">
+              <button type="button" class="gps-toggle-btn" style="font-size: 0.82rem; font-weight: 700; color: var(--success); display: flex; align-items: center; gap: 0.3rem;" onclick="toggleGpsHelper('tp-photo-tracker')">
+                📷 Advanced Field Tool: Client-Side Photo Sag Tracker (Parabolic Curve Fit)...
+              </button>
+              <div id="tp-photo-tracker" class="gps-helper-panel" style="margin-top: 0.6rem; border: 1px dashed var(--success); padding: 1rem; border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
+                <div class="subtitle" style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.45;">
+                  Upload a straight front-view photo of the transmission span. Click key points to extract the exact conductor sag using pixel scaling.
+                </div>
+
+                <!-- Calibration selection -->
+                <div class="input-grid-2" style="margin-bottom: 0.8rem;">
+                  <div class="form-group no-margin">
+                    <label style="font-size: 0.76rem; font-weight: bold; color: var(--success);">Select Image Calibration Method:</label>
+                    <select id="photo-cal-method" onchange="handlePhotoCalibChange()" style="font-size: 0.78rem; padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);">
+                      <option value="chord" selected>Chord Calibration (requires L and h)</option>
+                      <option value="tower">Tower Height Calibration (Hook to base)</option>
+                    </select>
+                  </div>
+                  <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
+                    <label style="font-size: 0.76rem; font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
+                    <input type="number" id="photo-cal-tower-h" value="40.00" step="0.1" style="border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);">
+                  </div>
+                </div>
+
+                <!-- Canvas Control buttons -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.6rem; font-size: 0.76rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
+                    📁 Upload Span Photo
+                  </button>
+                  <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
+                  <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.6rem; font-size: 0.76rem;" onclick="resetPhotoTracker()">
+                    🔄 Reset Points
+                  </button>
+                </div>
+
+                <!-- Instruction Banner -->
+                <div class="canvas-instructions" id="photo-tracker-instructions">
+                  No photo loaded. Click the button above to upload a span image.
+                </div>
+
+                <!-- HTML5 Canvas Workspace -->
+                <div class="canvas-workspace">
+                  <canvas id="photo-tracker-canvas" width="0" height="0"></canvas>
+                </div>
+
+                <!-- Solved results overlay -->
+                <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(16, 185, 129, 0.04); border-left: 2px solid var(--success); padding: 0.5rem; margin-top: 0.8rem; border-radius: 0 6px 6px 0; color: var(--success); display: none;">
+                  Solving...
+                </div>
+
+                <button type="button" class="btn btn-success btn-block" style="padding: 0.4rem; font-size: 0.8rem; margin-top: 0.6rem;" onclick="applyPhotoTrackerReadings()">
+                  Apply Solved Sag & Coordinates to Primary Inputs
                 </button>
               </div>
             </div>

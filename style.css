@@ -892,4 +892,54 @@ code {
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
+/* ==========================================================================
+   CLIENT-SIDE PHOTO SAG CANVAS TRACKER STYLES
+   ========================================================================== */
+.canvas-tracker-container {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--bg-panel);
+  margin-top: 1rem;
+}
+
+.canvas-workspace {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  background: #0f172a; /* nice dark slate backdrop for image */
+  border-radius: 8px;
+  overflow: auto;
+  border: 2px solid var(--border);
+  margin-top: 0.8rem;
+  min-height: 250px;
+  max-height: 550px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#photo-tracker-canvas {
+  display: block;
+  cursor: crosshair;
+  max-width: 100%;
+}
+
+.canvas-instructions {
+  background: rgba(180, 83, 9, 0.04);
+  border-left: 3px solid var(--warning);
+  padding: 0.6rem 0.8rem;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.78rem;
+  color: var(--warning);
+  margin-bottom: 0.8rem;
+  line-height: 1.45;
+}
+
+.import-export-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+
 
