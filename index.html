@@ -17,11 +17,11 @@
 
   <div class="container">
     
-    <!-- Professional Engineering Header -->
+    <!-- Engineering Header -->
     <header>
       <div class="header-title">
         <h1>TL-SAG</h1>
-        <p>Professional Overhead Line Sag-Tension Safety & Compliance Calculator</p>
+        <p>Overhead Line Sag-Tension Safety & Compliance Calculator</p>
       </div>
       <div class="header-actions">
         <a href="explanations.html" target="_blank" class="btn btn-outline">Open Sandbox Visualizer</a>
@@ -31,7 +31,7 @@
 
     <!-- Focus Label -->
     <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.4rem;">
-      📊 FLAGSHIP FIELD METHOD: THREE-POINT SURVEYOR SIGHTING
+      📊 PRIMARY FIELD METHOD: THREE-POINT SURVEYOR SIGHTING
     </div>
 
       <!-- TOP SECTION: MASSIVE VISUALIZER CANVAS CARD -->
@@ -41,76 +41,76 @@
           <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Real-time visual CAD model w.r.t. gravity references</span>
         </h2>
         <div class="visualizer-area" style="width: 100%; height: auto;">
-          <svg id="svg-threepoint" class="interactive-svg" viewBox="0 0 800 320" style="background: #fafafa; border: 1px solid var(--border); border-radius: 8px;">
+          <svg id="svg-threepoint" class="interactive-svg" viewBox="0 0 800 320" style="border: 1px solid var(--border); border-radius: 8px;">
             <defs>
               <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+                <path d="M 20 0 L 0 0 0 20" fill="none" class="cad-grid-line" stroke-width="0.5"/>
               </pattern>
             </defs>
             <!-- Grid background -->
             <rect x="0" y="0" width="100%" height="100%" fill="url(#cad-grid)"/>
-            <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" fill="#e2e8f0" opacity="0.6"/>
+            <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" class="cad-grid-line" style="fill: var(--bg-dark); fill-opacity: 0.4; stroke-width: 1;"/>
             
             <!-- Towers -->
             <!-- Tower A (Left, Lower) -->
-            <line x1="80" y1="140" x2="80" y2="280" stroke="#1e40af" stroke-width="4"/>
-            <line x1="80" y1="140" x2="60" y2="280" stroke="#1e40af" stroke-width="2"/>
-            <line x1="80" y1="140" x2="100" y2="280" stroke="#1e40af" stroke-width="2"/>
-            <circle cx="80" cy="140" r="4" fill="#dc2626"/>
-            <text x="60" y="135" fill="#0f172a" font-size="10">A (0, yA)</text>
+            <line x1="80" y1="140" x2="80" y2="280" class="cad-line-primary" stroke-width="4"/>
+            <line x1="80" y1="140" x2="60" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <line x1="80" y1="140" x2="100" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <circle cx="80" cy="140" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
+            <text x="60" y="135" class="cad-text-main" font-size="10">A (0, yA)</text>
             
             <!-- Tower B (Right, Higher) with dynamic structural legs -->
-            <line id="tower-b-center" x1="680" y1="60" x2="680" y2="280" stroke="#1e40af" stroke-width="4"/>
-            <line id="tower-b-leg-l" x1="680" y1="60" x2="660" y2="280" stroke="#1e40af" stroke-width="2"/>
-            <line id="tower-b-leg-r" x1="680" y1="60" x2="700" y2="280" stroke="#1e40af" stroke-width="2"/>
-            <circle cx="680" cy="60" r="4" fill="#dc2626"/>
-            <text x="685" y="55" fill="#0f172a" font-size="10">B (L, yB)</text>
+            <line id="tower-b-center" x1="680" y1="60" x2="680" y2="280" class="cad-line-primary" stroke-width="4"/>
+            <line id="tower-b-leg-l" x1="680" y1="60" x2="660" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <line id="tower-b-leg-r" x1="680" y1="60" x2="700" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <circle cx="680" cy="60" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
+            <text x="685" y="55" class="cad-text-main" font-size="10">B (L, yB)</text>
             
             <!-- Chord line (Dashed Black) -->
-            <line id="chord-line-3pt" x1="80" y1="140" x2="680" y2="60" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+            <line id="chord-line-3pt" x1="80" y1="140" x2="680" y2="60" class="cad-line-muted" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
             <!-- Conductor Path -->
-            <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" stroke="#10b981" stroke-width="3"/>
+            <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" class="cad-line-success" stroke-width="3"/>
             
             <!-- Total Station on Ground -->
-            <polygon points="340,280 360,280 350,250" fill="#d97706"/>
-            <circle cx="350" cy="245" r="5" fill="#1e40af"/>
+            <polygon points="340,280 360,280 350,250" class="cad-line-warning" style="fill: var(--warning);"/>
+            <circle cx="350" cy="245" r="5" class="cad-line-primary" style="fill: var(--primary);"/>
             
             <!-- Laser Sighting Lines -->
-            <line id="laser-a" x1="350" y1="245" x2="80" y2="140" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
-            <line id="laser-b" x1="350" y1="245" x2="680" y2="60" stroke="#d97706" stroke-width="1.2" stroke-dasharray="2,2"/>
-            <line id="laser-p" x1="350" y1="245" x2="380" y2="150" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
+            <line id="laser-a" x1="350" y1="245" x2="80" y2="140" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="2,2"/>
+            <line id="laser-b" x1="350" y1="245" x2="680" y2="60" class="cad-line-warning" stroke-width="1.2" stroke-dasharray="2,2"/>
+            <line id="laser-p" x1="350" y1="245" x2="380" y2="150" class="cad-line-success" stroke-width="1.5" stroke-dasharray="2,2"/>
             
             <!-- Sighted point P -->
-            <circle id="point-p" cx="380" cy="150" r="5" fill="#10b981" />
-            <text id="label-point-p" x="390" y="145" fill="#0f172a" font-size="10">P (xp, yp)</text>
+            <circle id="point-p" cx="380" cy="150" r="5" class="cad-line-success" style="fill: var(--success);"/>
+            <text id="label-point-p" x="390" y="145" class="cad-text-success" font-size="10">P (xp, yp)</text>
 
             <!-- Chord height indicator at xp -->
-            <line id="chord-line-offset" x1="380" y1="100" x2="380" y2="150" stroke="#b91c1c" stroke-width="2" stroke-dasharray="2,2"/>
-            <text id="label-sag-offset" x="390" y="125" fill="#b91c1c" font-size="10" font-weight="bold">D(xp) Offset</text>
+            <line id="chord-line-offset" x1="380" y1="100" x2="380" y2="150" class="cad-line-danger" stroke-width="2" stroke-dasharray="2,2"/>
+            <text id="label-sag-offset" x="390" y="125" class="cad-text-danger" font-size="10" font-weight="bold">D(xp) Offset</text>
 
             <!-- Gravity horizontal/vertical CAD-style visual references -->
-            <g id="tp-dimensions" stroke="#64748b" stroke-width="1">
+            <g id="tp-dimensions" stroke-width="1">
               <!-- Gravity Horizontal Datum Line -->
-              <line id="tp-datum-line" x1="40" y1="280" x2="760" y2="280" stroke="#94a3b8" stroke-dasharray="4,4"/>
-              <text id="tp-datum-label" x="400" y="274" fill="#475569" font-size="8" letter-spacing="0.05em" text-anchor="middle">GRAVITY HORIZONTAL DATUM PLANE</text>
+              <line id="tp-datum-line" x1="40" y1="280" x2="760" y2="280" class="cad-line-muted" stroke-dasharray="4,4"/>
+              <text id="tp-datum-label" x="400" y="274" class="cad-text-muted" font-size="8" letter-spacing="0.05em" text-anchor="middle">GRAVITY HORIZONTAL DATUM PLANE</text>
               
               <!-- Span L Dimension -->
-              <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" stroke="#1e40af" stroke-dasharray="2,2"/>
-              <path id="tp-dim-L-ticks" d="M 80,295 L 80,305 M 680,295 L 680,305" stroke="#1e40af"/>
-              <text id="tp-dim-L-text" x="380" y="312" fill="#1e40af" font-size="9" text-anchor="middle" font-weight="bold">L = 300.0 m</text>
+              <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" class="cad-line-primary" stroke-dasharray="2,2"/>
+              <path id="tp-dim-L-ticks" d="M 80,295 L 80,305 M 680,295 L 680,305" class="cad-line-primary"/>
+              <text id="tp-dim-L-text" x="380" y="312" class="cad-text-primary" font-size="9" text-anchor="middle" font-weight="bold">L = 300.0 m</text>
 
               <!-- Position xp Dimension -->
-              <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" stroke="#1d4ed8" stroke-dasharray="2,2"/>
-              <path id="tp-dim-xp-ticks" d="M 80,280 L 80,290 M 280,280 L 280,290" stroke="#1d4ed8"/>
-              <text id="tp-dim-xp-text" x="180" y="297" fill="#1d4ed8" font-size="9" text-anchor="middle">xp = 100.0 m</text>
+              <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" class="cad-line-primary" stroke-dasharray="2,2"/>
+              <path id="tp-dim-xp-ticks" d="M 80,280 L 80,290 M 280,280 L 280,290" class="cad-line-primary"/>
+              <text id="tp-dim-xp-text" x="180" y="297" class="cad-text-primary" font-size="9" text-anchor="middle">xp = 100.0 m</text>
 
               <!-- Vertical Height Diff h Dimension -->
-              <line id="tp-dim-h" x1="720" y1="140" x2="720" y2="60" stroke="#b45309" stroke-dasharray="2,2"/>
-              <path id="tp-dim-h-ticks" d="M 715,140 L 725,140 M 715,60 L 725,60" stroke="#b45309"/>
+              <line id="tp-dim-h" x1="720" y1="140" x2="720" y2="60" class="cad-line-warning" stroke-dasharray="2,2"/>
+              <path id="tp-dim-h-ticks" d="M 715,140 L 725,140 M 715,60 L 725,60" class="cad-line-warning"/>
               <!-- Extension lines from towers to vertical dimension -->
-              <line id="tp-ext-A" x1="80" y1="140" x2="730" y2="140" stroke="#94a3b8" stroke-dasharray="3,3"/>
-              <line id="tp-ext-B" x1="680" y1="60" x2="730" y2="60" stroke="#94a3b8" stroke-dasharray="3,3"/>
-              <text id="tp-dim-h-text" x="735" y="105" fill="#b45309" font-size="9" text-anchor="start">h = 35.00 m</text>
+              <line id="tp-ext-A" x1="80" y1="140" x2="730" y2="140" class="cad-line-muted" stroke-dasharray="3,3"/>
+              <line id="tp-ext-B" x1="680" y1="60" x2="730" y2="60" class="cad-line-muted" stroke-dasharray="3,3"/>
+              <text id="tp-dim-h-text" x="735" y="105" class="cad-text-warning" font-size="9" text-anchor="start">h = 35.00 m</text>
             </g>
           </svg>
         </div>
@@ -283,6 +283,107 @@
                 <label for="tp-span">Horizontal Span Length L (m):</label>
                 <input type="number" id="tp-span" value="300" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Horizontal projection distance between tower centers (measured w.r.t. gravity, NOT the straight sloped slant distance).</span>
+                
+                <!-- MOUNTAIN SURVEYOR SLOPED SPAN HELPER -->
+                <button type="button" class="gps-toggle-btn" style="color: var(--warning); font-size: 0.76rem;" onclick="toggleGpsHelper('tp-mountain-helper')">🏔️ Mountain Helper: Solve L & h in Mountain Terrain...</button>
+                <div id="tp-mountain-helper" class="gps-helper-panel" style="border-color: var(--warning); background: rgba(180, 83, 9, 0.02); padding: 0.8rem; border-radius: 8px; flex-direction: column; gap: 0.6rem;">
+                  <div style="font-weight: 700; font-size: 0.8rem; color: var(--warning); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <span>🏔️ Mountain Surveyor Sloped Span Solver</span>
+                  </div>
+                  
+                  <div class="form-group no-margin" style="margin-bottom: 0.6rem;">
+                    <label style="font-size: 0.76rem; font-weight: bold; color: var(--text-muted);">Select Mountain Sighting Method:</label>
+                    <select id="mt-input-mode" onchange="toggleMountainMode()" style="font-size: 0.76rem; padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input);">
+                      <option value="gps-slant" selected>Method 1: GPS Hook Elevations + Hook-to-Hook Slant Distance</option>
+                      <option value="angle-slant">Method 2: Sighting Angle w.r.t. Horizontal + Slant Distance</option>
+                    </select>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    
+                    <!-- Method 1 Panel -->
+                    <div id="mt-gps-slant-div" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                      <div class="input-grid-2" style="margin-bottom: 0;">
+                        <div class="form-group no-margin">
+                          <label style="font-size: 0.76rem;">Hook A Z-Elev (ZA) (m):</label>
+                          <input type="number" id="mt-za" value="140.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        </div>
+                        <div class="form-group no-margin">
+                          <label style="font-size: 0.76rem;">Hook B Z-Elev (ZB) (m):</label>
+                          <input type="number" id="mt-zb" value="175.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        </div>
+                      </div>
+                      <div class="form-group no-margin">
+                        <label style="font-size: 0.76rem;">Hook-to-Hook Slant Range (S) (m):</label>
+                        <input type="number" id="mt-slant-1" value="302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Formula: L = sqrt(S² - h²), where h = |ZB - ZA|</span>
+                      </div>
+                    </div>
+
+                    <!-- Method 2 Panel -->
+                    <div id="mt-angle-slant-div" style="display: none; flex-direction: column; gap: 0.6rem;">
+                      <div class="form-group no-margin">
+                        <label style="font-size: 0.76rem;">Hook-to-Hook Slant Range (S) (m):</label>
+                        <input type="number" id="mt-slant-2" value="302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                      </div>
+                      <div class="form-group no-margin">
+                        <label style="font-size: 0.76rem;">Sight Angle w.r.t Horizontal (θ) (deg):</label>
+                        <input type="number" id="mt-angle" value="6.66" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Angle above (+) or below (-) horizontal. Formula: L = S·cos(θ), h = S·sin(θ)</span>
+                      </div>
+                    </div>
+
+                    <!-- Full-Width High-Contrast Mountain Sighter SVG -->
+                    <div style="width: 100%; margin-top: 0.4rem;">
+                      <svg width="100%" height="150" viewBox="0 0 380 150" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 8px;">
+                        <!-- Grid pattern -->
+                        <rect width="100%" height="100%" class="cad-grid-bg"/>
+                        <path d="M 0 0 L 380 0 L 380 150 L 0 150 Z M 20 0 L 20 150 M 40 0 L 40 150 M 60 0 L 60 150 M 80 0 L 80 150 M 100 0 L 100 150 M 120 0 L 120 150 M 140 0 L 140 150 M 160 0 L 160 150 M 180 0 L 180 150 M 200 0 L 200 150 M 220 0 L 220 150 M 240 0 L 240 150 M 260 0 L 260 150 M 280 0 L 280 150 M 300 0 L 300 150 M 320 0 L 320 150 M 340 0 L 340 150 M 360 0 L 360 150 M 0 20 L 380 20 M 0 40 L 380 40 M 0 60 L 380 60 M 0 80 L 380 80 M 0 100 L 380 100 M 0 120 L 380 120" class="cad-grid-line" stroke-width="0.75"/>
+                        
+                        <!-- Sloped cliff base -->
+                        <path d="M 10,135 Q 80,125 190,85 T 370,65 L 370,150 L 10,150 Z" class="cad-grid-line" style="fill: var(--border); fill-opacity: 0.15; stroke: var(--text-muted); stroke-width: 1.5;"/>
+
+                        <!-- Tower A (Left) -->
+                        <line x1="60" y1="100" x2="60" y2="128" class="cad-line-primary" stroke-width="2.5"/>
+                        <circle cx="60" cy="100" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                        <text x="50" y="94" class="cad-text-primary" font-size="10.5" font-weight="bold">ZA Hook</text>
+
+                        <!-- Tower B (Right) -->
+                        <line x1="300" y1="45" x2="300" y2="76" class="cad-line-primary" stroke-width="2.5"/>
+                        <circle cx="300" cy="45" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                        <text x="306" y="42" class="cad-text-primary" font-size="10.5" font-weight="bold">ZB Hook</text>
+
+                        <!-- Sighting horizontal baseline from Tower A -->
+                        <line x1="60" y1="100" x2="300" y2="100" class="cad-line-muted" stroke-dasharray="3,2" stroke-width="1.2"/>
+                        
+                        <!-- Height difference h vertical dimension -->
+                        <line x1="300" y1="45" x2="300" y2="100" class="cad-line-danger" stroke-dasharray="2,2" stroke-width="1.2"/>
+                        
+                        <!-- Arc for Angle theta -->
+                        <path d="M 100,100 A 40,40 0 0,0 98,82" fill="none" class="cad-line-warning" stroke-width="1.2"/>
+                        <text x="105" y="94" class="cad-text-warning" font-size="11" font-weight="bold">θ</text>
+
+                        <!-- Slant Sight Range S (Laser line in amber) -->
+                        <line x1="60" y1="100" x2="300" y2="45" class="cad-line-warning" stroke-width="2"/>
+                        <text x="180" y="65" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="middle" transform="rotate(-13 180 65)">Slant S</text>
+
+                        <!-- Horizontal Span L Dimension below -->
+                        <line x1="60" y1="130" x2="300" y2="130" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1.2"/>
+                        <path d="M 60,127 L 60,133 M 300,127 L 300,133" class="cad-line-primary" stroke-width="1.2"/>
+                        <text x="180" y="142" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="middle">Span L = S·cos(θ)</text>
+                        <text x="306" y="75" class="cad-text-danger" font-size="10.5" font-weight="bold">h = S·sin(θ)</text>
+                      </svg>
+                    </div>
+
+                    <div id="mt-solved-text" style="font-family: var(--font-mono); font-size: 0.76rem; background: rgba(180, 83, 9, 0.04); border-left: 2px solid var(--warning); padding: 0.5rem; margin-top: 0.2rem; border-radius: 0 4px 4px 0; color: var(--warning); line-height: 1.4;">
+                      Solving...
+                    </div>
+
+                  </div>
+                  <button type="button" class="btn btn-outline btn-block" style="padding: 0.4rem; font-size: 0.8rem; margin-top: 0.6rem; color: var(--warning); border-color: var(--warning);" onclick="applyMountainSpan()">
+                    Apply Solved Span L & elevations to primary fields
+                  </button>
+                </div>
               </div>
               <div class="form-group">
                 <label for="tp-xp">Measurement Point Pos xp (m): <span class="unit-label">(Dist from Tower A)</span></label>
@@ -342,15 +443,71 @@
                   <input type="checkbox" id="rf-p-towards-b" checked onchange="calculateRangefinder()" style="width: auto;">
                   <label for="rf-p-towards-b" style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Sighted Point P is towards Tower B (from instrument)</label>
                 </div>
-                
-                <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-bottom: 0.8rem; background: #ffffff; border-left: 3px solid var(--warning);">
-                  <div style="font-size: 1.2rem;">📐</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
-                    <strong>Visual Sighter Cue:</strong> Setup anywhere between towers.<br>
-                    • <code>HDA, HDB</code>: horizontal offsets of Tower A & B w.r.t sighter<br>
-                    • <code>VDA, VDB</code>: vertical heights of attachment hooks w.r.t sighter
-                  </div>
-                </div>
+                  <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem; background: var(--bg-panel); border-left: 3px solid var(--warning);">
+                    <div style="font-size: 0.76rem; font-weight: bold; color: var(--warning);">📐 Handheld Laser Rangefinder Geometry Sighter Cue:</div>
+                    <svg width="100%" height="150" viewBox="0 0 460 150" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                      <!-- Grid background -->
+                      <rect width="100%" height="100%" class="cad-grid-bg"/>
+                      <path d="M 0 0 L 460 0 L 460 150 L 0 150 Z M 20 0 L 20 150 M 40 0 L 40 150 M 60 0 L 60 150 M 80 0 L 80 150 M 100 0 L 100 150 M 120 0 L 120 150 M 140 0 L 140 150 M 160 0 L 160 150 M 180 0 L 180 150 M 200 0 L 200 150 M 220 0 L 220 150 M 240 0 L 240 150 M 260 0 L 260 150 M 280 0 L 280 150 M 300 0 L 300 150 M 320 0 L 320 150 M 340 0 L 340 150 M 360 0 L 360 150 M 380 0 L 380 150 M 400 0 L 400 150 M 420 0 L 420 150 M 440 0 L 440 150 M 0 20 L 460 20 M 0 40 L 460 40 M 0 60 L 460 60 M 0 80 L 460 80 M 0 100 L 460 100 M 0 120 L 460 120 M 0 140 L 460 140" class="cad-grid-line" stroke-width="0.75"/>
+                      
+                      <!-- Ground base line -->
+                      <line x1="10" y1="120" x2="450" y2="120" class="cad-line-muted" stroke-width="1.2"/>
+                      <text x="230" y="134" class="cad-text-muted" font-size="9" font-weight="bold" text-anchor="middle">LASER SIGHTER EYE-LEVEL DATUM PLANE (0.00 m)</text>
+                      
+                      <!-- Tower A (Left) -->
+                      <line x1="40" y1="70" x2="40" y2="120" class="cad-line-primary" stroke-width="2.5"/>
+                      <circle cx="40" cy="70" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="30" y="62" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZA</text>
+                      
+                      <!-- Tower B (Right) -->
+                      <line x1="380" y1="30" x2="380" y2="120" class="cad-line-primary" stroke-width="2.5"/>
+                      <circle cx="380" cy="30" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="385" y="24" class="cad-text-primary" font-size="10" font-weight="bold">Hook ZB</text>
+
+                      <!-- Conductor Wire -->
+                      <path d="M 40,70 Q 200,105 380,30" fill="none" class="cad-line-success" stroke-width="2.5"/>
+                      <circle cx="200" cy="76" r="4" class="cad-line-success" style="fill: var(--success);"/>
+                      <text x="208" y="72" class="cad-text-success" font-size="10" font-weight="bold">Wire P (xp, ZP)</text>
+
+                      <!-- Sighter Instrument (Tripod) -->
+                      <polygon points="145,120 155,120 150,105" class="cad-line-muted" style="fill: var(--text-muted);"/>
+                      <circle cx="150" cy="102" r="3.5" class="cad-line-warning" style="fill: var(--warning);"/>
+                      <text x="150" y="96" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="middle">Sighter</text>
+
+                      <!-- Laser lines (Dashed Amber) -->
+                      <line x1="150" y1="102" x2="40" y2="70" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
+                      <line x1="150" y1="102" x2="380" y2="30" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
+                      <line x1="150" y1="102" x2="200" y2="76" class="cad-line-warning" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+                      <!-- Horizontal HDA / HDB offset lines -->
+                      <line x1="40" y1="110" x2="150" y2="110" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1.2"/>
+                      <text x="95" y="105" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDA</text>
+                      
+                      <line x1="150" y1="110" x2="380" y2="110" class="cad-line-primary" stroke-dasharray="2,2" stroke-width="1.2"/>
+                      <text x="265" y="105" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">HDB</text>
+
+                      <line x1="150" y1="90" x2="200" y2="90" class="cad-line-success" stroke-dasharray="2,2" stroke-width="1.2"/>
+                      <text x="175" y="85" class="cad-text-success" font-size="10" font-weight="bold" text-anchor="middle">HDP</text>
+
+                      <!-- Vertical VDA, VDB, VDP markers -->
+                      <line x1="28" y1="70" x2="28" y2="120" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 25,70 L 31,70 M 25,120 L 31,120" class="cad-line-danger" stroke-width="1"/>
+                      <text x="22" y="99" class="cad-text-danger" font-size="10" font-weight="bold" text-anchor="end">VDA (ZA)</text>
+
+                      <line x1="395" y1="30" x2="395" y2="120" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 392,30 L 398,30 M 392,120 L 398,120" class="cad-line-danger" stroke-width="1"/>
+                      <text x="402" y="78" class="cad-text-danger" font-size="10" font-weight="bold">VDB (ZB)</text>
+
+                      <line x1="215" y1="76" x2="215" y2="120" class="cad-line-danger" stroke-width="1"/>
+                      <path d="M 212,76 L 218,76 M 212,120 L 218,120" class="cad-line-danger" stroke-width="1"/>
+                      <text x="221" y="102" class="cad-text-danger" font-size="10" font-weight="bold">VDP (ZP)</text>
+                    </svg>
+                    <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.45;">
+                      • <code>HDA / HDB</code>: Horizontal ranges from sighter instrument to Tower A & B vertical center lines.<br>
+                      • <code>VDA / VDB</code>: Vertical height difference up to attachment hangers ZA & ZB w.r.t sighter eyepoint.<br>
+                      • <code>HDP / VDP</code>: Horizontal spacing and vertical height to conductor sighting point P w.r.t. instrument eye.
+                    </div>
+                  </div>                
 
                 <div id="rf-solved-text" style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(180, 83, 9, 0.04); border-left: 2px solid var(--warning); padding: 0.5rem; margin-bottom: 0.6rem; border-radius: 0 6px 6px 0; color: var(--warning);">
                   Solving...
@@ -380,15 +537,51 @@
                       <input type="number" id="tp-za-gps-height" value="40.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
                     </div>
                   </div>
-                  <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZA = Base GPS Elevation + Hanger Height from ground.</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZA = Base GPS Elevation + Hanger Height.</span>
                   
-                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--primary);">
-                    <div style="font-size: 1.2rem;">🗼</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
-                      <strong>Visual Sighter Cue:</strong> Hook A Elevation Projection<br>
-                      • <code>Base GPS</code>: Absolute ground elevation above sea level datum<br>
-                      • <code>Height</code>: Vertical distance up to the conductor crossarm hanger clamp
-                    </div>
+                  <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-top: 0.5rem; background: var(--bg-panel); border-left: 3px solid var(--primary);">
+                    <div style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">🗼 Hook ZA Elevation GPS Sighter Cue:</div>
+                    <svg width="100%" height="110" viewBox="0 0 400 110" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                      <!-- Grid background -->
+                      <rect width="100%" height="100%" class="cad-grid-bg"/>
+                      <path d="M 0 0 L 400 0 L 400 110 L 0 110 Z M 20 0 L 20 110 M 40 0 L 40 110 M 60 0 L 60 110 M 80 0 L 80 110 M 100 0 L 100 110 M 120 0 L 120 110 M 140 0 L 140 110 M 160 0 L 160 110 M 180 0 L 180 110 M 200 0 L 200 110 M 220 0 L 220 110 M 240 0 L 240 110 M 260 0 L 260 110 M 280 0 L 280 110 M 300 0 L 300 110 M 320 0 L 320 110 M 340 0 L 340 110 M 360 0 L 360 110 M 380 0 L 380 110 M 0 20 L 400 20 M 0 40 L 400 40 M 0 60 L 400 60 M 0 80 L 400 80 M 0 100 L 400 100" class="cad-grid-line" stroke-width="0.75"/>
+                      
+                      <!-- Sea Level Datum Plane (Z=0.00 m) -->
+                      <line x1="10" y1="95" x2="390" y2="95" class="cad-line-muted" stroke-dasharray="4,2" stroke-width="1.2"/>
+                      <text x="200" y="105" class="cad-text-muted" font-size="10.5" font-weight="bold" text-anchor="middle">SEA LEVEL ABSOLUTE DATUM PLANE (Z = 0.00 m)</text>
+
+                      <!-- Terrain Ground level -->
+                      <path d="M 10,70 L 390,70" class="cad-line-muted" stroke-width="1.5"/>
+                      <text x="15" y="65" class="cad-text-muted" font-size="10" font-weight="bold">Tower A Ground Base</text>
+
+                      <!-- Tower Structure legs & body -->
+                      <line x1="200" y1="25" x2="200" y2="70" class="cad-line-primary" stroke-width="3"/>
+                      <line x1="200" y1="25" x2="185" y2="70" class="cad-line-primary" stroke-width="1.5"/>
+                      <line x1="200" y1="25" x2="215" y2="70" class="cad-line-primary" stroke-width="1.5"/>
+                      <circle cx="200" cy="25" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="200" y="16" class="cad-text-primary" font-size="11" font-weight="bold" text-anchor="middle">Hook ZA Attachment</text>
+
+                      <!-- Dimension ZA = Base GPS + Hook height -->
+                      <!-- Base GPS component -->
+                      <line x1="80" y1="70" x2="80" y2="95" class="cad-line-warning" stroke-width="1.2"/>
+                      <path d="M 77,70 L 83,70 M 77,95 L 83,95" class="cad-line-warning" stroke-width="1.2"/>
+                      <text x="74" y="85" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="end">Base GPS</text>
+
+                      <!-- Hanger Height component -->
+                      <line x1="80" y1="25" x2="80" y2="70" class="cad-line-primary" stroke-width="1.2"/>
+                      <path d="M 77,25 L 83,25 M 77,70 L 83,70" class="cad-line-primary" stroke-width="1.2"/>
+                      <text x="74" y="50" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="end">Hanger Ht</text>
+
+                      <!-- Combined Absolute Z elevation dimension on right -->
+                      <line x1="320" y1="25" x2="320" y2="95" class="cad-line-success" stroke-dasharray="2,1" stroke-width="1.2"/>
+                      <path d="M 317,25 L 323,25 M 317,95 L 323,95" class="cad-line-success" stroke-width="1.2"/>
+                      <text x="326" y="63" class="cad-text-success" font-size="11" font-weight="bold">ZA = GPS + Height</text>
+                      
+                      <!-- Projective Extension dashed lines -->
+                      <line x1="80" y1="25" x2="200" y2="25" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="25" x2="320" y2="25" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="70" x2="320" y2="70" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -412,13 +605,49 @@
                   </div>
                   <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZB = Base GPS Elevation + Hanger Height from ground.</span>
 
-                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--primary);">
-                    <div style="font-size: 1.2rem;">🗼</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
-                      <strong>Visual Sighter Cue:</strong> Hook B Elevation Projection<br>
-                      • <code>Base GPS</code>: Absolute ground elevation above sea level datum<br>
-                      • <code>Height</code>: Vertical distance up to the conductor crossarm hanger clamp
-                    </div>
+                  <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-top: 0.5rem; background: var(--bg-panel); border-left: 3px solid var(--primary);">
+                    <div style="font-size: 0.74rem; font-weight: bold; color: var(--primary);">🗼 Hook ZB Elevation GPS Sighter Cue:</div>
+                    <svg width="100%" height="110" viewBox="0 0 400 110" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                      <!-- Grid background -->
+                      <rect width="100%" height="100%" class="cad-grid-bg"/>
+                      <path d="M 0 0 L 400 0 L 400 110 L 0 110 Z M 20 0 L 20 110 M 40 0 L 40 110 M 60 0 L 60 110 M 80 0 L 80 110 M 100 0 L 100 110 M 120 0 L 120 110 M 140 0 L 140 110 M 160 0 L 160 110 M 180 0 L 180 110 M 200 0 L 200 110 M 220 0 L 220 110 M 240 0 L 240 110 M 260 0 L 260 110 M 280 0 L 280 110 M 300 0 L 300 110 M 320 0 L 320 110 M 340 0 L 340 110 M 360 0 L 360 110 M 380 0 L 380 110 M 0 20 L 400 20 M 0 40 L 400 40 M 0 60 L 400 60 M 0 80 L 400 80 M 0 100 L 400 100" class="cad-grid-line" stroke-width="0.75"/>
+                      
+                      <!-- Sea Level Datum Plane (Z=0.00 m) -->
+                      <line x1="10" y1="95" x2="390" y2="95" class="cad-line-muted" stroke-dasharray="4,2" stroke-width="1.2"/>
+                      <text x="200" y="105" class="cad-text-muted" font-size="10.5" font-weight="bold" text-anchor="middle">SEA LEVEL ABSOLUTE DATUM PLANE (Z = 0.00 m)</text>
+
+                      <!-- Terrain Ground level (visibly higher for Tower B) -->
+                      <path d="M 10,60 L 390,60" class="cad-line-muted" stroke-width="1.5"/>
+                      <text x="15" y="54" class="cad-text-muted" font-size="10" font-weight="bold">Tower B Ground Base (Higher Slope)</text>
+
+                      <!-- Tower Structure legs & body -->
+                      <line x1="200" y1="15" x2="200" y2="60" class="cad-line-primary" stroke-width="3"/>
+                      <line x1="200" y1="15" x2="185" y2="60" class="cad-line-primary" stroke-width="1.5"/>
+                      <line x1="200" y1="15" x2="215" y2="60" class="cad-line-primary" stroke-width="1.5"/>
+                      <circle cx="200" cy="15" r="3" class="cad-line-danger" style="fill: var(--danger);"/>
+                      <text x="200" y="8" class="cad-text-primary" font-size="11" font-weight="bold" text-anchor="middle">Hook ZB Attachment</text>
+
+                      <!-- Dimension ZB = Base GPS + Hook height -->
+                      <!-- Base GPS component -->
+                      <line x1="80" y1="60" x2="80" y2="95" class="cad-line-warning" stroke-width="1.2"/>
+                      <path d="M 77,60 L 83,60 M 77,95 L 83,95" class="cad-line-warning" stroke-width="1.2"/>
+                      <text x="74" y="80" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="end">Base GPS</text>
+
+                      <!-- Hanger Height component -->
+                      <line x1="80" y1="15" x2="80" y2="60" class="cad-line-primary" stroke-width="1.2"/>
+                      <path d="M 77,15 L 83,15 M 77,60 L 83,60" class="cad-line-primary" stroke-width="1.2"/>
+                      <text x="74" y="38" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="end">Hanger Ht</text>
+
+                      <!-- Combined Absolute Z elevation dimension on right -->
+                      <line x1="320" y1="15" x2="320" y2="95" class="cad-line-success" stroke-dasharray="2,1" stroke-width="1.2"/>
+                      <path d="M 317,15 L 323,15 M 317,95 L 323,95" class="cad-line-success" stroke-width="1.2"/>
+                      <text x="326" y="55" class="cad-text-success" font-size="11" font-weight="bold">ZB = GPS + Height</text>
+                      
+                      <!-- Projective Extension dashed lines -->
+                      <line x1="80" y1="15" x2="200" y2="15" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="15" x2="320" y2="15" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="60" x2="320" y2="60" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -442,13 +671,47 @@
                   </div>
                   <span style="font-size: 0.7rem; color: var(--text-muted);">Calculates: ZP = Ground GPS + Measured vertical clearance.</span>
 
-                  <div class="visual-cue-box" style="display: flex; gap: 0.8rem; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-top: 0.4rem; background: #ffffff; border-left: 3px solid var(--success);">
-                    <div style="font-size: 1.2rem;">📈</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
-                      <strong>Visual Sighter Cue:</strong> Conductor Point P Elevation<br>
-                      • <code>Ground GPS</code>: Elevation of the terrain directly beneath sighted point P<br>
-                      • <code>Clearance</code>: Measured vertical clearance height up to the suspended conductor
-                    </div>
+                  <div class="visual-cue-box" style="display: flex; flex-direction: column; gap: 0.6rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-top: 0.5rem; background: var(--bg-panel); border-left: 3px solid var(--success);">
+                    <div style="font-size: 0.74rem; font-weight: bold; color: var(--success);">📈 Conductor Wire ZP Elevation GPS Sighter Cue:</div>
+                    <svg width="100%" height="110" viewBox="0 0 400 110" class="cad-grid-bg" style="border: 1px solid var(--border); border-radius: 6px;">
+                      <!-- Grid background -->
+                      <rect width="100%" height="100%" class="cad-grid-bg"/>
+                      <path d="M 0 0 L 400 0 L 400 110 L 0 110 Z M 20 0 L 20 110 M 40 0 L 40 110 M 60 0 L 60 110 M 80 0 L 80 110 M 100 0 L 100 110 M 120 0 L 120 110 M 140 0 L 140 110 M 160 0 L 160 110 M 180 0 L 180 110 M 200 0 L 200 110 M 220 0 L 220 110 M 240 0 L 240 110 M 260 0 L 260 110 M 280 0 L 280 110 M 300 0 L 300 110 M 320 0 L 320 110 M 340 0 L 340 110 M 360 0 L 360 110 M 380 0 L 380 110 M 0 20 L 400 20 M 0 40 L 400 40 M 0 60 L 400 60 M 0 80 L 400 80 M 0 100 L 400 100" class="cad-grid-line" stroke-width="0.75"/>
+                      
+                      <!-- Sea Level Datum Plane (Z=0.00 m) -->
+                      <line x1="10" y1="95" x2="390" y2="95" class="cad-line-muted" stroke-dasharray="4,2" stroke-width="1.2"/>
+                      <text x="200" y="105" class="cad-text-muted" font-size="10.5" font-weight="bold" text-anchor="middle">SEA LEVEL ABSOLUTE DATUM PLANE (Z = 0.00 m)</text>
+
+                      <!-- Terrain Ground level -->
+                      <path d="M 10,70 L 390,70" class="cad-line-muted" stroke-width="1.5"/>
+                      <text x="15" y="64" class="cad-text-muted" font-size="10" font-weight="bold">Terrain Ground at xp</text>
+
+                      <!-- Conductor curve -->
+                      <path d="M 10,25 Q 200,55 390,20" fill="none" class="cad-line-success" stroke-width="2"/>
+                      <circle cx="200" cy="40" r="3" class="cad-line-success" style="fill: var(--success);"/>
+                      <text x="200" y="32" class="cad-text-success" font-size="11" font-weight="bold" text-anchor="middle">Wire Point P (xp)</text>
+
+                      <!-- Dimension ZP = Ground GPS + Clearance -->
+                      <!-- Ground GPS component -->
+                      <line x1="80" y1="70" x2="80" y2="95" class="cad-line-warning" stroke-width="1.2"/>
+                      <path d="M 77,70 L 83,70 M 77,95 L 83,95" class="cad-line-warning" stroke-width="1.2"/>
+                      <text x="74" y="85" class="cad-text-warning" font-size="10.5" font-weight="bold" text-anchor="end">Ground GPS</text>
+
+                      <!-- Hanger Height component -->
+                      <line x1="80" y1="40" x2="80" y2="70" class="cad-line-primary" stroke-width="1.2"/>
+                      <path d="M 77,40 L 83,40 M 77,70 L 83,70" class="cad-line-primary" stroke-width="1.2"/>
+                      <text x="74" y="58" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="end">Wire Clearance</text>
+
+                      <!-- Combined Absolute Z elevation dimension on right -->
+                      <line x1="320" y1="40" x2="320" y2="95" class="cad-line-success" stroke-dasharray="2,1" stroke-width="1.2"/>
+                      <path d="M 317,40 L 323,40 M 317,95 L 323,95" class="cad-line-success" stroke-width="1.2"/>
+                      <text x="326" y="70" class="cad-text-success" font-size="11" font-weight="bold">ZP = Ground GPS + Clearance</text>
+                      
+                      <!-- Projective Extension dashed lines -->
+                      <line x1="80" y1="40" x2="200" y2="40" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="40" x2="320" y2="40" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                      <line x1="200" y1="70" x2="320" y2="70" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -650,6 +913,11 @@
                 </div>
               </div>
 
+              <!-- Open CAD Results Button -->
+              <button type="button" class="btn btn-primary btn-block" style="margin-top: 1.5rem; padding: 0.8rem; font-size: 1rem; font-weight: bold; border-radius: 10px;" onclick="openDetailedResults()">
+                📐 Open Detailed CAD Results & Scale Model
+              </button>
+
               <!-- Monospaced steps -->
               <div class="steps-title" style="margin-top: 1.5rem;">Analytical Calculation Steps Log</div>
               <div class="steps-box" id="tp-steps">
@@ -673,7 +941,7 @@
       <div class="guide-content">
         <p>To ensure high-precision calculations, field crews and surveyors must adhere to standardized measurement guidelines. Below are instructions for gathering the input values in the field.</p>
         
-        <h3>1. Flagship Three-Point Sighting Procedure (Total Station)</h3>
+        <h3>1. Three-Point Sighting Procedure (Total Station)</h3>
         <p>The Three-Point Method is highly robust because it utilizes raw trigonometric geometry. The Total Station should be positioned with a clear, unobstructed line of sight to both towers and the conductor loop.</p>
         
         <div class="formula-block">
@@ -716,9 +984,10 @@
       </div>
     </div>
 
-    <!-- Professional Footer -->
-    <footer style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem;">
-      <p>&copy; 2026 TL-SAG Sag-Tension Safety System | Conforms to IS 398 & Utility Construction Codes</p>
+    <!-- Engineering Credits Footer -->
+    <footer style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
+      <p>Overhead line analysis utility initiated to solve practical difficulties of quickly calculating conductor tension in transmission lines using simple field tools in mountainous terrains. Developed in collaboration with Keshav Attri, Parikshit Pal, and Sanjay Negi, Power Transmission Engineers, Himachal Pradesh.</p>
+      <p style="margin-top: 0.5rem; font-size: 0.76rem; opacity: 0.8;">&copy; 2026 TL-SAG | Conforms to IS 398 & Indian Standard Electricity Utility Guidelines</p>
     </footer>
 
   </div>

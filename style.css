@@ -849,3 +849,47 @@ code {
     font-size: 10pt;
   }
 }
+
+/* ==========================================================================
+   CAD VECTOR HELPERS FOR HIGH-CONTRAST SVG THEME ADAPTATION
+   ========================================================================== */
+.cad-text-primary { fill: var(--primary) !important; }
+.cad-text-success { fill: var(--success) !important; }
+.cad-text-warning { fill: var(--warning) !important; }
+.cad-text-danger { fill: var(--danger) !important; }
+.cad-text-muted { fill: var(--text-muted) !important; }
+.cad-text-main { fill: var(--text-main) !important; }
+
+.cad-line-primary { stroke: var(--primary) !important; }
+.cad-line-success { stroke: var(--success) !important; }
+.cad-line-warning { stroke: var(--warning) !important; }
+.cad-line-danger { stroke: var(--danger) !important; }
+.cad-line-muted { stroke: var(--text-muted) !important; }
+.cad-line-border { stroke: var(--border) !important; }
+
+.cad-grid-line { stroke: var(--border) !important; opacity: 0.35 !important; }
+.cad-grid-bg { fill: var(--bg-panel) !important; }
+
+/* Scale CAD results sheet styles */
+.scale-cad-wrapper {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.scale-cad-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.interactive-svg {
+  background: var(--bg-panel) !important;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+

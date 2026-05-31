@@ -23,6 +23,8 @@ window.onload = function() {
   calculateThreePoint();
   // Calculate rangefinder default values
   calculateRangefinder();
+  // Calculate mountain span default values
+  calculateMountainSpan();
 };
 
 // Collapsible Section Toggle
@@ -73,7 +75,7 @@ function populateConductorSelectors() {
     tpSelect.appendChild(opt1);
   }
 
-  // Pre-select Zebra as default flagship
+  // Pre-select Zebra as default primary conductor
   tpSelect.value = "zebra";
 }
 
@@ -847,3 +849,230 @@ function calculatePerturbedTension(w, L, xp, za, zb, zp, delta, variable) {
   if (offsetD <= 0) return 0;
   return (w * tempXp * (tempL - tempXp)) / (2 * offsetD);
 }
+
+// ==========================================================================
+// 6. MOUNTAIN SURVEYOR SLOPED SPAN SOLVER TRIGONOMETRY HELPERS
+// ==========================================================================
+function toggleMountainMode() {
+  const mode = document.getElementById('mt-input-mode').value;
+  const gpsDiv = document.getElementById('mt-gps-slant-div');
+  const angleDiv = document.getElementById('mt-angle-slant-div');
+
+  if (mode === 'gps-slant') {
+    gpsDiv.style.display = 'flex';
+    angleDiv.style.display = 'none';
+  } else {
+    gpsDiv.style.display = 'none';
+    angleDiv.style.display = 'flex';
+  }
+  calculateMountainSpan();
+}
+
+function calculateMountainSpan() {
+  const mode = document.getElementById('mt-input-mode').value;
+  const solvedDiv = document.getElementById('mt-solved-text');
+  if (!solvedDiv) return;
+
+  if (mode === 'gps-slant') {
+    const za = parseFloat(document.getElementById('mt-za').value) || 0;
+    const zb = parseFloat(document.getElementById('mt-zb').value) || 0;
+    const slant = parseFloat(document.getElementById('mt-slant-1').value) || 0;
+
+    const h = zb - za;
+    const hAbs = Math.abs(h);
+
+    if (slant <= hAbs) {
+      solvedDiv.innerHTML = `<span style="color: var(--danger);">Error: Slant Range S must be greater than height difference h (${hAbs.toFixed(2)}m)</span>`;
+      return;
+    }
+
+    const L = Math.sqrt(slant * slant - h * h);
+    solvedDiv.innerHTML = 
+      `<strong>Method 1 Solved (GPS + Slant distance):</strong><br>` +
+      `• Height Difference h = ZB - ZA = <strong>${h.toFixed(3)} m</strong><br>` +
+      `• Solved Span L = sqrt(S² - h²) = <strong>${L.toFixed(3)} m</strong>`;
+  } else {
+    const slant = parseFloat(document.getElementById('mt-slant-2').value) || 0;
+    const angleDeg = parseFloat(document.getElementById('mt-angle').value) || 0;
+    const angleRad = angleDeg * Math.PI / 180;
+
+    const L = slant * Math.cos(angleRad);
+    const h = slant * Math.sin(angleRad);
+    
+    // Base ZA on the active primary input, or a safe default
+    const primaryZaInput = document.getElementById('tp-za');
+    const za = primaryZaInput ? (parseFloat(primaryZaInput.value) || 140.0) : 140.0;
+    const zb = za + h;
+
+    solvedDiv.innerHTML = 
+      `<strong>Method 2 Solved (Sight Angle + Slant distance):</strong><br>` +
+      `• Solved Span L = S · cos(θ) = <strong>${L.toFixed(3)} m</strong><br>` +
+      `• Height Diff h = S · sin(θ) = <strong>${h.toFixed(3)} m</strong><br>` +
+      `• Projective Hook ZB = ZA + h = <strong>${zb.toFixed(3)} m</strong> (based on ZA = ${za.toFixed(2)}m)`;
+  }
+}
+
+function applyMountainSpan() {
+  const mode = document.getElementById('mt-input-mode').value;
+  let L = 300;
+  let h = 35;
+  let zb = 175;
+
+  if (mode === 'gps-slant') {
+    const za = parseFloat(document.getElementById('mt-za').value) || 0;
+    const zbVal = parseFloat(document.getElementById('mt-zb').value) || 0;
+    const slant = parseFloat(document.getElementById('mt-slant-1').value) || 0;
+    h = zbVal - za;
+    const hAbs = Math.abs(h);
+    if (slant > hAbs) {
+      L = Math.sqrt(slant * slant - h * h);
+    }
+    zb = zbVal;
+  } else {
+    const slant = parseFloat(document.getElementById('mt-slant-2').value) || 0;
+    const angleDeg = parseFloat(document.getElementById('mt-angle').value) || 0;
+    const angleRad = angleDeg * Math.PI / 180;
+    L = slant * Math.cos(angleRad);
+    h = slant * Math.sin(angleRad);
+    
+    const primaryZaInput = document.getElementById('tp-za');
+    const za = primaryZaInput ? (parseFloat(primaryZaInput.value) || 140.0) : 140.0;
+    zb = za + h;
+  }
+
+  // Set primary span length
+  document.getElementById('tp-span').value = L.toFixed(2);
+
+  // Set secondary height elements
+  const inputMode = document.getElementById('tp-input-mode').value;
+  if (inputMode === 'z-coords') {
+    document.getElementById('tp-zb').value = zb.toFixed(3);
+  } else {
+    document.getElementById('tp-height-diff').value = h.toFixed(3);
+  }
+
+  // Recalculate
+  calculateThreePoint();
+}
+
+function openDetailedResults() {
+  // Let's gather all inputs and computed parameters from active fields and DOM elements
+  // 1. Get Conductor mechanical properties
+  const condSelect = document.getElementById('tp-conductor');
+  const condName = condSelect ? condSelect.options[condSelect.selectedIndex].text : "Custom";
+  const condKey = condSelect ? condSelect.value : "custom";
+  const cond = getConductorSpecs('tp');
+  const w = cond.w;
+  const uts = cond.uts;
+
+  // 2. Read basic dimensions
+  const L = parseFloat(document.getElementById('tp-span').value) || 0;
+  const xp = parseFloat(document.getElementById('tp-xp').value) || 0;
+  
+  // 3. Resolve input mode and calculate intermediate sag parameters
+  const inputMode = document.getElementById('tp-input-mode').value;
+  let h = 0;
+  let offsetD = 0;
+  let Z_A = 0, Z_B = 0, Z_P = 0;
+
+  if (inputMode === 'z-coords') {
+    Z_A = parseFloat(document.getElementById('tp-za').value) || 0;
+    Z_B = parseFloat(document.getElementById('tp-zb').value) || 0;
+    Z_P = parseFloat(document.getElementById('tp-zp').value) || 0;
+    h = Z_B - Z_A;
+    const yChord = Z_A + (h / L) * xp;
+    offsetD = yChord - Z_P;
+  } else {
+    h = parseFloat(document.getElementById('tp-height-diff').value) || 0;
+    offsetD = parseFloat(document.getElementById('tp-offset-d').value) || 0;
+    Z_A = 140.000;
+    Z_B = Z_A + h;
+    const yChord = Z_A + (h / L) * xp;
+    Z_P = yChord - offsetD;
+  }
+
+  // Get active ground base elevations for terrain profile visualization
+  const Z_A_base = parseFloat(document.getElementById('tp-za-gps-base').value) || (Z_A - 40.0);
+  const Z_B_base = parseFloat(document.getElementById('tp-zb-gps-base').value) || (Z_B - 45.0);
+  const Z_P_base = parseFloat(document.getElementById('tp-zp-gps-base').value) || (Z_P - 16.4);
+
+  // 4. Validate
+  if (L <= 0 || xp <= 0 || xp >= L || w <= 0 || offsetD <= 0) {
+    alert("Please enter valid geometrical and conductor specifications first.");
+    return;
+  }
+
+  // 5. Calculate mechanical horizontal tension T
+  const T = (w * xp * (L - xp)) / (2 * offsetD);
+  const T_kN = T / 1000;
+  const dMid = (w * L * L) / (8 * T);
+
+  // 6. Safety evaluations
+  const pctUTS = (T / uts) * 100;
+  const safetyFactor = uts / T;
+
+  // 7. Get line configurations
+  const lineVoltage = document.getElementById('line-voltage').value || "132 kV";
+  const towerA = document.getElementById('tower-a-id').value || "Tower A";
+  const towerB = document.getElementById('tower-b-id').value || "Tower B";
+  const lineCircuits = document.getElementById('line-circuits').value || "Double Circuit";
+  const lineConfig = document.getElementById('line-config').value || "Vertical";
+  const lineBundling = document.getElementById('line-bundling').value || "Twin (2-Bundle)";
+  const linePeaks = document.getElementById('line-peaks').value || "2 Peaks";
+  const lineOpgwSize = document.getElementById('line-opgw-size').value || "7/3.15 mm Earthwire";
+
+  // Gather calculated sensitivity values
+  const sensZpText = document.getElementById('sens-zp') ? document.getElementById('sens-zp').innerText : "-";
+  const sensXpText = document.getElementById('sens-xp') ? document.getElementById('sens-xp').innerText : "-";
+  const sensLText = document.getElementById('sens-L') ? document.getElementById('sens-L').innerText : "-";
+  const sensHooksText = document.getElementById('sens-hooks') ? document.getElementById('sens-hooks').innerText : "-";
+  const sensConfidenceRange = document.getElementById('sens-confidence-range') ? document.getElementById('sens-confidence-range').innerText : "-";
+  const sensVerdictText = document.getElementById('sens-verdict') ? document.getElementById('sens-verdict').innerText : "-";
+  const stepsText = document.getElementById('tp-steps') ? document.getElementById('tp-steps').innerText : "";
+
+  // Store in localStorage
+  const data = {
+    L,
+    xp,
+    inputMode,
+    Z_A,
+    Z_B,
+    Z_P,
+    Z_A_base,
+    Z_B_base,
+    Z_P_base,
+    h,
+    offsetD,
+    condKey,
+    condName,
+    w,
+    uts,
+    T,
+    T_kN,
+    dMid,
+    pctUTS,
+    safetyFactor,
+    lineVoltage,
+    towerA,
+    towerB,
+    lineCircuits,
+    lineConfig,
+    lineBundling,
+    linePeaks,
+    lineOpgwSize,
+    sensZpText,
+    sensXpText,
+    sensLText,
+    sensHooksText,
+    sensConfidenceRange,
+    sensVerdictText,
+    stepsText,
+    timestamp: new Date().toISOString()
+  };
+
+  localStorage.setItem('tlsag_last_run', JSON.stringify(data));
+
+  // Open results.html in a new tab
+  window.open('results.html', '_blank');
+}
+

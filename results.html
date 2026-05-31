@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TL-SAG - Scaled CAD Verification & Design Sheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Dynamic font importing from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <!-- Link same style.css for unified visual identity -->
+  <link rel="stylesheet" href="style.css">
+  
+  <style>
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 2rem 1.5rem;
+      font-family: var(--font-sans);
+    }
+    
+    .report-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      max-width: 1100px;
+      margin: 0 auto 3rem auto;
+    }
+    
+    .report-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 0.6rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .meta-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      margin-bottom: 2rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .meta-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .meta-lbl {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-val {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-main);
+    }
+
+    .cad-canvas-container {
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .cad-canvas-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .results-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .results-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .results-table th, .results-table td {
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .results-table th {
+      background-color: var(--bg-dark);
+      font-weight: bold;
+      color: var(--text-muted);
+    }
+
+    .results-table td.mono {
+      font-family: var(--font-mono);
+      font-weight: bold;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-family: serif !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .report-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .report-title {
+        color: #000000 !important;
+        border-bottom-color: #000000 !important;
+      }
+      .meta-box, .cad-canvas-container {
+        border-color: #000000 !important;
+        background: #ffffff !important;
+      }
+      .results-table th {
+        background-color: #f2f2f2 !important;
+        color: #000000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="report-card">
+    <div class="report-title">
+      <span>📐 Scaled CAD Design & Verification Sheet</span>
+      <button class="btn btn-success no-print" onclick="window.print()" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+        🖨️ Export PDF / Print Sheet
+      </button>
+    </div>
+
+    <!-- METADATA BLOCK -->
+    <div class="meta-box">
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-lbl">Line Voltage Level</span>
+          <span class="meta-val" id="m-voltage">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-lbl">Lower Support Tower A</span>
+          <span class="meta-val" id="m-tower-a">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-lbl">Higher Support Tower B</span>
+          <span class="meta-val" id="m-tower-b">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-lbl">Circuits & Configuration</span>
+          <span class="meta-val" id="m-circuits">-</span>
+        </div>
+        <div class="meta-item" style="margin-top: 0.5rem;">
+          <span class="meta-lbl">Conductor Bundling</span>
+          <span class="meta-val" id="m-bundling">-</span>
+        </div>
+        <div class="meta-item" style="margin-top: 0.5rem;">
+          <span class="meta-lbl">OPGW / Earthwire Spec</span>
+          <span class="meta-val" id="m-earth">-</span>
+        </div>
+        <div class="meta-item" style="margin-top: 0.5rem;">
+          <span class="meta-lbl">Conductor Core Model</span>
+          <span class="meta-val" id="m-conductor-name">-</span>
+        </div>
+        <div class="meta-item" style="margin-top: 0.5rem;">
+          <span class="meta-lbl">Timestamp of Calculation</span>
+          <span class="meta-val" id="m-timestamp">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCALE ACCURATE CAD CANVAS -->
+    <div class="cad-canvas-container">
+      <div class="cad-canvas-title">
+        <span>📏 Scale-Accurate Transmission Span Catenary Vector Model</span>
+        <span style="font-weight: normal; text-transform: none;" id="cad-scale-text">Scale: Auto-Fitting Vector Space</span>
+      </div>
+      <svg id="svg-scale-cad" viewBox="0 0 1000 450" class="cad-grid-bg" style="width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px;">
+        <!-- Definitions -->
+        <defs>
+          <pattern id="scale-cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" class="cad-grid-line" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <!-- Background grid -->
+        <rect x="0" y="0" width="100%" height="100%" fill="url(#scale-cad-grid)"/>
+        
+        <!-- Drawing placeholder / dynamically generated SVG elements inside script -->
+        <g id="draw-group"></g>
+      </svg>
+    </div>
+
+    <!-- DETAILED METRICS TABLES -->
+    <div class="results-split">
+      <!-- Left side: Solved Mechanical Parameters -->
+      <div>
+        <h3 class="form-section-title" style="margin-bottom: 0.8rem; font-size: 0.95rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; color: var(--primary);">
+          ⚙️ Verified Mechanical Sag & Tension Metrics
+        </h3>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Calculated Metric Parameter</th>
+              <th style="width: 40%;">Verified Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Conductor Horizontal Tension (T)</td>
+              <td class="mono" id="r-tension" style="color: var(--primary);">-</td>
+            </tr>
+            <tr>
+              <td>everyday Tension load index</td>
+              <td class="mono" id="r-uts-pct" style="color: var(--warning);">-</td>
+            </tr>
+            <tr>
+              <td>Mechanical safety factor</td>
+              <td class="mono" id="r-sf" style="color: var(--success);">-</td>
+            </tr>
+            <tr>
+              <td>Sighted Wire Vertical Chord-Sag D(xp)</td>
+              <td class="mono" id="r-offset-d">-</td>
+            </tr>
+            <tr>
+              <td>Equivalent Level-Ground Mid-Span Sag</td>
+              <td class="mono" id="r-mid-sag">-</td>
+            </tr>
+            <tr>
+              <td>Conductor Unit Weight (w)</td>
+              <td class="mono" id="r-weight">-</td>
+            </tr>
+            <tr>
+              <td>Ultimate Tensile Strength (UTS)</td>
+              <td class="mono" id="r-uts">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right side: Statistical error tolerances -->
+      <div>
+        <h3 class="form-section-title" style="margin-bottom: 0.8rem; font-size: 0.95rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; color: var(--warning);">
+          📈 Error Propagation & Statistical Sensitivity
+        </h3>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Field Survey Measurement</th>
+              <th style="width: 40%;">Tension Sensitivity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sighted Conductor ZP (±0.05m tolerance)</td>
+              <td class="mono" id="s-zp" style="color: var(--danger);">-</td>
+            </tr>
+            <tr>
+              <td>Measurement position xp (±0.50m tolerance)</td>
+              <td class="mono" id="s-xp" style="color: var(--warning);">-</td>
+            </tr>
+            <tr>
+              <td>Span projection distance L (±0.20m tolerance)</td>
+              <td class="mono" id="s-L" style="color: var(--primary);">-</td>
+            </tr>
+            <tr>
+              <td>Hook attachment elevations (±0.10m tolerance)</td>
+              <td class="mono" id="s-hooks">-</td>
+            </tr>
+            <tr style="background: var(--bg-dark);">
+              <td style="font-weight: bold;">95% statistical confidence bounds</td>
+              <td class="mono" id="s-confidence" style="color: var(--primary); font-size: 0.95rem;">-</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div style="background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin-top: 1rem; border-left: 3px solid var(--warning); font-size: 0.8rem; line-height: 1.45;" id="s-verdict-summary">
+          Field survey parameters are verified within bounds.
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Credits block -->
+    <div style="margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; text-align: center;">
+      <p>Overhead line analysis utility initiated to solve practical difficulties of quickly calculating conductor tension in transmission lines using simple field tools in mountainous terrains. Developed in collaboration with Keshav Attri, Parikshit Pal, and Sanjay Negi, Power Transmission Engineers, Himachal Pradesh.</p>
+      <p style="margin-top: 0.4rem; font-size: 0.72rem; opacity: 0.75;">TL-SAG System &bull; Scaled Engineering CAD Verification Page &bull; Conforms to IS 398 and Indian Electricity Codes</p>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Load active data from localStorage
+      const rawData = localStorage.getItem('tlsag_last_run');
+      if (!rawData) {
+        document.body.innerHTML = `
+          <div class="report-card" style="text-align: center; padding: 5rem 2rem;">
+            <h1 style="color: var(--danger); font-size: 2rem; margin-bottom: 1.5rem;">⚠️ No Calculation Records Found</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">Please run the TL-SAG primary calculator dashboard first and click "Open Detailed CAD Results".</p>
+            <button class="btn btn-primary" onclick="window.close()">Close Document</button>
+          </div>
+        `;
+        return;
+      }
+
+      const data = JSON.parse(rawData);
+
+      // 2. Populate text metadata
+      document.getElementById('m-voltage').innerText = data.lineVoltage || "N/A";
+      document.getElementById('m-tower-a').innerText = data.towerA || "Tower A";
+      document.getElementById('m-tower-b').innerText = data.towerB || "Tower B";
+      document.getElementById('m-circuits').innerText = (data.lineCircuits || "N/A") + " (" + (data.lineConfig || "N/A") + ")";
+      document.getElementById('m-bundling').innerText = data.lineBundling || "N/A";
+      document.getElementById('m-earth').innerText = (data.linePeaks || "N/A") + " / " + (data.lineOpgwSize || "N/A");
+      document.getElementById('m-conductor-name').innerText = data.condName || "Custom";
+      document.getElementById('m-timestamp').innerText = data.timestamp ? new Date(data.timestamp).toLocaleString() : "N/A";
+
+      // 3. Populate metrics tables
+      document.getElementById('r-tension').innerText = data.T_kN.toFixed(2) + " kN (" + (data.T/9.80665).toFixed(0) + " kgf)";
+      document.getElementById('r-uts-pct').innerText = data.pctUTS.toFixed(2) + "% of UTS";
+      document.getElementById('r-sf').innerText = data.safetyFactor.toFixed(2);
+      document.getElementById('r-offset-d').innerText = data.offsetD.toFixed(3) + " m";
+      document.getElementById('r-mid-sag').innerText = data.dMid.toFixed(3) + " m";
+      document.getElementById('r-weight').innerText = data.w.toFixed(3) + " N/m (" + (data.w/9.80665).toFixed(3) + " kg/m)";
+      document.getElementById('r-uts').innerText = (data.uts/1000).toFixed(1) + " kN";
+
+      // 4. Populate error sensitivity metrics
+      document.getElementById('s-zp').innerText = data.sensZpText;
+      document.getElementById('s-xp').innerText = data.sensXpText;
+      document.getElementById('s-L').innerText = data.sensLText;
+      document.getElementById('s-hooks').innerText = data.sensHooksText;
+      document.getElementById('s-confidence').innerText = data.sensConfidenceRange;
+      document.getElementById('s-verdict-summary').innerText = data.sensVerdictText;
+
+      // 5. scale-accurate vector CAD drawing logic
+      drawScaleCadModel(data);
+    });
+
+    function drawScaleCadModel(d) {
+      const svg = document.getElementById('svg-scale-cad');
+      const drawGroup = document.getElementById('draw-group');
+      if (!svg || !drawGroup) return;
+
+      const L = d.L;
+      const xp = d.xp;
+      const Z_A = d.Z_A;
+      const Z_B = d.Z_B;
+      const Z_P = d.Z_P;
+      const Z_A_base = d.Z_A_base;
+      const Z_B_base = d.Z_B_base;
+      const Z_P_base = d.Z_P_base;
+      const T = d.T;
+      const w = d.w;
+
+      // Draw horizontal parameters
+      const width = 1000;
+      const height = 450;
+      const marginX = 80;
+      const marginY = 60;
+      
+      const drawWidth = width - 2 * marginX;
+      const drawHeight = height - 2 * marginY;
+
+      // 1. Gather range of elevations for auto-scaling
+      // Catenary curve points
+      const numCurvePoints = 100;
+      const zValues = [];
+      for (let i = 0; i <= numCurvePoints; i++) {
+        const x = (i / numCurvePoints) * L;
+        const sag = (w * x * (L - x)) / (2 * T);
+        const yChord = Z_A + ((Z_B - Z_A) / L) * x;
+        const zCond = yChord - sag;
+        zValues.push(zCond);
+      }
+
+      // Conductor minimum point
+      const zCondMin = Math.min(...zValues);
+      
+      // Elevations list to find absolute boundaries
+      const allElevs = [Z_A, Z_B, Z_P, Z_A_base, Z_B_base, Z_P_base, zCondMin];
+      const zMax = Math.max(...allElevs);
+      const zMinRaw = Math.min(...allElevs);
+      
+      // Cushion of 15% range to avoid clipping borders
+      const zRange = zMax - zMinRaw;
+      const zCushion = Math.max(zRange * 0.15, 10.0);
+      const zMin = zMinRaw - zCushion;
+      const zMaxFinal = zMax + zCushion;
+      const zRangeFinal = zMaxFinal - zMin;
+
+      // Scale factors
+      const Sx = drawWidth / L;
+      const Sz = drawHeight / zRangeFinal;
+
+      // Mapping coordinate helper functions
+      function getX(xVal) {
+        return marginX + xVal * Sx;
+      }
+      function getY(zVal) {
+        return height - marginY - (zVal - zMin) * Sz;
+      }
+
+      // Update scale metadata text
+      document.getElementById('cad-scale-text').innerText = 
+        `Auto-Scaled CAD (H-Scale: 1m = ${Sx.toFixed(3)}px | V-Scale: 1m = ${Sz.toFixed(3)}px)`;
+
+      let svgHtml = "";
+
+      // 1. Draw Soft Sloped Terrain shaded base
+      const tAx = getX(0);
+      const tAy = getY(Z_A_base);
+      const tPx = getX(xp);
+      const tPy = getY(Z_P_base);
+      const tBx = getX(L);
+      const tBy = getY(Z_B_base);
+      const bottomY = height - marginY;
+
+      svgHtml += `<!-- Shaded Terrain -->
+      <polygon points="${tAx},${tAy} ${tPx},${tPy} ${tBx},${tBy} ${tBx},${bottomY} ${tAx},${bottomY}" 
+               class="cad-grid-line" style="fill: var(--bg-dark); fill-opacity: 0.45; stroke: var(--text-muted); stroke-width: 1.5;"/>
+      <text x="${tPx}" y="${tPy + 18}" class="cad-text-muted" font-size="10" text-anchor="middle" font-weight="bold">Terrain Elevation Slope</text>
+      `;
+
+      // 2. Draw Tower structures
+      // Tower A (Left)
+      const hookAy = getY(Z_A);
+      svgHtml += `<!-- Tower A structure -->
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx}" y2="${tAy}" class="cad-line-primary" stroke-width="4"/>
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx - 15}" y2="${tAy}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tAx}" y1="${hookAy}" x2="${tAx + 15}" y2="${tAy}" class="cad-line-primary" stroke-width="1.5"/>
+      <!-- Cross bracing -->
+      <line x1="${tAx - 7}" y1="${(hookAy + tAy)/2}" x2="${tAx + 7}" y2="${(hookAy + tAy)/2}" class="cad-line-primary" stroke-width="1"/>
+      <circle cx="${tAx}" cy="${hookAy}" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
+      <text x="${tAx - 10}" y="${hookAy - 8}" class="cad-text-primary" font-size="10.5" font-weight="bold" text-anchor="end">Hook ZA (${Z_A.toFixed(2)}m)</text>
+      <text x="${tAx - 10}" y="${tAy - 4}" class="cad-text-muted" font-size="9" text-anchor="end">Base A (${Z_A_base.toFixed(1)}m)</text>
+      `;
+
+      // Tower B (Right)
+      const hookBy = getY(Z_B);
+      svgHtml += `<!-- Tower B structure -->
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx}" y2="${tBy}" class="cad-line-primary" stroke-width="4"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx - 15}" y2="${tBy}" class="cad-line-primary" stroke-width="1.5"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx + 15}" y2="${tBy}" class="cad-line-primary" stroke-width="1.5"/>
+      <!-- Cross bracing -->
+      <line x1="${tBx - 7}" y1="${(hookBy + tBy)/2}" x2="${tBx + 7}" y2="${(hookBy + tBy)/2}" class="cad-line-primary" stroke-width="1"/>
+      <circle cx="${tBx}" cy="${hookBy}" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
+      <text x="${tBx + 10}" y="${hookBy - 8}" class="cad-text-primary" font-size="10.5" font-weight="bold">Hook ZB (${Z_B.toFixed(2)}m)</text>
+      <text x="${tBx + 10}" y="${tBy - 4}" class="cad-text-muted" font-size="9">Base B (${Z_B_base.toFixed(1)}m)</text>
+      `;
+
+      // 3. Draw Catenary curve path
+      let curveD = `M ${tAx},${hookAy}`;
+      for (let i = 1; i <= numCurvePoints; i++) {
+        const xVal = (i / numCurvePoints) * L;
+        const xPx = getX(xVal);
+        const yPx = getY(zValues[i]);
+        curveD += ` L ${xPx},${yPx}`;
+      }
+
+      svgHtml += `<!-- Conductor curve -->
+      <path d="${curveD}" fill="none" class="cad-line-success" stroke-width="3"/>
+      `;
+
+      // 4. Draw Chord Line (Dashed primary)
+      svgHtml += `<!-- Support Chord -->
+      <line x1="${tAx}" y1="${hookAy}" x2="${tBx}" y2="${hookBy}" class="cad-line-muted" stroke-dasharray="6,4" stroke-width="1.2"/>
+      `;
+
+      // 5. Draw Sighted Point P (xp, ZP)
+      const pPx = getX(xp);
+      const pPy = getY(Z_P);
+      const yChordAtP = Z_A + ((Z_B - Z_A) / L) * xp;
+      const pChordY = getY(yChordAtP);
+
+      svgHtml += `<!-- Point P -->
+      <circle cx="${pPx}" cy="${pPy}" r="5" class="cad-line-success" style="fill: var(--success);"/>
+      <text x="${pPx + 8}" y="${pPy - 8}" class="cad-text-success" font-size="11" font-weight="bold">Sighted P (${Z_P.toFixed(2)}m)</text>
+      
+      <!-- Chord Offset vertical line D(xp) -->
+      <line x1="${pPx}" y1="${pChordY}" x2="${pPx}" y2="${pPy}" class="cad-line-danger" stroke-width="2" stroke-dasharray="3,2"/>
+      <text x="${pPx - 8}" y="${(pChordY + pPy)/2 + 4}" class="cad-text-danger" font-size="10.5" font-weight="bold" text-anchor="end">Chord Sag D(xp) = ${d.offsetD.toFixed(3)}m</text>
+
+      <!-- Clearance Dimension from Ground Base under Point P -->
+      <line x1="${pPx}" y1="${pPy}" x2="${pPx}" y2="${tPy}" class="cad-line-success" stroke-width="1.5" stroke-dasharray="2,2"/>
+      <path d="M ${pPx - 5},${pPy} L ${pPx + 5},${pPy} M ${pPx - 5},${tPy} L ${pPx + 5},${tPy}" class="cad-line-success" stroke-width="1.5"/>
+      <text x="${pPx + 8}" y="${(pPy + tPy)/2 + 4}" class="cad-text-success" font-size="11" font-weight="bold">Ground Clearance = ${(Z_P - Z_P_base).toFixed(2)}m</text>
+      `;
+
+      // 6. Draw Horizontal datum lines and dimensions
+      const dimY = height - 25;
+      svgHtml += `<!-- Span horizontal dimension -->
+      <line x1="${tAx}" y1="${dimY}" x2="${tBx}" y2="${dimY}" class="cad-line-primary" stroke-width="1.2"/>
+      <path d="M ${tAx},${dimY - 5} L ${tAx},${dimY + 5} M ${tBx},${dimY - 5} L ${tBx},${dimY + 5}" class="cad-line-primary" stroke-width="1.2"/>
+      <text x="${(tAx + tBx)/2}" y="${dimY - 6}" class="cad-text-primary" font-size="11" font-weight="bold" text-anchor="middle">Horizontal Span L = ${L.toFixed(2)}m</text>
+      
+      <!-- xp spacing dimension -->
+      <line x1="${tAx}" y1="${dimY + 12}" x2="${pPx}" y2="${dimY + 12}" class="cad-line-primary" stroke-width="1.0" stroke-dasharray="2,1"/>
+      <path d="M ${tAx},${dimY + 8} L ${tAx},${dimY + 16} M ${pPx},${dimY + 8} L ${pPx},${dimY + 16}" class="cad-line-primary" stroke-width="1.0"/>
+      <text x="${(tAx + pPx)/2}" y="${dimY + 22}" class="cad-text-primary" font-size="10" font-weight="bold" text-anchor="middle">xp = ${xp.toFixed(2)}m</text>
+      `;
+
+      // 7. Height Difference dimension h on the right side
+      svgHtml += `<!-- Vertical height difference h -->
+      <line x1="${tBx + 30}" y1="${hookAy}" x2="${tBx + 30}" y2="${hookBy}" class="cad-line-warning" stroke-width="1.2"/>
+      <path d="M ${tBx + 25},${hookAy} L ${tBx + 35},${hookAy} M ${tBx + 25},${hookBy} L ${tBx + 35},${hookBy}" class="cad-line-warning" stroke-width="1.2"/>
+      <text x="${tBx + 38}" y="${(hookAy + hookBy)/2 + 4}" class="cad-text-warning" font-size="10.5" font-weight="bold">h = ${Math.abs(Z_B - Z_A).toFixed(3)}m</text>
+      <!-- dashed extension lines from Tower A hook to vertical dimension on right -->
+      <line x1="${tAx}" y1="${hookAy}" x2="${tBx + 35}" y2="${hookAy}" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+      <line x1="${tBx}" y1="${hookBy}" x2="${tBx + 35}" y2="${hookBy}" class="cad-line-muted" stroke-dasharray="2,2" stroke-width="0.8"/>
+      `;
+
+      drawGroup.innerHTML = svgHtml;
+    }
+  </script>
+</body>
+</html>
