@@ -966,6 +966,39 @@ code {
   gap: 0.5rem;
 }
 
+/* App version badge + update notice */
+.version-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+
+.update-notice {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid var(--success);
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.update-notice a { color: var(--success); font-weight: 600; }
+.update-notice button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
 /* Full-width analysis panel: chart + sensitivity side by side */
 .analysis-grid {
   display: grid;

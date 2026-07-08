@@ -1,5 +1,12 @@
 /* TL-SAG Analytical Engine & UI Controller */
 
+// Single source of truth for the app version — shown in the header/footer,
+// stamped into printed reports and project JSON exports.
+// Bump on every user-visible release and add an entry to CHANGELOG.md.
+const APP_VERSION = '0.4.0-beta';
+const APP_VERSION_DATE = '2026-07-08';
+const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
+
 // Standard ACSR Conductor Database (IS 398 Part-II Reference Specs)
 const conductorDatabase = {
   "dog": { name: "ACSR Dog", w: 3.865, mass: 0.394, uts: 32700 },
@@ -31,7 +38,42 @@ window.onload = function() {
   }
   // Project-first workflow: autosave hooks + open the project gate
   initProjectWorkflow();
+  // Version badge, footer meta and "app updated" notice
+  initVersionInfo();
 };
+
+// ==========================================================================
+// APP VERSION DISPLAY & UPDATE NOTICE
+// ==========================================================================
+function initVersionInfo() {
+  const badge = document.getElementById('app-version-badge');
+  if (badge) badge.innerText = 'v' + APP_VERSION;
+
+  const footerMeta = document.getElementById('app-footer-meta');
+  if (footerMeta) {
+    footerMeta.innerHTML =
+      `TL-SAG <strong>v${APP_VERSION}</strong> (${APP_VERSION_DATE}) · ` +
+      `<a href="${APP_REPO_URL}/blob/master/CHANGELOG.md" target="_blank" rel="noopener">What's new</a> · ` +
+      `Open source under the <a href="${APP_REPO_URL}/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a> · ` +
+      `<a href="${APP_REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a>`;
+  }
+
+  // One-time notice when a returning user gets a new version.
+  try {
+    const seen = localStorage.getItem('tlsag_seen_version');
+    if (seen && seen !== APP_VERSION) {
+      const note = document.createElement('div');
+      note.className = 'update-notice';
+      note.innerHTML =
+        `🔄 TL-SAG updated: <strong>v${seen}</strong> → <strong>v${APP_VERSION}</strong> — ` +
+        `<a href="${APP_REPO_URL}/blob/master/CHANGELOG.md" target="_blank" rel="noopener">see what's new</a>` +
+        `<button type="button" onclick="this.parentElement.remove()" title="Dismiss">✕</button>`;
+      const container = document.querySelector('.container');
+      if (container) container.insertBefore(note, container.firstChild);
+    }
+    localStorage.setItem('tlsag_seen_version', APP_VERSION);
+  } catch (e) { /* storage unavailable — skip the notice */ }
+}
 
 // Collapsible Section Toggle
 function toggleCollapsible(contentId, arrowId) {
@@ -710,8 +752,10 @@ function printEngineeringReport() {
   const gpsB_el = document.getElementById('tower-b-elev').value || '-';
   document.getElementById('pr-gps-b').innerText = `${gpsB_lat} / ${gpsB_lon} (Elev: ${gpsB_el} m)`;
 
-  // Timestamp
+  // Timestamp + generating app version (traceability of engineering outputs)
   document.getElementById('pr-date').innerText = new Date().toLocaleString();
+  const prVer = document.getElementById('pr-app-version');
+  if (prVer) prVer.innerText = 'v' + APP_VERSION;
 
   // B. Method-specific content
   const reportVerdictBox = document.getElementById('pr-verdict-box');
@@ -1215,9 +1259,10 @@ function openDetailedResults() {
 // ==========================================================================
 function collectProjectData() {
   const data = {
-    // Project identity
+    // Project identity & provenance
     projectId: currentProject.id,
     projectName: currentProject.name,
+    appVersion: APP_VERSION,
 
     // Primary Inputs
     tpConductor: document.getElementById('tp-conductor').value,

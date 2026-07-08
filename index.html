@@ -76,7 +76,7 @@
     <!-- Engineering Header -->
     <header>
       <div class="header-title">
-        <h1>TL-SAG</h1>
+        <h1>TL-SAG <span id="app-version-badge" class="version-badge"></span></h1>
         <p>Overhead Line Sag-Tension Safety & Compliance Calculator</p>
       </div>
       <div class="header-actions">
@@ -1281,6 +1281,7 @@
     <footer style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
       <p>Overhead line analysis utility initiated to solve practical difficulties of quickly calculating conductor tension in transmission lines using simple field tools in mountainous terrains. Developed in collaboration with Keshav Attri, Parikshit Pal, and Sanjay Negi, Power Transmission Engineers, Himachal Pradesh.</p>
       <p style="margin-top: 0.5rem; font-size: 0.88rem; opacity: 0.8;">&copy; 2026 TL-SAG | Conforms to IS 398 & Indian Standard Electricity Utility Guidelines</p>
+      <p id="app-footer-meta" style="margin-top: 0.4rem; font-size: 0.82rem;"></p>
     </footer>
 
   </div>
@@ -1404,15 +1405,15 @@
     <!-- Report footer -->
     <div class="report-section" style="page-break-inside: avoid; margin-top: 2rem;">
       <div style="text-align: center; font-size: 8pt; color: #777777;">
-        Report Generated on: <span id="pr-date">-</span> | TL-SAG Sag-Tension Analysis Report
+        Report Generated on: <span id="pr-date">-</span> | TL-SAG Sag-Tension Analysis Report | App Version: <span id="pr-app-version">-</span>
       </div>
     </div>
 
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=p2b"></script>
-  <script src="app.js?v=p2b"></script>
-  <script src="phototracker.js?v=p2b"></script>
+  <script src="engine.js?v=0.4.0-beta"></script>
+  <script src="app.js?v=0.4.0-beta"></script>
+  <script src="phototracker.js?v=0.4.0-beta"></script>
 </body>
 </html>
