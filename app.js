@@ -29,6 +29,8 @@ window.onload = function() {
   if (typeof handlePhotoCalibChange === 'function') {
     handlePhotoCalibChange();
   }
+  // Project-first workflow: autosave hooks + open the project gate
+  initProjectWorkflow();
 };
 
 // Collapsible Section Toggle
@@ -96,6 +98,8 @@ function handleConductorChange(calcType) {
   }
 
   calculateThreePoint();
+  // Photo tracker tension (T = w·C) depends on the selected conductor.
+  if (typeof photoTrackerResolve === 'function') photoTrackerResolve();
 }
 
 // Toggle Z-Coordinates vs Direct Offset input modes in Three-Point Method
@@ -136,6 +140,10 @@ function getConductorSpecs(calcType) {
 // 1. THREE-POINT CALCULATOR ENGINE & VISUALIZER
 // ==========================================================================
 function calculateThreePoint() {
+  // Photo tracker chord calibration reads L/h from these same inputs —
+  // refresh it even when this calculator's own inputs are still incomplete.
+  if (typeof photoTrackerResolve === 'function') photoTrackerResolve();
+
   // 1. Get Conductor mechanical properties
   const cond = getConductorSpecs('tp');
   const w = cond.w;
@@ -146,7 +154,10 @@ function calculateThreePoint() {
   const xp = parseFloat(document.getElementById('tp-xp').value) || 0;
   
   if (L <= 0 || xp <= 0 || xp >= L || w <= 0) {
-    displayError('tp-results', 'Ensure Span, Position (xp < L), and Conductor specifications are valid.');
+    const nothingEntered = !document.getElementById('tp-span').value.trim() && !document.getElementById('tp-xp').value.trim();
+    displayError('tp-results', nothingEntered
+      ? 'Enter your field measurements to begin — Span Length L, sighting position xp, and elevation readings. Or use the Photo Sag Tracker / field helper tools above to fill these in.'
+      : 'Ensure Span, Position (xp < L), and Conductor specifications are valid.');
     return;
   }
 
@@ -202,12 +213,12 @@ function calculateThreePoint() {
 
   // 5. Calculate mechanical horizontal tension T
   // T = (w * xp * (L - xp)) / (2 * D)
-  const T = (w * xp * (L - xp)) / (2 * offsetD);
+  const T = TLEngine.tensionThreePoint(w, L, xp, offsetD);
   const T_kN = T / 1000;
 
   // 6. Calculate equivalent mid-span level-ground sag D_mid
   // D_mid = (w * L^2) / (8 * T)
-  const dMid = (w * L * L) / (8 * T);
+  const dMid = TLEngine.midSpanSag(w, L, T);
 
   // 7. Safety evaluations
   const pctUTS = (T / uts) * 100;
@@ -227,6 +238,7 @@ function calculateThreePoint() {
   // Update UI Elements
   document.getElementById('tp-results-error').style.display = 'none';
   document.getElementById('tp-results-ok').style.display = 'block';
+  toggleAnalysisPanel(true);
 
   document.getElementById('tp-val-tension').innerText = T_kN.toFixed(2) + " kN";
   document.getElementById('tp-val-sag').innerText = dMid.toFixed(2) + " m";
@@ -617,6 +629,13 @@ function displayError(prefixId, message) {
   document.getElementById(`${prefixId}-ok`).style.display = 'none';
   document.getElementById(`${prefixId}-error`).style.display = 'block';
   document.getElementById(`${prefixId}-error-msg`).innerText = message;
+  // The full-width analysis panel mirrors the three-point results state.
+  if (prefixId === 'tp-results') toggleAnalysisPanel(false);
+}
+
+function toggleAnalysisPanel(show) {
+  const panel = document.getElementById('tp-analysis-panel');
+  if (panel) panel.style.display = show ? 'block' : 'none';
 }
 
 // Generate Safety Verdict Dashboard Card
@@ -665,7 +684,11 @@ function updateStatusVerdict(cardId, pctUTS, safetyFactor, uts, T_kN) {
 // ==========================================================================
 function printEngineeringReport() {
   // Bind form variables dynamically to the printable A4 DOM elements before printing
-  
+
+  // Project reference
+  const prProject = document.getElementById('pr-project-name');
+  if (prProject) prProject.innerText = currentProject.name || 'Ad-hoc session (no project)';
+
   // A. Conductor metadata
   const condName = document.getElementById('line-voltage').value;
   document.getElementById('pr-voltage').innerText = condName ? condName : 'N/A';
@@ -769,6 +792,44 @@ function printEngineeringReport() {
       document.getElementById('pr-verdict-desc').innerText = "Tension exceeds the 50% UTS utility safety limit. Conductor snapping hazard. Readjust line tension immediately.";
     }
   }
+
+  // C. Photo Sag Tracker section — annotated span photograph + fit summary
+  const annex = document.getElementById('pr-photo-annex');
+  if (annex) {
+    const photoData = (typeof PhotoTracker !== 'undefined' && PhotoTracker.getReportData)
+      ? PhotoTracker.getReportData()
+      : null;
+    if (photoData && photoData.image) {
+      document.getElementById('pr-photo-img').src = photoData.image;
+      document.getElementById('pr-photo-summary').innerText = photoData.summary;
+      annex.style.display = 'block';
+    } else {
+      annex.style.display = 'none';
+    }
+  }
+
+  // D. Engineering sketch — clone the live three-point geometry drawing
+  const sketchBox = document.getElementById('pr-sketch-box');
+  if (sketchBox) {
+    sketchBox.innerHTML = '';
+    const svg = document.getElementById('svg-threepoint');
+    if (svg) {
+      const clone = svg.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.removeAttribute('class');
+      clone.setAttribute('style', 'width: 100%; height: auto; display: block;');
+      sketchBox.appendChild(clone);
+    }
+  }
+
+  // E. Renumber visible section headings (the photo section hides without a photo)
+  let sectionNo = 0;
+  document.querySelectorAll('#printable-report .report-section').forEach(sec => {
+    const h2 = sec.querySelector('h2');
+    if (!h2 || sec.style.display === 'none') return;
+    sectionNo++;
+    h2.innerText = h2.innerText.replace(/^\d+\./, sectionNo + '.');
+  });
 
   // Trigger system print window
   window.print();
@@ -915,24 +976,7 @@ function applyRangefinderReadings() {
 // 5. ERROR PROPAGATION MATH HELPER
 // ==========================================================================
 function calculatePerturbedTension(w, L, xp, za, zb, zp, delta, variable) {
-  let tempL = L;
-  let tempXp = xp;
-  let tempZa = za;
-  let tempZb = zb;
-  let tempZp = zp;
-
-  if (variable === 'zp') tempZp += delta;
-  if (variable === 'xp') tempXp += delta;
-  if (variable === 'L') tempL += delta;
-  if (variable === 'za') tempZa += delta;
-  if (variable === 'zb') tempZb += delta;
-
-  const h = tempZb - tempZa;
-  const yChord = tempZa + (h / tempL) * tempXp;
-  const offsetD = yChord - tempZp;
-  
-  if (offsetD <= 0) return 0;
-  return (w * tempXp * (tempL - tempXp)) / (2 * offsetD);
+  return TLEngine.perturbedTension(w, L, xp, za, zb, zp, delta, variable);
 }
 
 // ==========================================================================
@@ -1162,414 +1206,19 @@ function openDetailedResults() {
 }
 
 // ==========================================================================
-// 7. CLIENT-SIDE PHOTO SAG TRACKER ENGINE
+// 7. PHOTO SAG TRACKER — moved to phototracker.js (catenary tracing tool).
+//    That module provides the global handlers used by index.html and the
+//    PhotoTracker.serialize()/restore() API used by save/resume below.
 // ==========================================================================
-let photoTrackerImg = null;
-let photoClicks = [];
-let photoImgSrc = null; // Base64 representation of loaded image
-let solvedPhotoSag = 0.0;
-let solvedPhotoXp = 0.0;
-let solvedPhotoL = 0.0;
-let solvedPhotoH = 0.0;
-
-function handlePhotoCalibChange() {
-  const method = document.getElementById('photo-cal-method').value;
-  const towerHGroup = document.getElementById('photo-tower-h-group');
-  if (towerHGroup) {
-    if (method === 'tower') {
-      towerHGroup.style.display = 'block';
-    } else {
-      towerHGroup.style.display = 'none';
-    }
-  }
-  // Clear coordinates on calibration method change since clicks need resetting
-  resetPhotoTracker();
-}
-
-function loadPhotoTrackerImage(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    photoImgSrc = e.target.result;
-    initPhotoTrackerImage(photoImgSrc);
-  };
-  reader.readAsDataURL(file);
-}
-
-function initPhotoTrackerImage(src) {
-  photoTrackerImg = new Image();
-  photoTrackerImg.onload = function() {
-    const canvas = document.getElementById('photo-tracker-canvas');
-    if (!canvas) return;
-    
-    // Set canvas dimensions to exact image natural resolution
-    canvas.width = photoTrackerImg.naturalWidth;
-    canvas.height = photoTrackerImg.naturalHeight;
-    
-    // Bind mouse down action
-    canvas.onmousedown = handleCanvasClick;
-    
-    photoClicks = [];
-    drawPhotoTrackerCanvas();
-    updatePhotoTrackerInstructions();
-  };
-  photoTrackerImg.src = src;
-}
-
-function resetPhotoTracker() {
-  photoClicks = [];
-  drawPhotoTrackerCanvas();
-  updatePhotoTrackerInstructions();
-  const solvedDiv = document.getElementById('photo-solved-text');
-  if (solvedDiv) solvedDiv.style.display = 'none';
-  solvedPhotoSag = 0.0;
-  solvedPhotoXp = 0.0;
-  solvedPhotoL = 0.0;
-  solvedPhotoH = 0.0;
-}
-
-function updatePhotoTrackerInstructions() {
-  const instructions = document.getElementById('photo-tracker-instructions');
-  if (!instructions) return;
-
-  if (!photoTrackerImg) {
-    instructions.innerHTML = "No photo loaded. Click the button above to upload a span image.";
-    instructions.style.color = "var(--warning)";
-    instructions.style.borderColor = "var(--warning)";
-    instructions.style.background = "rgba(180, 83, 9, 0.04)";
-    return;
-  }
-
-  const calMethod = document.getElementById('photo-cal-method').value;
-  const count = photoClicks.length;
-
-  instructions.style.color = "var(--success)";
-  instructions.style.borderColor = "var(--success)";
-  instructions.style.background = "rgba(16, 185, 129, 0.04)";
-
-  if (calMethod === 'chord') {
-    if (count === 0) {
-      instructions.innerHTML = "🎯 <strong>Step 1:</strong> Click directly on <strong>Tower A Hook Point (Anchor ZA)</strong> in the image.";
-    } else if (count === 1) {
-      instructions.innerHTML = "🎯 <strong>Step 2:</strong> Click directly on <strong>Tower B Hook Point (Anchor ZB)</strong> in the image.";
-    } else if (count === 2) {
-      instructions.innerHTML = "🎯 <strong>Step 3:</strong> Click directly on <strong>Conductor Point P</strong> (lowest curve point) in the image.";
-    } else {
-      instructions.innerHTML = "✅ <strong>Calibration Done:</strong> 3 points registered successfully! View mathematical results below and click 'Apply'.";
-    }
-  } else {
-    // Tower Structural Length Calibration
-    if (count === 0) {
-      instructions.innerHTML = "🎯 <strong>Step 1:</strong> Click directly on <strong>Tower A Hook Point (Anchor ZA)</strong> in the image.";
-    } else if (count === 1) {
-      instructions.innerHTML = "🎯 <strong>Step 2:</strong> Click directly on <strong>Tower B Hook Point (Anchor ZB)</strong> in the image.";
-    } else if (count === 2) {
-      instructions.innerHTML = "🎯 <strong>Step 3:</strong> Click directly on <strong>Conductor Point P</strong> (lowest curve point) in the image.";
-    } else if (count === 3) {
-      instructions.innerHTML = "🎯 <strong>Step 4:</strong> Click directly on <strong>Tower A Ground Base</strong> to calibrate the length scale from structural drawings.";
-    } else {
-      instructions.innerHTML = "✅ <strong>Calibration Done:</strong> 4 points registered successfully! View mathematical results below and click 'Apply'.";
-    }
-  }
-}
-
-function handleCanvasClick(event) {
-  if (!photoTrackerImg) return;
-
-  const canvas = document.getElementById('photo-tracker-canvas');
-  const calMethod = document.getElementById('photo-cal-method').value;
-  const maxClicks = calMethod === 'chord' ? 3 : 4;
-
-  if (photoClicks.length >= maxClicks) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const rawX = (event.clientX - rect.left) * scaleX;
-  const rawY = (event.clientY - rect.top) * scaleY;
-
-  photoClicks.push({ x: rawX, y: rawY });
-  
-  drawPhotoTrackerCanvas();
-  updatePhotoTrackerInstructions();
-
-  if (photoClicks.length === maxClicks) {
-    calculatePhotoTrackerSag();
-  }
-}
-
-function drawPhotoTrackerCanvas() {
-  const canvas = document.getElementById('photo-tracker-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (!photoTrackerImg) return;
-
-  // Render photographic background
-  ctx.drawImage(photoTrackerImg, 0, 0);
-
-  // Overlay points
-  const colors = [
-    '#3b82f6', // Hook ZA (Blue)
-    '#f59e0b', // Hook ZB (Orange)
-    '#10b981', // Conductor P (Green)
-    '#ec4899'  // Base A (Pink)
-  ];
-  const labels = [
-    'Hook ZA',
-    'Hook ZB',
-    'Point P',
-    'Base A'
-  ];
-
-  photoClicks.forEach((click, idx) => {
-    // Draw outer pulsing indicator
-    ctx.beginPath();
-    ctx.arc(click.x, click.y, 10, 0, 2 * Math.PI);
-    ctx.fillStyle = colors[idx] + '33'; // 20% opacity
-    ctx.fill();
-
-    // Draw inner solid target
-    ctx.beginPath();
-    ctx.arc(click.x, click.y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = colors[idx];
-    ctx.fill();
-
-    // Draw solid white ring
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Text Label Overlay
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillStyle = colors[idx];
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3.5;
-    ctx.strokeText(labels[idx], click.x + 14, click.y - 4);
-    ctx.fillText(labels[idx], click.x + 14, click.y - 4);
-  });
-
-  // Render relative Chord vector
-  if (photoClicks.length >= 2) {
-    const ptA = photoClicks[0];
-    const ptB = photoClicks[1];
-
-    ctx.beginPath();
-    ctx.moveTo(ptA.x, ptA.y);
-    ctx.lineTo(ptB.x, ptB.y);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Render Sag measurement indicators
-  if (photoClicks.length >= 3) {
-    const ptA = photoClicks[0];
-    const ptB = photoClicks[1];
-    const ptP = photoClicks[2];
-
-    const dx_px = ptB.x - ptA.x;
-    const dy_px = ptB.y - ptA.y;
-    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
-
-    if (pixelChordSq > 0) {
-      const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
-      const chord_pt = {
-        x: ptA.x + t_p * dx_px,
-        y: ptA.y + t_p * dy_px
-      };
-
-      // Draw projection point on chord
-      ctx.beginPath();
-      ctx.arc(chord_pt.x, chord_pt.y, 4, 0, 2 * Math.PI);
-      ctx.fillStyle = '#ef4444';
-      ctx.fill();
-
-      // Gravity vertical line under standard level photo (constant X equal to ptP.x)
-      let chord_y_at_xp = ptA.y;
-      if (Math.abs(dx_px) > 0.0001) {
-        chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
-      }
-
-      ctx.beginPath();
-      ctx.moveTo(ptP.x, ptP.y);
-      ctx.lineTo(ptP.x, chord_y_at_xp);
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Draw vertical endpoint on chord
-      ctx.beginPath();
-      ctx.arc(ptP.x, chord_y_at_xp, 4.5, 0, 2 * Math.PI);
-      ctx.fillStyle = '#ef4444';
-      ctx.fill();
-    }
-  }
-
-  // Render Tower Height structural reference line
-  if (photoClicks.length >= 4) {
-    const ptA = photoClicks[0];
-    const ptBase = photoClicks[3];
-
-    ctx.beginPath();
-    ctx.moveTo(ptA.x, ptA.y);
-    ctx.lineTo(ptBase.x, ptBase.y);
-    ctx.strokeStyle = '#ec4899';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-  }
-}
-
-function calculatePhotoTrackerSag() {
-  const calMethod = document.getElementById('photo-cal-method').value;
-  const solvedDiv = document.getElementById('photo-solved-text');
-  if (!solvedDiv) return;
-
-  if (calMethod === 'chord') {
-    if (photoClicks.length < 3) return;
-    const ptA = photoClicks[0];
-    const ptB = photoClicks[1];
-    const ptP = photoClicks[2];
-
-    const L = parseFloat(document.getElementById('tp-span').value) || 300.0;
-    
-    let h = 0.0;
-    const inputMode = document.getElementById('tp-input-mode').value;
-    if (inputMode === 'z-coords') {
-      const za = parseFloat(document.getElementById('tp-za').value) || 0.0;
-      const zb = parseFloat(document.getElementById('tp-zb').value) || 0.0;
-      h = zb - za;
-    } else {
-      h = parseFloat(document.getElementById('tp-height-diff').value) || 0.0;
-    }
-
-    const dx_px = ptB.x - ptA.x;
-    const dy_px = ptB.y - ptA.y;
-    const pixelChord = Math.sqrt(dx_px * dx_px + dy_px * dy_px);
-    const realChord = Math.sqrt(L * L + h * h);
-
-    if (pixelChord <= 0) return;
-
-    // Scale ratio (meters per pixel)
-    const S = realChord / pixelChord;
-
-    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
-    const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
-
-    // Vertical pixel sag w.r.t gravity
-    let chord_y_at_xp = ptA.y;
-    if (Math.abs(dx_px) > 0.0001) {
-      chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
-    }
-    const sag_px = ptP.y - chord_y_at_xp;
-
-    solvedPhotoL = L;
-    solvedPhotoH = h;
-    solvedPhotoXp = t_p * L;
-    solvedPhotoSag = sag_px * S;
-
-    solvedDiv.style.display = 'block';
-    solvedDiv.innerHTML = 
-      `<strong>Solved Canvas Photo Geometry (Chord Calibration):</strong><br>` +
-      `• Real-World Chord: <strong>${realChord.toFixed(2)} m</strong> (based on span = ${L.toFixed(1)}m)<br>` +
-      `• Calibrated Scale: <strong>${(1/S).toFixed(1)} px/m</strong> (${(S*1000).toFixed(1)} mm/px)<br>` +
-      `• Solved xp Offset: <strong>${solvedPhotoXp.toFixed(2)} m</strong> (from Tower A)<br>` +
-      `• Solved Vertical Sag D(xp): <strong>${solvedPhotoSag.toFixed(3)} m</strong>`;
-
-  } else {
-    // Tower Structural Length Calibration
-    if (photoClicks.length < 4) return;
-    const ptA = photoClicks[0];
-    const ptB = photoClicks[1];
-    const ptP = photoClicks[2];
-    const ptBase = photoClicks[3];
-
-    const H_tower = parseFloat(document.getElementById('photo-cal-tower-h').value) || 40.0;
-
-    const dx_t_px = ptBase.x - ptA.x;
-    const dy_t_px = ptBase.y - ptA.y;
-    const pixelTower = Math.sqrt(dx_t_px * dx_t_px + dy_t_px * dy_t_px);
-
-    if (pixelTower <= 0) return;
-
-    // Calibrated scale factor (meters per pixel)
-    const S = H_tower / pixelTower;
-
-    const dx_px = ptB.x - ptA.x;
-    const dy_px = ptB.y - ptA.y;
-
-    solvedPhotoL = Math.abs(dx_px) * S;
-    solvedPhotoH = (ptA.y - ptB.y) * S; // Canvas y increases downwards
-
-    const pixelChordSq = dx_px * dx_px + dy_px * dy_px;
-    const t_p = ((ptP.x - ptA.x) * dx_px + (ptP.y - ptA.y) * dy_px) / pixelChordSq;
-
-    // Vertical pixel sag w.r.t gravity
-    let chord_y_at_xp = ptA.y;
-    if (Math.abs(dx_px) > 0.0001) {
-      chord_y_at_xp = ptA.y + ((ptP.x - ptA.x) / dx_px) * dy_px;
-    }
-    const sag_px = ptP.y - chord_y_at_xp;
-
-    solvedPhotoXp = t_p * solvedPhotoL;
-    solvedPhotoSag = sag_px * S;
-
-    solvedDiv.style.display = 'block';
-    solvedDiv.innerHTML = 
-      `<strong>Solved Canvas Photo Geometry (Tower Height Calibration):</strong><br>` +
-      `• Solved Span L: <strong>${solvedPhotoL.toFixed(2)} m</strong> (Auto-solved from image)<br>` +
-      `• Hook Elev Diff h: <strong>${solvedPhotoH.toFixed(3)} m</strong> (Auto-solved from image)<br>` +
-      `• Calibrated Scale: <strong>${(1/S).toFixed(1)} px/m</strong> (based on Tower ZA = ${H_tower}m)<br>` +
-      `• Solved xp Offset: <strong>${solvedPhotoXp.toFixed(2)} m</strong> (from Tower A)<br>` +
-      `• Solved Vertical Sag D(xp): <strong>${solvedPhotoSag.toFixed(3)} m</strong>`;
-  }
-}
-
-function applyPhotoTrackerReadings() {
-  if (solvedPhotoSag <= 0.0 || solvedPhotoXp <= 0.0 || solvedPhotoXp >= solvedPhotoL) {
-    alert("Please load a photo and click the required points to run the solver first.");
-    return;
-  }
-
-  // Update primary span and offset inputs
-  document.getElementById('tp-span').value = solvedPhotoL.toFixed(2);
-  document.getElementById('tp-xp').value = solvedPhotoXp.toFixed(2);
-
-  const inputMode = document.getElementById('tp-input-mode').value;
-  if (inputMode === 'z-coords') {
-    let za = parseFloat(document.getElementById('tp-za').value);
-    if (isNaN(za) || za === 0) {
-      za = 140.0;
-      document.getElementById('tp-za').value = za.toFixed(3);
-    }
-    
-    const zb = za + solvedPhotoH;
-    document.getElementById('tp-zb').value = zb.toFixed(3);
-
-    const zp = za + (solvedPhotoXp / solvedPhotoL) * solvedPhotoH - solvedPhotoSag;
-    document.getElementById('tp-zp').value = zp.toFixed(3);
-  } else {
-    // Direct chord-sag offset mode
-    document.getElementById('tp-height-diff').value = solvedPhotoH.toFixed(3);
-    document.getElementById('tp-offset-d').value = solvedPhotoSag.toFixed(3);
-  }
-
-  // Recalculate
-  calculateThreePoint();
-  alert("Visual photo sag and coordinates applied to inputs below!");
-}
-
 // ==========================================================================
 // 8. LOCAL PROJECT JSON SAVE / RESUME
 // ==========================================================================
-function exportProjectJSON() {
+function collectProjectData() {
   const data = {
+    // Project identity
+    projectId: currentProject.id,
+    projectName: currentProject.name,
+
     // Primary Inputs
     tpConductor: document.getElementById('tp-conductor').value,
     tpCustomName: document.getElementById('tp-custom-name') ? document.getElementById('tp-custom-name').value : "",
@@ -1634,22 +1283,28 @@ function exportProjectJSON() {
     mtSlant2: document.getElementById('mt-slant-2') ? document.getElementById('mt-slant-2').value : "",
     mtAngle: document.getElementById('mt-angle') ? document.getElementById('mt-angle').value : "",
 
-    // Canvas Photo Sag Tracker Inputs
+    // Canvas Photo Sag Tracker state (v2 catenary tracer)
     photoCalMethod: document.getElementById('photo-cal-method').value,
     photoCalTowerH: document.getElementById('photo-cal-tower-h').value,
-    photoImgSrc: photoImgSrc, // Base64 photographic source
-    photoClicks: photoClicks, // Click states list
-    
+    photoTracker: (typeof PhotoTracker !== 'undefined') ? PhotoTracker.serialize() : null,
+
+
     timestamp: new Date().toISOString()
   };
 
+  return data;
+}
+
+function exportProjectJSON() {
+  const data = collectProjectData();
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  
+
+  const baseName = data.projectName || `${data.towerAId || 'TowerA'}-${data.towerBId || 'TowerB'}`;
   const a = document.createElement('a');
   a.href = url;
-  a.download = `TL-SAG-Project-${data.towerAId || 'TowerA'}-${data.towerBId || 'TowerB'}.json`;
+  a.download = `TL-SAG-${baseName.replace(/[^\w.-]+/g, '_')}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1664,7 +1319,29 @@ function importProjectJSON(event) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      
+      applyProjectData(data);
+
+      // Register the imported project locally so it shows in the saved list.
+      currentProject = {
+        id: data.projectId || ('p' + Date.now().toString(36)),
+        name: data.projectName || ((data.towerAId && data.towerBId) ? `${data.towerAId} – ${data.towerBId}` : 'Imported Project')
+      };
+      updateProjectBadge();
+      saveCurrentProject(false);
+      closeProjectGate();
+
+      alert("Project imported and restored successfully!");
+    } catch (err) {
+      alert("Failed to parse project JSON file: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+
+  event.target.value = "";
+}
+
+// Apply a saved project data object to the whole workspace.
+function applyProjectData(data) {
       const setVal = (id, val) => {
         const el = document.getElementById(id);
         if (el && val !== undefined && val !== null) {
@@ -1759,36 +1436,224 @@ function importProjectJSON(event) {
       if (typeof toggleMountainMode === 'function') toggleMountainMode();
       handlePhotoCalibChange();
       
-      // Restore photo canvas workspace state
-      if (data.photoImgSrc) {
-        photoImgSrc = data.photoImgSrc;
-        photoClicks = data.photoClicks || [];
-        initPhotoTrackerImage(photoImgSrc);
-      } else {
-        photoClicks = [];
-        photoImgSrc = null;
-        photoTrackerImg = null;
-        const canvas = document.getElementById('photo-tracker-canvas');
-        if (canvas) {
-          canvas.width = 0;
-          canvas.height = 0;
+      // Restore photo tracker workspace (v2 format, with legacy v1 fallback).
+      // PhotoTracker.restore re-applies saved clicks AFTER the image loads,
+      // so annotations survive the round-trip.
+      if (typeof PhotoTracker !== 'undefined') {
+        if (data.photoTracker) {
+          PhotoTracker.restore(data.photoTracker);
+        } else if (data.photoImgSrc) {
+          PhotoTracker.restoreLegacy(data.photoImgSrc, data.photoClicks);
+        } else {
+          PhotoTracker.restore(null);
         }
-        resetPhotoTracker();
       }
 
       // Re-trigger calculation sheets
       calculateThreePoint();
       calculateRangefinder();
       if (typeof calculateMountainSpan === 'function') calculateMountainSpan();
-
-      alert("Project state imported and restored successfully!");
-    } catch (err) {
-      alert("Failed to parse project JSON file: " + err.message);
-    }
-  };
-  reader.readAsText(file);
-  
-  event.target.value = "";
 }
 
 
+
+// ==========================================================================
+// 9. PROJECT WORKFLOW — named project context with device autosave
+// ==========================================================================
+let currentProject = { id: null, name: "" };
+const PROJECTS_LS_KEY = 'tlsag_projects_v1';
+
+function listProjects() {
+  try { return JSON.parse(localStorage.getItem(PROJECTS_LS_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+
+function persistProjects(map) {
+  try { localStorage.setItem(PROJECTS_LS_KEY, JSON.stringify(map)); return true; }
+  catch (e) {
+    console.warn('Project save failed (browser storage quota exceeded?):', e);
+    return false;
+  }
+}
+
+function updateProjectBadge() {
+  const el = document.getElementById('project-name-display');
+  if (el) el.innerText = currentProject.name || 'No project (not saving)';
+}
+
+function saveCurrentProject(notify) {
+  if (!currentProject.id) {
+    if (notify) openProjectGate(); // no project yet — send the user to create one
+    return;
+  }
+  const map = listProjects();
+  map[currentProject.id] = {
+    id: currentProject.id,
+    name: currentProject.name,
+    savedAt: new Date().toISOString(),
+    data: collectProjectData()
+  };
+  const ok = persistProjects(map);
+  if (notify) {
+    const btn = document.getElementById('project-save-btn');
+    if (btn) {
+      const original = '💾 Save';
+      btn.innerText = ok ? '✓ Saved' : '⚠ Save failed';
+      setTimeout(() => { btn.innerText = original; }, 1600);
+    }
+  }
+}
+
+let autosaveTimer = null;
+function projectAutosave() {
+  if (!currentProject.id) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => saveCurrentProject(false), 2000);
+}
+
+function initProjectWorkflow() {
+  document.addEventListener('input', projectAutosave);
+  document.addEventListener('change', projectAutosave);
+  window.addEventListener('beforeunload', () => {
+    if (currentProject.id) saveCurrentProject(false);
+  });
+  updateProjectBadge();
+  openProjectGate();
+}
+
+function openProjectGate() {
+  renderGateProjectList();
+  const methods = document.getElementById('gate-step-methods');
+  const start = document.getElementById('gate-step-start');
+  const gate = document.getElementById('project-gate');
+  if (methods) methods.style.display = 'none';
+  if (start) start.style.display = 'block';
+  if (gate) gate.style.display = 'flex';
+}
+
+function closeProjectGate() {
+  const gate = document.getElementById('project-gate');
+  if (gate) gate.style.display = 'none';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderGateProjectList() {
+  const listEl = document.getElementById('gate-project-list');
+  if (!listEl) return;
+  const items = Object.values(listProjects())
+    .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+  if (!items.length) {
+    listEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.4rem 0;">No saved projects on this device yet.</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(p => `
+    <div class="gate-project-item">
+      <button type="button" class="gate-project-open" onclick="openSavedProject('${p.id}')">
+        <strong>${escapeHtml(p.name || 'Untitled')}</strong>
+        <span>${p.savedAt ? new Date(p.savedAt).toLocaleString() : ''}</span>
+      </button>
+      <button type="button" class="gate-project-delete" title="Delete this saved project" onclick="deleteSavedProject('${p.id}')">✕</button>
+    </div>`).join('');
+}
+
+function gateCreateProject() {
+  const nameInput = document.getElementById('gate-project-name');
+  const name = (nameInput.value || '').trim();
+  if (!name) {
+    nameInput.focus();
+    nameInput.style.borderColor = 'var(--danger)';
+    nameInput.placeholder = 'Give the project a name first — e.g. line, circuit & span';
+    return;
+  }
+  nameInput.style.borderColor = '';
+  currentProject = {
+    id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
+    name: name
+  };
+  resetWorkspaceForNewProject();
+  updateProjectBadge();
+  saveCurrentProject(false);
+  nameInput.value = '';
+
+  // Step 2: methodology chooser
+  document.getElementById('gate-step-start').style.display = 'none';
+  document.getElementById('gate-methods-title').innerText = `“${name}” created — how will you measure this span?`;
+  document.getElementById('gate-step-methods').style.display = 'block';
+}
+
+function openSavedProject(id) {
+  const p = listProjects()[id];
+  if (!p) return;
+  currentProject = { id: p.id, name: p.name };
+  applyProjectData(p.data || {});
+  updateProjectBadge();
+  closeProjectGate();
+}
+
+function deleteSavedProject(id) {
+  const map = listProjects();
+  const p = map[id];
+  if (!p) return;
+  if (!confirm(`Delete saved project "${p.name}"? This cannot be undone.`)) return;
+  delete map[id];
+  persistProjects(map);
+  if (currentProject.id === id) {
+    currentProject = { id: null, name: "" };
+    updateProjectBadge();
+  }
+  renderGateProjectList();
+}
+
+function gateSkipProject() {
+  currentProject = { id: null, name: "" };
+  updateProjectBadge();
+  closeProjectGate();
+}
+
+function gateChooseMethod(method) {
+  closeProjectGate();
+  const targets = {
+    photo: 'photo-panel',
+    threepoint: 'tp-span',
+    rangefinder: 'rf-setup-mode',
+    mountain: 'mt-input-mode'
+  };
+  const el = document.getElementById(targets[method]);
+  if (el) {
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.focus();
+    }, 80);
+  }
+}
+
+// Fresh workspace for a newly created project — never carry over data.
+function resetWorkspaceForNewProject() {
+  const blankIds = [
+    'tp-span', 'tp-xp', 'tp-za', 'tp-zb', 'tp-zp', 'tp-height-diff', 'tp-offset-d',
+    'tp-za-gps-base', 'tp-za-gps-height', 'tp-zb-gps-base', 'tp-zb-gps-height',
+    'tp-zp-gps-base', 'tp-zp-gps-height', 'photo-cal-tower-h',
+    'tower-a-id', 'tower-b-id', 'tower-a-lat', 'tower-a-lon', 'tower-a-elev',
+    'tower-b-lat', 'tower-b-lon', 'tower-b-elev'
+  ];
+  blankIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  // Reset line-spec dropdowns to their HTML defaults
+  document.querySelectorAll('#specs-content select').forEach(sel => {
+    const di = Array.from(sel.options).findIndex(o => o.defaultSelected);
+    sel.selectedIndex = di >= 0 ? di : 0;
+  });
+
+  const cond = document.getElementById('tp-conductor');
+  if (cond) cond.value = 'zebra';
+  handleConductorChange('tp');
+
+  if (typeof PhotoTracker !== 'undefined') PhotoTracker.restore(null);
+  calculateThreePoint();
+}

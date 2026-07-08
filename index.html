@@ -15,6 +15,62 @@
 </head>
 <body>
 
+  <!-- ========================================================================
+     PROJECT GATE — every work session starts inside a named project
+     ======================================================================== -->
+  <div id="project-gate" class="project-gate" style="display: none;" onclick="if (event.target === this) closeProjectGate()">
+    <div class="gate-card">
+      <button type="button" class="gate-close" title="Close (continue without switching project)" onclick="closeProjectGate()">✕</button>
+      <div class="gate-brand">
+        <h1>⚡ TL-SAG</h1>
+        <p>Overhead Line Sag-Tension Safety &amp; Compliance Calculator</p>
+      </div>
+
+      <div id="gate-step-start">
+        <h2>Start a Project</h2>
+        <p class="gate-sub">Measurements, photos and results are organised under a project and auto-saved on this device.</p>
+        <div class="gate-new-row">
+          <input type="text" id="gate-project-name" placeholder="e.g. 220kV Bhaba–Kashang · Span T45–T46 river crossing" onkeydown="if(event.key==='Enter') gateCreateProject()">
+          <button type="button" class="btn btn-success" onclick="gateCreateProject()">➕ Create Project</button>
+        </div>
+
+        <h3 class="gate-list-title">Resume a saved project</h3>
+        <div id="gate-project-list"></div>
+
+        <div class="gate-footer-row">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('project-file-input').click()">📥 Import project JSON…</button>
+          <button type="button" class="gate-skip" onclick="gateSkipProject()">Quick calculation without a project (no autosave) →</button>
+        </div>
+      </div>
+
+      <div id="gate-step-methods" style="display: none;">
+        <h2 id="gate-methods-title">How will you measure this span?</h2>
+        <p class="gate-sub">Pick the field methodology you have data for — you can combine methods at any time.</p>
+        <div class="gate-methods">
+          <button type="button" class="gate-method-card" onclick="gateChooseMethod('photo')">
+            <span class="gm-icon">📷</span><strong>Photo Sag Tracker</strong>
+            <span>Have a span photograph? Trace the conductor and fit a catenary to extract tension. Needs the span length or a tower height for scale.</span>
+          </button>
+          <button type="button" class="gate-method-card" onclick="gateChooseMethod('threepoint')">
+            <span class="gm-icon">📐</span><strong>Three-Point Sighting</strong>
+            <span>Total Station / theodolite Z-elevations of both hooks and one conductor point. The primary solver.</span>
+          </button>
+          <button type="button" class="gate-method-card" onclick="gateChooseMethod('rangefinder')">
+            <span class="gm-icon">🔦</span><strong>Laser Rangefinder</strong>
+            <span>Slant distances &amp; angles shot from an off-axis viewpoint — projected into the span plane automatically.</span>
+          </button>
+          <button type="button" class="gate-method-card" onclick="gateChooseMethod('mountain')">
+            <span class="gm-icon">⛰️</span><strong>Mountain Span Solver</strong>
+            <span>GPS hook elevations + slant distance → horizontal span L and height difference h.</span>
+          </button>
+        </div>
+        <div class="gate-footer-row">
+          <button type="button" class="gate-skip" onclick="closeProjectGate()">Skip — show me everything →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     
     <!-- Engineering Header -->
@@ -24,8 +80,10 @@
         <p>Overhead Line Sag-Tension Safety & Compliance Calculator</p>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn btn-outline" onclick="exportProjectJSON()" title="Export all coordinates and settings to a local JSON file">📤 Export Project</button>
-        <button type="button" class="btn btn-outline" onclick="document.getElementById('project-file-input').click()" title="Import/Resume a saved project from a local JSON file">📥 Import Project</button>
+        <span id="project-badge" title="Active project">📁 <span id="project-name-display">No project</span></span>
+        <button type="button" id="project-save-btn" class="btn btn-outline" onclick="saveCurrentProject(true)" title="Save this project on this device (also auto-saves as you work)">💾 Save</button>
+        <button type="button" class="btn btn-outline" onclick="openProjectGate()" title="Create, switch, resume or delete projects">📂 Projects</button>
+        <button type="button" class="btn btn-outline" onclick="exportProjectJSON()" title="Export this project to a local JSON file (backup / share)">📤 Export</button>
         <input type="file" id="project-file-input" style="display: none;" accept=".json" onchange="importProjectJSON(event)">
         <a href="explanations.html" target="_blank" class="btn btn-outline">Open Sandbox Visualizer</a>
         <button class="btn btn-success" onclick="printEngineeringReport()">Print Engineering Report</button>
@@ -125,32 +183,48 @@
         </div>
       </div>
       <!-- STANDALONE PHOTO SAG TRACKER PANEL -->
-      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+      <div class="panel" id="photo-panel" style="margin-bottom: 2rem; padding: 1.5rem;">
         <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem;">
-          <span>📷 Photo Sag Tracker — Client-Side Visual Measurement Tool</span>
-          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Upload front-view span photo · Click points · Extract sag via pixel scaling</span>
+          <span>📷 Photo Sag Tracker — Catenary Tracing &amp; Fitting Tool</span>
+          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Upload span photo · Trace the conductor · Fit catenary · Extract tension</span>
         </h2>
         <p class="subtitle" style="margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--text-muted);">
-          Take a straight front-view photo of the transmission span from an opposite vantage point (e.g. opposite ridge in mountains). Click key points on the image to mark tower hooks, base, and conductor low point. The tool calculates real-world sag by pixel-to-meter calibration.
+          Photograph the span as square-on (perpendicular) as possible. Mark the two tower hooks, then trace 10–20 points along the conductor — the tool least-squares fits a catenary through your trace and extracts the catenary constant C = T/w, giving horizontal tension directly from the curve shape. Zoom with scroll/pinch; a magnifier loupe appears while placing points.
         </p>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+        <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 1.5rem; align-items: start;">
           <!-- Left: Controls -->
           <div>
-            <!-- Calibration selection -->
+            <!-- Measurement mode + calibration -->
             <div class="form-section" style="margin-bottom: 1rem;">
-              <div class="form-section-title" style="font-size: 0.82rem;">Calibration Settings</div>
+              <div class="form-section-title" style="font-size: 0.82rem;">Measurement &amp; Calibration Settings</div>
               <div class="input-grid-2" style="margin-bottom: 0.8rem;">
+                <div class="form-group no-margin">
+                  <label style="font-weight: bold; color: var(--success);">Measurement Mode:</label>
+                  <select id="photo-mode" onchange="setPhotoMode(this)">
+                    <option value="trace" selected>Full Catenary Trace (recommended)</option>
+                    <option value="quick">Quick 3-Point (single sag point)</option>
+                  </select>
+                </div>
                 <div class="form-group no-margin">
                   <label style="font-weight: bold; color: var(--success);">Image Calibration Method:</label>
                   <select id="photo-cal-method" onchange="handlePhotoCalibChange()">
-                    <option value="chord" selected>Chord Calibration (requires L and h)</option>
-                    <option value="tower">Tower Height Calibration (Hook to base)</option>
+                    <option value="perspective" selected>Perspective 4-Point (best — handles oblique photos)</option>
+                    <option value="chord">Chord Calibration (square-on photos, requires L and h)</option>
+                    <option value="tower">Tower Height Calibration (square-on photos, hook to base)</option>
                   </select>
                 </div>
                 <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
                   <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
-                  <input type="number" id="photo-cal-tower-h" value="40.00" step="0.1">
+                  <input type="number" id="photo-cal-tower-h" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-persp-ha-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Tower A Height — hook to base (m):</label>
+                  <input type="number" id="photo-persp-ha" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-persp-hb-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Tower B Height (m): <span class="unit-label">(blank = same as A)</span></label>
+                  <input type="number" id="photo-persp-hb" value="" placeholder="= Tower A" step="0.1" onchange="photoTrackerResolve()">
                 </div>
               </div>
             </div>
@@ -161,6 +235,24 @@
                 📁 Upload Span Photo
               </button>
               <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
+              <button type="button" id="pt-tool-place" class="btn btn-outline btn-success" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('place')" title="Click/tap to place and drag points">
+                🎯 Place Points
+              </button>
+              <button type="button" id="pt-tool-pan" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('pan')" title="Drag to pan the photo">
+                🖐 Pan
+              </button>
+              <button type="button" id="pt-vert-btn" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">
+                📐 Vertical Ref
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoUndo()">
+                ↩ Undo
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoFitView()">
+                ⤢ Fit View
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleFullscreen()" title="Edit the photo in fullscreen">
+                ⛶ Fullscreen
+              </button>
               <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
                 🔄 Reset Points
               </button>
@@ -183,8 +275,8 @@
 
           <!-- Right: Canvas Workspace -->
           <div>
-            <div class="canvas-workspace" style="min-height: 300px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-input);">
-              <canvas id="photo-tracker-canvas" width="0" height="0"></canvas>
+            <div class="canvas-workspace" style="height: 560px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block;">
+              <canvas id="photo-tracker-canvas"></canvas>
             </div>
           </div>
         </div>
@@ -362,12 +454,12 @@
             <div class="input-grid-2">
               <div class="form-group">
                 <label for="tp-span">Horizontal Span Length L (m):</label>
-                <input type="number" id="tp-span" value="300" oninput="calculateThreePoint()">
+                <input type="number" id="tp-span" value="" placeholder="e.g. 300" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Horizontal projection distance between tower centers (measured w.r.t. gravity, NOT the straight sloped slant distance).</span>
               </div>
               <div class="form-group">
                 <label for="tp-xp">Measurement Point Pos xp (m): <span class="unit-label">(Dist from Tower A)</span></label>
-                <input type="number" id="tp-xp" value="100" oninput="calculateThreePoint()">
+                <input type="number" id="tp-xp" value="" placeholder="e.g. 100" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Horizontal projection distance from Tower A to point P (measured w.r.t. gravity, NOT along the sloped slant wire).</span>
               </div>
             </div>
@@ -712,7 +804,7 @@
             <div id="tp-z-coords-div">
               <div class="form-group" style="margin-bottom: 1.2rem; background: rgba(30, 64, 175, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
                 <label for="tp-za" style="font-weight: 700; color: var(--primary);">Tower A Hook Z-Elevation (ZA) (meters):</label>
-                <input type="number" id="tp-za" value="140.000" step="0.001" oninput="calculateThreePoint()">
+                <input type="number" id="tp-za" value="" placeholder="e.g. 140.000" step="0.001" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Hook A elevation vertically w.r.t. gravity. Enter directly, or calculate below.</span>
                 
                 <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-za-gps')">📍 Field Helper: Calculate ZA from phone GPS + tower drawings...</button>
@@ -720,11 +812,11 @@
                   <div class="input-grid-2" style="margin-bottom: 0;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Base GPS Elevation (m):</label>
-                      <input type="number" id="tp-za-gps-base" value="100.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
+                      <input type="number" id="tp-za-gps-base" value="" placeholder="e.g. 100.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook Height above Base (m):</label>
-                      <input type="number" id="tp-za-gps-height" value="40.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
+                      <input type="number" id="tp-za-gps-height" value="" placeholder="e.g. 40.00" step="0.01" oninput="calculateGpsHookElev('tp-za')">
                     </div>
                   </div>
                   <span style="font-size: 0.82rem; color: var(--text-muted);">Calculates: ZA = Base GPS Elevation + Hanger Height.</span>
@@ -778,7 +870,7 @@
 
               <div class="form-group" style="margin-bottom: 1.2rem; background: rgba(30, 64, 175, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
                 <label for="tp-zb" style="font-weight: 700; color: var(--primary);">Tower B Hook Z-Elevation (ZB) (meters):</label>
-                <input type="number" id="tp-zb" value="175.000" step="0.001" oninput="calculateThreePoint()">
+                <input type="number" id="tp-zb" value="" placeholder="e.g. 175.000" step="0.001" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Hook B elevation vertically w.r.t. gravity. Enter directly, or calculate below.</span>
                 
                 <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-zb-gps')">📍 Field Helper: Calculate ZB from phone GPS + tower drawings...</button>
@@ -786,11 +878,11 @@
                   <div class="input-grid-2" style="margin-bottom: 0;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Base GPS Elevation (m):</label>
-                      <input type="number" id="tp-zb-gps-base" value="130.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
+                      <input type="number" id="tp-zb-gps-base" value="" placeholder="e.g. 130.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook Height above Base (m):</label>
-                      <input type="number" id="tp-zb-gps-height" value="45.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
+                      <input type="number" id="tp-zb-gps-height" value="" placeholder="e.g. 45.00" step="0.01" oninput="calculateGpsHookElev('tp-zb')">
                     </div>
                   </div>
                   <span style="font-size: 0.82rem; color: var(--text-muted);">Calculates: ZB = Base GPS Elevation + Hanger Height from ground.</span>
@@ -844,7 +936,7 @@
 
               <div class="form-group" style="margin-bottom: 0; background: rgba(16, 185, 129, 0.02); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
                 <label for="tp-zp" style="font-weight: 700; color: var(--success);">Sighted Conductor Z-Elevation at xp (ZP) (meters):</label>
-                <input type="number" id="tp-zp" value="146.400" step="0.001" oninput="calculateThreePoint()">
+                <input type="number" id="tp-zp" value="" placeholder="e.g. 146.400" step="0.001" oninput="calculateThreePoint()">
                 <span class="field-tooltip">Direct elevation of conductor wire point P (measured vertically w.r.t. gravity).</span>
 
                 <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('tp-zp-gps')" style="color: var(--success);">📍 Field Helper: Calculate ZP from ground elevation + sighter clearance...</button>
@@ -852,11 +944,11 @@
                   <div class="input-grid-2" style="margin-bottom: 0;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Ground GPS Elev under xp (m):</label>
-                      <input type="number" id="tp-zp-gps-base" value="130.00" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
+                      <input type="number" id="tp-zp-gps-base" value="" placeholder="e.g. 130.00" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Measured Clearance to Wire (m):</label>
-                      <input type="number" id="tp-zp-gps-height" value="16.40" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
+                      <input type="number" id="tp-zp-gps-height" value="" placeholder="e.g. 16.40" step="0.01" oninput="calculateGpsHookElev('tp-zp')">
                     </div>
                   </div>
                   <span style="font-size: 0.82rem; color: var(--text-muted);">Calculates: ZP = Ground GPS + Measured vertical clearance.</span>
@@ -912,12 +1004,12 @@
               <div class="input-grid-2" style="margin-bottom: 0;">
                 <div class="form-group no-margin">
                   <label for="tp-height-diff">Hook Elevation Diff h (m): <span class="unit-label">(ZB - ZA)</span></label>
-                  <input type="number" id="tp-height-diff" value="35.000" step="0.001" oninput="calculateThreePoint()">
+                  <input type="number" id="tp-height-diff" value="" placeholder="e.g. 35.000" step="0.001" oninput="calculateThreePoint()">
                   <span class="field-tooltip">Vertical elevation difference between Hooks B and A (measured vertically w.r.t. gravity, NOT the straight slant distance).</span>
                 </div>
                 <div class="form-group no-margin">
                   <label for="tp-offset-d">Measured Sag Offset D (m): <span class="unit-label">(from chord)</span></label>
-                  <input type="number" id="tp-offset-d" value="5.300" step="0.001" oninput="calculateThreePoint()">
+                  <input type="number" id="tp-offset-d" value="" placeholder="e.g. 5.300" step="0.001" oninput="calculateThreePoint()">
                   <span class="field-tooltip">Vertical sag distance (parallel to gravity) from the straight tower-to-tower chord line down to the conductor.</span>
                 </div>
               </div>
@@ -985,6 +1077,29 @@
                 </div>
               </div>
 
+
+
+              <!-- Open CAD Results Button -->
+              <button type="button" class="btn btn-primary btn-block" style="margin-top: 1.5rem; padding: 0.8rem; font-size: 1rem; font-weight: bold; border-radius: 10px;" onclick="openDetailedResults()">
+                📐 Open Detailed CAD Results & Scale Model
+              </button>
+
+            </div>
+          </div>
+
+
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- FULL-WIDTH ANALYSIS SECTION: safety curve, accuracy & calculation log -->
+    <div class="panel" id="tp-analysis-panel" style="margin-top: 2rem; padding: 1.5rem;">
+      <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1.2rem; font-size: 1.2rem;">📈 Analysis — Safety Curve, Accuracy &amp; Calculation Log</h2>
+      <div class="analysis-grid">
+        <div>
               <!-- Dynamic Sag vs. Tension Chart Card -->
               <div class="chart-area">
                 <div class="chart-title">
@@ -1047,9 +1162,10 @@
                   </circle>
                 </svg>
               </div>
-
+        </div>
+        <div>
               <!-- Dynamic Sensitivity & Accuracy Analysis Card -->
-              <div class="chart-area" style="margin-top: 1.5rem;">
+              <div class="chart-area">
                 <div class="chart-title">
                   <span>📊 Statistical Accuracy & Sensitivity Analysis</span>
                   <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Error propagation based on field tolerances</span>
@@ -1102,26 +1218,13 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Open CAD Results Button -->
-              <button type="button" class="btn btn-primary btn-block" style="margin-top: 1.5rem; padding: 0.8rem; font-size: 1rem; font-weight: bold; border-radius: 10px;" onclick="openDetailedResults()">
-                📐 Open Detailed CAD Results & Scale Model
-              </button>
-
+        </div>
+      </div>
               <!-- Monospaced steps -->
               <div class="steps-title" style="margin-top: 1.5rem;">Analytical Calculation Steps Log</div>
               <div class="steps-box" id="tp-steps">
                 Calculating...
               </div>
-            </div>
-          </div>
-
-
-
-        </div>
-
-      </div>
-
     </div>
 
     <!-- PANEL D: Survey guidelines and measurement instructions -->
@@ -1188,13 +1291,17 @@
   <div id="printable-report">
     
     <div class="report-header">
-      <h1>Transmission Line Sag-Tension Certificate</h1>
-      <p>Official Structural Calculation & Safety Clearance Report</p>
+      <h1>Transmission Line Sag-Tension Analysis Report</h1>
+      <p>Field Measurement, Structural Calculation & Safety Compliance Summary</p>
     </div>
 
     <div class="report-section">
       <h2>1. Line & Tower Infrastructure Metadata</h2>
       <table class="report-table">
+        <tr>
+          <th style="width: 25%;">Project Reference</th>
+          <td colspan="3" id="pr-project-name" style="font-weight: bold;">-</td>
+        </tr>
         <tr>
           <th style="width: 25%;">Line Voltage Level</th>
           <td style="width: 25%; font-weight: bold;" id="pr-voltage">220 kV</td>
@@ -1228,8 +1335,21 @@
       </table>
     </div>
 
+    <!-- Photo Sag Tracker: annotated span photograph + fit summary (leads the report) -->
+    <div class="report-section" id="pr-photo-annex" style="page-break-inside: avoid; display: none;">
+      <h2>2. Annotated Span Photograph (Photo Sag Tracker)</h2>
+      <img id="pr-photo-img" alt="Annotated span photograph with traced conductor and fitted catenary" style="width: 100%; max-height: 14cm; object-fit: contain; border: 1px solid #999999; background: #111111;">
+      <div class="print-math-box" id="pr-photo-summary" style="margin-top: 0.5rem;"></div>
+    </div>
+
+    <!-- Live three-point geometry drawing, cloned from the app at print time -->
+    <div class="report-section" id="pr-sketch-section" style="page-break-inside: avoid;">
+      <h2>3. Span Geometry Engineering Sketch (Three-Point Model)</h2>
+      <div id="pr-sketch-box" style="border: 1px solid #999999; border-radius: 4px; background: #ffffff; padding: 0.3cm;"></div>
+    </div>
+
     <div class="report-section">
-      <h2>2. Conductor Specifications</h2>
+      <h2>4. Conductor Specifications</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Conductor Code Name</th>
@@ -1247,7 +1367,7 @@
     </div>
 
     <div class="report-section">
-      <h2>3. Sag & Tension Calculation Results</h2>
+      <h2>5. Sag & Tension Calculation Results</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Measurement Method</th>
@@ -1275,39 +1395,24 @@
     </div>
 
     <div class="report-section" style="page-break-inside: avoid;">
-      <h2>4. Geometrical Math Calculation Logs</h2>
+      <h2>6. Geometrical Math Calculation Logs</h2>
       <div class="print-math-box" id="pr-math-steps">
         Three-Point Coordinate Sighting Logic Steps...
       </div>
     </div>
 
-    <!-- Official sign-off seals -->
-    <div class="report-section" style="page-break-inside: avoid; margin-top: 3rem;">
-      <div class="signature-block">
-        <div class="sig-line">
-          <strong>Measured / Sighted By</strong><br>
-          <span style="font-size: 8.5pt; color: #555555;">Field Construction Contractor</span><br>
-          Date: ________________________
-        </div>
-        <div class="sig-line">
-          <strong>Calculations Sighted By</strong><br>
-          <span style="font-size: 8.5pt; color: #555555;">Quality Assurance Surveyor</span><br>
-          Date: ________________________
-        </div>
-        <div class="sig-line">
-          <strong>Approved / Cleared By</strong><br>
-          <span style="font-size: 8.5pt; color: #555555;">Superintending Utility Engineer</span><br>
-          Date: ________________________
-        </div>
-      </div>
-      <div style="text-align: center; margin-top: 3rem; font-size: 8pt; color: #777777;">
-        Report Generated on: <span id="pr-date">-</span> | TL-SAG Sag-Tension Safety Certificate
+    <!-- Report footer -->
+    <div class="report-section" style="page-break-inside: avoid; margin-top: 2rem;">
+      <div style="text-align: center; font-size: 8pt; color: #777777;">
+        Report Generated on: <span id="pr-date">-</span> | TL-SAG Sag-Tension Analysis Report
       </div>
     </div>
 
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="app.js"></script>
+  <script src="engine.js?v=p2b"></script>
+  <script src="app.js?v=p2b"></script>
+  <script src="phototracker.js?v=p2b"></script>
 </body>
 </html>

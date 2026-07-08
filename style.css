@@ -941,6 +941,15 @@ code {
   max-width: 100%;
 }
 
+/* Fullscreen photo editing: the workspace container fills the screen */
+.canvas-workspace:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
 .canvas-instructions {
   background: rgba(180, 83, 9, 0.04);
   border-left: 3px solid var(--warning);
@@ -955,6 +964,168 @@ code {
 .import-export-container {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Full-width analysis panel: chart + sensitivity side by side */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 1000px) {
+  .analysis-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   PROJECT GATE — project-first entry overlay
+   ========================================================================== */
+.project-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 5vh 1rem 3vh;
+}
+
+.gate-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 740px;
+  width: 100%;
+  padding: 2rem 2.2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.gate-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.9rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+.gate-close:hover { color: var(--danger); border-color: var(--danger); }
+
+.gate-brand {
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.4rem;
+}
+.gate-brand h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+.gate-brand p { color: var(--text-muted); font-size: 0.85rem; }
+
+.gate-card h2 { font-size: 1.15rem; margin-bottom: 0.3rem; }
+.gate-sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5; }
+.gate-list-title { font-size: 0.9rem; margin: 1.4rem 0 0.5rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.gate-new-row { display: flex; gap: 0.6rem; }
+.gate-new-row input {
+  flex: 1;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.gate-project-item { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+.gate-project-open {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.88rem;
+  text-align: left;
+}
+.gate-project-open span { color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; }
+.gate-project-open:hover { border-color: var(--primary); }
+.gate-project-delete {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--danger);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+}
+.gate-project-delete:hover { border-color: var(--danger); }
+
+.gate-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.gate-method-card {
+  text-align: left;
+  padding: 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.gate-method-card:hover { border-color: var(--success); transform: translateY(-1px); }
+.gate-method-card .gm-icon { font-size: 1.5rem; }
+.gate-method-card span:last-child { font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
+
+.gate-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.4rem;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.gate-skip {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.83rem;
+}
+.gate-skip:hover { color: var(--text-main); }
+
+#project-badge {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-self: center;
+}
+
+@media (max-width: 640px) {
+  .gate-methods { grid-template-columns: 1fr; }
+  .gate-new-row { flex-direction: column; }
 }
 
 
