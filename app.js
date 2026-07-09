@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.5.1-beta';
+const APP_VERSION = '0.6.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -55,7 +55,8 @@ function initVersionInfo() {
       `TL-SAG <strong>v${APP_VERSION}</strong> (${APP_VERSION_DATE}) · ` +
       `<a href="${APP_REPO_URL}/blob/master/CHANGELOG.md" target="_blank" rel="noopener">What's new</a> · ` +
       `Open source under the <a href="${APP_REPO_URL}/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a> · ` +
-      `<a href="${APP_REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a>`;
+      `<a href="${APP_REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a> · ` +
+      `<a href="explanations.html" target="_blank" rel="noopener">Physics sandbox</a>`;
   }
 
   // One-time notice when a returning user gets a new version.
@@ -307,34 +308,49 @@ function calculateThreePoint() {
       document.getElementById('chart-lbl-uts-50').textContent = `50% UTS (${(0.50 * uts_kN).toFixed(1)} kN)`;
       document.getElementById('chart-lbl-uts-max').textContent = `100% UTS (${uts_kN.toFixed(1)} kN)`;
 
-      // Draw standard curves for s in [1.0m, 20.0m]
+      // Dynamic sag axis: expand beyond the default 1–20 m window when the
+      // measured sag is larger (e.g. 80 m slack-stringing river crossings),
+      // so the operating point always sits ON the curve, never clamped.
+      const sMin = Math.max(0.5, Math.min(1.0, offsetD * 0.3));
+      const sMax = Math.max(20.0, offsetD * 1.4);
+
+      // Update x-axis tick labels to the active range
+      for (let i = 0; i <= 4; i++) {
+        const lbl = document.getElementById('chart-xlbl-' + i);
+        if (lbl) {
+          const sv = sMin + ((sMax - sMin) * i) / 4;
+          lbl.textContent = (sv >= 100 ? sv.toFixed(0) : sv.toFixed(1)) + 'm';
+        }
+      }
+
       let pathD = "";
-      for (let s = 1.0; s <= 20.0; s += 0.2) {
+      const steps = 95;
+      for (let k = 0; k <= steps; k++) {
+        const s = sMin + ((sMax - sMin) * k) / steps;
         // Tension T = (w * xp * (L - xp)) / (2 * D(xp))
         const tempT = (w * xp * (L - xp)) / (2 * s); // in Newtons
-        const tempT_kN = tempT / 1000;
         const tempP = tempT / uts;
-        
-        const curX = 50 + 420 * (s - 1.0) / 19.0;
+
+        const curX = 50 + 420 * (s - sMin) / (sMax - sMin);
         const curY = 220 - 200 * tempP;
-        
+
         // Clamp Y visually within grid boundaries (20 to 220)
         const clampedY = Math.max(20, Math.min(220, curY));
-        
+
         if (pathD === "") {
           pathD = `M ${curX},${clampedY}`;
         } else {
           pathD += ` L ${curX},${clampedY}`;
         }
       }
-      
+
       const curvePath = document.getElementById('chart-curve-path');
       if (curvePath) {
         curvePath.setAttribute('d', pathD);
       }
 
       // Map dynamic active operating dot position
-      let dotX = 50 + 420 * (offsetD - 1.0) / 19.0;
+      let dotX = 50 + 420 * (offsetD - sMin) / (sMax - sMin);
       let dotY = 220 - 200 * (T / uts);
       
       // Clamp active dot within visual grid boundaries

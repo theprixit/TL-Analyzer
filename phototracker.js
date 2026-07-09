@@ -51,6 +51,7 @@
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', onContextMenu);
     window.addEventListener('resize', () => { resizeCanvas(); redraw(); });
     document.addEventListener('fullscreenchange', () => {
       // Give the browser a frame to settle the new container size.
@@ -204,6 +205,23 @@
     return null;
   }
 
+  // Delete a hit point (right-click, or double-tap on touch)
+  function deleteHit(hit) {
+    if (hit.kind === 'trace') state.trace.splice(hit.index, 1);
+    else if (hit.kind === 'vert') state.vertRef.splice(hit.index, 1);
+    else state.points[hit.kind] = null;
+    solve();
+    updateInstructions();
+    redraw();
+  }
+
+  function onContextMenu(e) {
+    e.preventDefault();
+    if (!state.img) return;
+    const hit = hitTest(eventCss(e));
+    if (hit) deleteHit(hit);
+  }
+
   function setDragPos(drag, ip) {
     if (drag.kind === 'trace') state.trace[drag.index] = ip;
     else if (drag.kind === 'vert') state.vertRef[drag.index] = ip;
@@ -263,6 +281,16 @@
     // Place tool: grab an existing point, or start placing a new one.
     const hit = hitTest(pos);
     if (hit) {
+      // Double-tap on a point deletes it (touch-friendly delete)
+      const now = performance.now();
+      if (state.lastTap && now - state.lastTap.t < 350 &&
+          Math.hypot(pos.x - state.lastTap.x, pos.y - state.lastTap.y) < 16) {
+        state.lastTap = null;
+        state.pointers.delete(e.pointerId);
+        deleteHit(hit);
+        return;
+      }
+      state.lastTap = { t: now, x: pos.x, y: pos.y };
       state.dragging = hit;
     } else if (expectedNext()) {
       state.placing = { pos: c2i(pos) };
@@ -271,7 +299,13 @@
   }
 
   function onPointerMove(e) {
-    if (!state.pointers.has(e.pointerId)) return;
+    if (!state.pointers.has(e.pointerId)) {
+      // Hover (no button down): show a move cursor over grabbable points.
+      if (state.img && state.tool === 'place') {
+        canvas.style.cursor = hitTest(eventCss(e)) ? 'move' : 'crosshair';
+      }
+      return;
+    }
     const pos = eventCss(e);
     state.pointers.set(e.pointerId, pos);
 
@@ -603,7 +637,7 @@
     const mark = (t, color, dy) =>
       `<line x1="${xOf(t).toFixed(1)}" x2="${xOf(t).toFixed(1)}" y1="${padT}" y2="${H - padB}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
       `<text x="${xOf(t).toFixed(1)}" y="${H - padB + 10 + (dy || 0)}" font-size="9" fill="${color}" text-anchor="middle">${(t / 1000).toFixed(1)}</text>`;
-    return `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; height: auto; display: block; margin-top: 0.35rem;">` +
+    return `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-width: 680px; height: auto; display: block; margin-top: 0.35rem;">` +
       bars + mark(mc.p5, 'var(--warning)') + mark(mc.p50, 'var(--primary)', 9) + mark(mc.p95, 'var(--warning)') +
       `<text x="${W / 2}" y="${H - 2}" font-size="9" fill="var(--text-muted)" text-anchor="middle">Probable horizontal tension (kN) — ${mc.n} re-fits with ±${MC_SIGMA_REF}px hook / ±${MC_SIGMA_TRACE}px trace click scatter</text>` +
       `</svg>`;
@@ -937,7 +971,7 @@
     style('success');
 
     const next = expectedNext();
-    const hint = ' <span style="opacity:0.75;">(scroll/pinch to zoom · hold &amp; drag for fine placement with magnifier · drag any point to adjust)</span>';
+    const hint = ' <span style="opacity:0.75;">(scroll/pinch to zoom · hold &amp; drag for fine placement with magnifier · drag any point to adjust · right-click or double-tap a point to delete)</span>';
 
     if (next === 'vert') {
       el.innerHTML = `🎯 <strong>Vertical reference (${state.vertRef.length}/2):</strong> Click two points along a known plumb-vertical edge (e.g. tower body centreline).` + hint;
@@ -964,9 +998,9 @@
     const place = document.getElementById('pt-tool-place');
     const pan = document.getElementById('pt-tool-pan');
     const vert = document.getElementById('pt-vert-btn');
-    if (place) place.classList.toggle('btn-success', state.tool === 'place');
-    if (pan) pan.classList.toggle('btn-success', state.tool === 'pan');
-    if (vert) vert.classList.toggle('btn-success', state.placingVertRef);
+    if (place) place.classList.toggle('active', state.tool === 'place');
+    if (pan) pan.classList.toggle('active', state.tool === 'pan');
+    if (vert) vert.classList.toggle('active', state.placingVertRef);
     if (canvas) canvas.style.cursor = state.tool === 'pan' ? 'grab' : 'crosshair';
   }
 

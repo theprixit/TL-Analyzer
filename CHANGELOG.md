@@ -2,6 +2,18 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.6.0-beta — 2026-07-09
+
+Workspace & report usability pass (from field-test feedback):
+
+- **On-canvas toolbar**: Place/Pan/Vertical Ref/Undo/Fit/Fullscreen now float on the photo itself — and stay available in fullscreen editing.
+- **Delete points**: right-click (desktop) or double-tap (touch) any placed point to remove it; hovering a point shows a move cursor so it's obvious points are draggable.
+- **Fit results moved below the canvas** at full panel width — no more cramped skinny results column; the Monte-Carlo histogram gets proper room.
+- **Sag-vs-Tension chart axis is now dynamic** — an 80 m slack-stringing sag previously pinned the operating point to the clamped chart edge; the axis now expands to fit the measured sag.
+- **Three-point visualizer** moved into the input column so the results panel top-aligns with it (no more dead space beside it).
+- **Print page breaks disciplined**: headings stay with their content; figures, tables, cards and the photo never split across pages.
+- Removed the separate "Detailed CAD Results" page button — the printed report now carries the sketch, chart and distribution, making it redundant. The physics sandbox link moved from the header to the footer.
+
 ## v0.5.1-beta — 2026-07-09
 
 UI & report polish pass:

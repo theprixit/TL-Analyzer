@@ -750,6 +750,27 @@ code {
     padding: 0 !important;
   }
 
+  /* Page-break discipline: keep headings with their content and never
+     split a figure, table, card or the photo across pages — but allow
+     breaks BETWEEN those blocks so pages fill naturally. */
+  #printable-report h2 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  #printable-report img,
+  #printable-report table.report-table,
+  #printable-report .pr-figure-box,
+  #printable-report .print-verdict-box,
+  #printable-report .print-math-box,
+  #printable-report #pr-sketch-box {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  .report-header {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
   .report-header {
     display: flex;
     align-items: baseline;
@@ -1032,6 +1053,39 @@ code {
 #photo-panel .input-grid-2 {
   grid-template-columns: 1fr;
 }
+
+/* Floating toolbar overlaid on the photo canvas (also visible in fullscreen) */
+.canvas-toolbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.74);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 5px 6px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 20px);
+}
+
+.ct-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.55rem;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ct-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ct-btn.active { background: var(--success); color: #ffffff; }
+.ct-sep { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.22); }
 
 @media (max-width: 1100px) {
   .photo-panel-grid { grid-template-columns: 1fr; }

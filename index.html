@@ -85,7 +85,6 @@
         <button type="button" class="btn btn-outline" onclick="openProjectGate()" title="Create, switch, resume or delete projects">📂 Projects</button>
         <button type="button" class="btn btn-outline" onclick="exportProjectJSON()" title="Export this project to a local JSON file (backup / share)">📤 Export</button>
         <input type="file" id="project-file-input" style="display: none;" accept=".json" onchange="importProjectJSON(event)">
-        <a href="explanations.html" target="_blank" class="btn btn-outline">Open Sandbox Visualizer</a>
         <button class="btn btn-success" onclick="printEngineeringReport()">Print Engineering Report</button>
       </div>
     </header>
@@ -148,30 +147,12 @@
               </div>
             </div>
 
-            <!-- Canvas Control buttons -->
+            <!-- Upload / reset -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
               <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
                 📁 Upload Span Photo
               </button>
               <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
-              <button type="button" id="pt-tool-place" class="btn btn-outline btn-success" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('place')" title="Click/tap to place and drag points">
-                🎯 Place Points
-              </button>
-              <button type="button" id="pt-tool-pan" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('pan')" title="Drag to pan the photo">
-                🖐 Pan
-              </button>
-              <button type="button" id="pt-vert-btn" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">
-                📐 Vertical Ref
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoUndo()">
-                ↩ Undo
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoFitView()">
-                ⤢ Fit View
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleFullscreen()" title="Edit the photo in fullscreen">
-                ⛶ Fullscreen
-              </button>
               <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
                 🔄 Reset Points
               </button>
@@ -181,28 +162,44 @@
             <div class="canvas-instructions" id="photo-tracker-instructions" style="font-size: 0.88rem; padding: 0.8rem;">
               No photo loaded. Click "Upload Span Photo" to begin.
             </div>
-
-            <!-- Solved results overlay -->
-            <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(16, 185, 129, 0.04); border-left: 3px solid var(--success); padding: 0.8rem; margin-top: 1rem; border-radius: 0 8px 8px 0; color: var(--success); display: none;">
-              Solving...
-            </div>
-
-            <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
-              Apply Solved Sag &amp; Coordinates to Primary Inputs
-            </button>
           </div>
 
-          <!-- Right: Canvas Workspace -->
+          <!-- Right: Canvas Workspace with floating toolbar -->
           <div>
-            <div class="canvas-workspace" style="height: 660px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block;">
+            <div class="canvas-workspace" style="height: 660px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block; position: relative;">
               <canvas id="photo-tracker-canvas"></canvas>
+              <div class="canvas-toolbar" id="photo-toolbar">
+                <button type="button" id="pt-tool-place" class="ct-btn active" onclick="setPhotoTool('place')" title="Place / drag points (right-click or double-tap a point to delete)">🎯 Place</button>
+                <button type="button" id="pt-tool-pan" class="ct-btn" onclick="setPhotoTool('pan')" title="Drag to pan the photo">🖐 Pan</button>
+                <span class="ct-sep"></span>
+                <button type="button" id="pt-vert-btn" class="ct-btn" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">📐 Vert Ref</button>
+                <button type="button" class="ct-btn" onclick="photoUndo()" title="Undo last point">↩ Undo</button>
+                <span class="ct-sep"></span>
+                <button type="button" class="ct-btn" onclick="photoFitView()" title="Fit photo to view">⤢ Fit</button>
+                <button type="button" class="ct-btn" onclick="photoToggleFullscreen()" title="Edit in fullscreen">⛶</button>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Solved results: full width under the workspace -->
+        <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(16, 185, 129, 0.04); border-left: 3px solid var(--success); padding: 0.8rem 1.1rem; margin-top: 1.2rem; border-radius: 0 8px 8px 0; color: var(--success); display: none;">
+          Solving...
+        </div>
+
+        <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
+          Apply Solved Sag &amp; Coordinates to Primary Inputs
+        </button>
       </div>
 
+      <!-- MAIN DASHBOARD CONTENT GRID -->
+      <div class="dashboard-grid">
+      
+      <!-- LEFT COLUMN: INPUTS PANEL -->
+      <div class="left-col">
+
       <!-- THREE-POINT GEOMETRY VISUALIZER (secondary to the photo tool) -->
-      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem; max-width: 1100px;">
+      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
         <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.35rem;">
           <span>📐 Live Structural Catenary Visualizer (Three-Point Geometry)</span>
           <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Real-time visual CAD model w.r.t. gravity references</span>
@@ -282,11 +279,7 @@
           </svg>
         </div>
       </div>
-      <!-- MAIN DASHBOARD CONTENT GRID -->
-      <div class="dashboard-grid">
-      
-      <!-- LEFT COLUMN: INPUTS PANEL -->
-      <div class="left-col">
+
         
         <!-- PANEL A: Collapsible Line Infrastructure Specifications -->
         <button class="collapsible-trigger" id="specs-toggle-btn" onclick="toggleCollapsible('specs-content', 'specs-arrow')">
@@ -1079,10 +1072,6 @@
 
 
 
-              <!-- Open CAD Results Button -->
-              <button type="button" class="btn btn-primary btn-block" style="margin-top: 1.5rem; padding: 0.8rem; font-size: 1rem; font-weight: bold; border-radius: 10px;" onclick="openDetailedResults()">
-                📐 Open Detailed CAD Results & Scale Model
-              </button>
 
             </div>
           </div>
@@ -1143,11 +1132,11 @@
                   <line id="line-uts-50" x1="50" y1="120" x2="470" y2="120" stroke="var(--danger)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
 
                   <!-- X-Axis labels -->
-                  <text x="50" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
-                  <text x="155" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
-                  <text x="260" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
-                  <text x="365" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
-                  <text x="470" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
+                  <text id="chart-xlbl-0" x="50" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
+                  <text id="chart-xlbl-1" x="155" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
+                  <text id="chart-xlbl-2" x="260" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
+                  <text id="chart-xlbl-3" x="365" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
+                  <text id="chart-xlbl-4" x="470" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
 
                   <!-- Axis Title Labels -->
                   <text x="260" y="247" font-size="9" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
@@ -1306,21 +1295,21 @@
     </div>
 
     <!-- Photo Sag Tracker: annotated span photograph + fit summary (leads the report) -->
-    <div class="report-section" id="pr-photo-annex" style="page-break-inside: avoid; display: none;">
+    <div class="report-section" id="pr-photo-annex" style="display: none;">
       <h2>2. Annotated Span Photograph (Photo Sag Tracker)</h2>
-      <img id="pr-photo-img" alt="Annotated span photograph with traced conductor and fitted catenary" style="width: 100%; max-height: 14cm; object-fit: contain; border: 1px solid #999999; background: #111111;">
+      <img id="pr-photo-img" alt="Annotated span photograph with traced conductor and fitted catenary" style="width: 100%; max-height: 12cm; object-fit: contain; border: 1px solid #999999; background: #111111;">
       <div class="print-math-box" id="pr-photo-summary" style="margin-top: 0.5rem;"></div>
       <div id="pr-photo-mc" class="pr-figure-box" style="margin-top: 0.4rem;"></div>
     </div>
 
     <!-- Live three-point geometry drawing, cloned from the app at print time -->
-    <div class="report-section" id="pr-sketch-section" style="page-break-inside: avoid;">
+    <div class="report-section" id="pr-sketch-section">
       <h2>3. Span Geometry Engineering Sketch (Three-Point Model)</h2>
       <div id="pr-sketch-box" style="border: 1px solid #999999; border-radius: 4px; background: #ffffff; padding: 0.3cm;"></div>
     </div>
 
     <!-- Sag vs tension safety curve, cloned from the live dashboard -->
-    <div class="report-section" id="pr-chart-section" style="page-break-inside: avoid;">
+    <div class="report-section" id="pr-chart-section">
       <h2>4. Sag vs. Tension Safety Curve</h2>
       <div id="pr-chart-box" class="pr-figure-box"></div>
     </div>
@@ -1371,7 +1360,7 @@
       <p id="pr-verdict-desc">The measured everyday tension complies fully with safety code guidelines (<20% of Conductor UTS). The conductor tension is safe from long-term wind vibration breakage.</p>
     </div>
 
-    <div class="report-section" style="page-break-inside: avoid;">
+    <div class="report-section">
       <h2>7. Geometrical Math Calculation Logs</h2>
       <div class="print-math-box" id="pr-math-steps">
         Three-Point Coordinate Sighting Logic Steps...
@@ -1388,8 +1377,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.5.1-beta"></script>
-  <script src="app.js?v=0.5.1-beta"></script>
-  <script src="phototracker.js?v=0.5.1-beta"></script>
+  <script src="engine.js?v=0.6.0-beta"></script>
+  <script src="app.js?v=0.6.0-beta"></script>
+  <script src="phototracker.js?v=0.6.0-beta"></script>
 </body>
 </html>
