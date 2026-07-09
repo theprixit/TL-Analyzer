@@ -2,6 +2,14 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.1-beta — 2026-07-09
+
+Temperature analysis redesigned around what the field can actually measure:
+
+- **Ambient temperature is now the primary input** (nobody knows conductor temperature in the field!). A "conditions during measurement" selector brackets the unknown solar/load heating (overcast/off-load ≈ ambient, up to +5/+10/+20 °C) and the analysis shows an honest **band** instead of a false-precision line. An optional IR-measured conductor temperature collapses the band.
+- **Winter cold-condition check**: the plot now extends below zero and a dedicated verdict reports the estimated static tension and %UTS at your chosen low temperature (default −10 °C) — built for the "will it be over-tensioned in snow conditions at minimum load?" question. Wind/ice load cases are explicitly out of scope (IS 802 checks add those).
+- Field guidance built in: measuring at minimum load, early morning or overcast makes conductor ≈ ambient nearly exact.
+
 ## v0.9.0-beta — 2026-07-09
 
 Field-tester requests: temperature behaviour and tower heights without drawings.

@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.9.0-beta';
+const APP_VERSION = '0.9.1-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -542,9 +542,12 @@ function calculateThreePoint() {
   }
 }
 
-// Render the tension/sag vs conductor temperature analysis. The measured
-// tension T (N) is anchored at the user-entered conductor temperature and
-// carried across 0–85 °C with the parabolic change-of-state equation.
+// Tension/sag vs conductor temperature. The field can only know AMBIENT
+// temperature, so the anchor is bracketed: conductor temperature at the
+// moment of measurement lies between ambient and ambient + a condition-based
+// solar/load rise. The result is an honest BAND, collapsing to a single
+// curve when an IR-measured conductor temperature is supplied. Includes an
+// explicit cold-condition check (default -10 C) for winter safety.
 function updateTemperaturePlot(T, w, L, cond) {
   const wrap = document.getElementById('temp-plot-wrap');
   if (!wrap) return;
@@ -554,33 +557,49 @@ function updateTemperaturePlot(T, w, L, cond) {
     return;
   }
 
-  const tempEl = document.getElementById('tp-temp-meas');
-  const tMeas = tempEl ? parseFloat(tempEl.value) : NaN;
-  if (isNaN(tMeas)) {
-    wrap.innerHTML = '<div style="color: var(--warning); font-size: 0.88rem; padding: 0.4rem 0;">⬆ Enter the conductor temperature at the time of measurement to see how tension and sag evolve from 0–85 °C. (On sunny days conductor temperature can run well above ambient.)</div>';
+  const ambient = parseFloat(document.getElementById('tp-temp-meas').value);
+  const irTemp = parseFloat((document.getElementById('tp-temp-cond') || {}).value);
+  const rise = parseFloat((document.getElementById('tp-temp-rise') || {}).value) || 0;
+  let tCold = parseFloat((document.getElementById('tp-temp-cold') || {}).value);
+  if (isNaN(tCold)) tCold = -10;
+
+  if (isNaN(ambient) && isNaN(irTemp)) {
+    wrap.innerHTML = '<div style="color: var(--warning); font-size: 0.88rem; padding: 0.4rem 0;">⬆ Enter the ambient temperature at the time of measurement (and pick the conditions) to project tension and sag from −20 to 85 °C, including the winter cold-condition check. Tip: measuring early morning / overcast at minimum load makes conductor ≈ ambient almost exact.</div>';
     return;
   }
 
+  // Anchor temperatures: an IR reading collapses the band to one curve.
+  const anchors = !isNaN(irTemp)
+    ? [{ t: irTemp, label: 'measured (IR) @ ' + irTemp + '°C' }]
+    : (rise > 0
+      ? [{ t: ambient, label: 'if conductor ≈ ambient (' + ambient + '°C)' },
+         { t: ambient + rise, label: 'if conductor ran +' + rise + '°C above ambient' }]
+      : [{ t: ambient, label: 'conductor ≈ ambient @ ' + ambient + '°C' }]);
+
   const EA = cond.E * 1e9 * cond.area * 1e-6; // N
-  const tLo = 0, tHi = 85;
-  const pts = [];
-  for (let t = tLo; t <= tHi; t += 1) {
-    pts.push({ t: t, T: TLEngine.changeOfState(T, tMeas, t, w, L, EA, cond.alpha) });
-  }
-  const Tmax = Math.max(...pts.map(p => p.T));
-  const Tmin = Math.min(...pts.map(p => p.T));
-  const pad = (Tmax - Tmin) * 0.15 || Tmax * 0.05;
+  const tLo = Math.min(-20, Math.floor(tCold / 5) * 5), tHi = 85;
+  const curves = anchors.map(a => {
+    const pts = [];
+    for (let t = tLo; t <= tHi; t += 1) {
+      pts.push({ t: t, T: TLEngine.changeOfState(T, a.t, t, w, L, EA, cond.alpha) });
+    }
+    return pts;
+  });
+
+  const allT = [];
+  curves.forEach(c => c.forEach(p => allT.push(p.T)));
+  const Tmax = Math.max.apply(null, allT), Tmin = Math.min.apply(null, allT);
+  const pad = (Tmax - Tmin) * 0.12 || Tmax * 0.05;
   const yTop = Tmax + pad, yBot = Math.max(0, Tmin - pad);
 
-  // Plot geometry
   const X0 = 70, X1 = 960, Y0 = 40, Y1 = 300;
   const xOf = t => X0 + (X1 - X0) * (t - tLo) / (tHi - tLo);
   const yOf = Tn => Y1 - (Y1 - Y0) * (Tn - yBot) / (yTop - yBot);
 
   let grid = '';
-  for (let t = 0; t <= 85; t += 10) {
+  for (let t = Math.ceil(tLo / 10) * 10; t <= tHi; t += 10) {
     grid += `<line x1="${xOf(t)}" y1="${Y0}" x2="${xOf(t)}" y2="${Y1}" stroke="#e2e8f0" stroke-width="0.6"/>` +
-            `<text x="${xOf(t)}" y="${Y1 + 18}" font-size="11" text-anchor="middle" fill="var(--text-muted)">${t}°C</text>`;
+            `<text x="${xOf(t)}" y="${Y1 + 18}" font-size="11" text-anchor="middle" fill="var(--text-muted)">${t}°</text>`;
   }
   let yTicks = '';
   for (let i = 0; i <= 4; i++) {
@@ -589,35 +608,78 @@ function updateTemperaturePlot(T, w, L, cond) {
               `<text x="${X0 - 6}" y="${yOf(Tv) + 4}" font-size="11" text-anchor="end" fill="var(--text-muted)">${(Tv / 1000).toFixed(1)}</text>`;
   }
 
-  const curve = pts.map((p, i) => `${i ? 'L' : 'M'} ${xOf(p.t).toFixed(1)},${yOf(p.T).toFixed(1)}`).join(' ');
-  const mX = xOf(tMeas), mY = yOf(T);
+  const pathOf = pts => pts.map((p, i) => `${i ? 'L' : 'M'} ${xOf(p.t).toFixed(1)},${yOf(p.T).toFixed(1)}`).join(' ');
+
+  let bandSvg = '';
+  if (curves.length === 2) {
+    const fwd = curves[0].map(p => `${xOf(p.t).toFixed(1)},${yOf(p.T).toFixed(1)}`);
+    const back = curves[1].slice().reverse().map(p => `${xOf(p.t).toFixed(1)},${yOf(p.T).toFixed(1)}`);
+    bandSvg = `<polygon points="${fwd.concat(back).join(' ')}" fill="var(--primary)" opacity="0.12"/>`;
+  }
+  let curveSvg = '';
+  curves.forEach((pts, i) => {
+    curveSvg += `<path d="${pathOf(pts)}" fill="none" stroke="var(--primary)" stroke-width="2.2"${i === 1 ? ' stroke-dasharray="7,4"' : ''}/>`;
+  });
+  let anchorSvg = '';
+  anchors.forEach((a, i) => {
+    anchorSvg += `<circle cx="${xOf(a.t)}" cy="${yOf(T)}" r="5.5" class="chart-dot"/>` +
+                 `<text x="${xOf(a.t) + 8}" y="${Y0 + 14 + i * 15}" font-size="11" font-weight="bold" fill="var(--success)">${a.label}</text>`;
+  });
+
+  // Cold-condition marker + worst case
+  const coldTs = anchors.map(a => TLEngine.changeOfState(T, a.t, tCold, w, L, EA, cond.alpha));
+  const coldWorst = Math.max.apply(null, coldTs);
+  const coldBest = Math.min.apply(null, coldTs);
+  const coldPct = (coldWorst / cond.uts) * 100;
+  const coldSvg =
+    `<line x1="${xOf(tCold)}" y1="${Y0}" x2="${xOf(tCold)}" y2="${Y1}" stroke="var(--danger)" stroke-width="1.4" stroke-dasharray="6,4"/>` +
+    `<text x="${xOf(tCold) + 6}" y="${Y1 - 8}" font-size="11" font-weight="bold" fill="var(--danger)">cold check ${tCold}°C</text>`;
 
   const svg =
     `<svg id="svg-temp-chart" class="chart-svg" viewBox="0 0 1000 360">` +
-    grid + yTicks +
+    grid + yTicks + bandSvg +
     `<line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" class="chart-axis"/>` +
     `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" class="chart-axis"/>` +
-    `<path d="${curve}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>` +
-    `<line x1="${mX}" y1="${Y0}" x2="${mX}" y2="${Y1}" stroke="var(--success)" stroke-width="1.2" stroke-dasharray="5,4"/>` +
-    `<circle cx="${mX}" cy="${mY}" r="6" class="chart-dot"/>` +
-    `<text x="${mX + 8}" y="${Y0 + 14}" font-size="11" font-weight="bold" fill="var(--success)">measured @ ${tMeas}°C</text>` +
+    curveSvg + coldSvg + anchorSvg +
     `<text x="${(X0 + X1) / 2}" y="345" font-size="12" text-anchor="middle" font-weight="bold" fill="var(--text-main)">Conductor Temperature (°C)</text>` +
     `<text x="24" y="${(Y0 + Y1) / 2}" font-size="12" text-anchor="middle" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 24 ${(Y0 + Y1) / 2})">Horizontal Tension T (kN)</text>` +
     `</svg>`;
 
-  // Key-temperature table (tension + equivalent mid-span sag)
-  const keyTemps = Array.from(new Set([0, 15, 32, 45, 65, 85, Math.round(tMeas)])).sort((a, b) => a - b);
+  // Cold-condition verdict (static tension only — wind/ice not modelled)
+  let vColor = 'var(--success)', vTitle = 'WITHIN EVERYDAY LIMIT';
+  if (coldPct > 50) { vColor = 'var(--danger)'; vTitle = 'EXCEEDS 50% UTS LIMIT'; }
+  else if (coldPct > 25) { vColor = 'var(--warning)'; vTitle = 'ABOVE EVERYDAY RANGE — CAUTION'; }
+  else if (coldPct > 20) { vColor = 'var(--warning)'; vTitle = 'BORDERLINE EVERYDAY LIMIT'; }
+  const rangeTxt = curves.length === 2
+    ? `${(coldBest / 1000).toFixed(2)} – ${(coldWorst / 1000).toFixed(2)} kN (${(coldBest / 9.80665).toFixed(0)} – ${(coldWorst / 9.80665).toFixed(0)} kgf)`
+    : `${(coldWorst / 1000).toFixed(2)} kN (${(coldWorst / 9.80665).toFixed(0)} kgf)`;
+  const verdict =
+    `<div style="border: 1px solid var(--border); border-left: 6px solid ${vColor}; border-radius: 10px; padding: 0.7rem 1rem; margin-top: 0.8rem; background: var(--bg-input);">` +
+    `<div style="font-weight: 800; color: ${vColor};">❄ COLD-CONDITION ESTIMATE AT ${tCold} °C: ${vTitle}</div>` +
+    `<div style="font-size: 0.88rem; margin-top: 0.2rem;">Estimated static tension: <strong>${rangeTxt}</strong> — worst case <strong>${coldPct.toFixed(1)}% of UTS</strong>. ` +
+    `Static (no wind / no ice) estimate: formal IS 802 loading checks add wind and ice cases on top of this.</div></div>`;
+
+  // Key-temperature table (band-aware)
+  const keySet = {};
+  [tCold, 0, 15, 32, 45, 65, 85].concat(anchors.map(a => Math.round(a.t))).forEach(t => { keySet[t] = true; });
+  const keyTemps = Object.keys(keySet).map(Number).sort((a, b) => a - b);
+  const fmt = vals => {
+    const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    return (hi - lo) / hi > 0.005
+      ? { kn: `${(lo / 1000).toFixed(2)}–${(hi / 1000).toFixed(2)}`, kgf: `${(lo / 9.80665).toFixed(0)}–${(hi / 9.80665).toFixed(0)}`, sag: `${((w * L * L) / (8 * hi)).toFixed(2)}–${((w * L * L) / (8 * lo)).toFixed(2)}`, pct: `${((lo / cond.uts) * 100).toFixed(1)}–${((hi / cond.uts) * 100).toFixed(1)}` }
+      : { kn: (hi / 1000).toFixed(2), kgf: (hi / 9.80665).toFixed(0), sag: ((w * L * L) / (8 * hi)).toFixed(2), pct: ((hi / cond.uts) * 100).toFixed(1) };
+  };
   let rows = '';
   for (const t of keyTemps) {
-    const Tt = TLEngine.changeOfState(T, tMeas, t, w, L, EA, cond.alpha);
-    const sag = (w * L * L) / (8 * Tt);
-    const isMeas = t === Math.round(tMeas);
-    rows += `<tr${isMeas ? ' style="background: rgba(15, 118, 110, 0.08); font-weight: bold;"' : ''}>` +
-      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem;">${t} °C${isMeas ? ' (measured)' : ''}</td>` +
-      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${(Tt / 1000).toFixed(2)} kN</td>` +
-      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${(Tt / 9.80665).toFixed(0)} kgf</td>` +
-      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${sag.toFixed(2)} m</td>` +
-      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${((Tt / cond.uts) * 100).toFixed(1)} %</td></tr>`;
+    const vals = anchors.map(a => TLEngine.changeOfState(T, a.t, t, w, L, EA, cond.alpha));
+    const f = fmt(vals);
+    const isCold = t === tCold;
+    rows += `<tr${isCold ? ' style="background: rgba(185, 28, 28, 0.06); font-weight: bold;"' : ''}>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem;">${t} °C${isCold ? ' ❄ cold check' : ''}</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${f.kn} kN</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${f.kgf} kgf</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${f.sag} m</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${f.pct} %</td></tr>`;
   }
   const table =
     `<table class="report-table" style="font-size: 0.8rem; width: 100%; border-collapse: collapse; margin-top: 0.8rem;">` +
@@ -628,9 +690,9 @@ function updateTemperaturePlot(T, w, L, cond) {
     `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">Mid-Span Sag</th>` +
     `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">% UTS</th>` +
     `</tr></thead><tbody>${rows}</tbody></table>` +
-    `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Parabolic change-of-state (level-span approximation) using typical final-modulus values: E = ${cond.E} GPa, A = ${cond.area} mm², α = ${(cond.alpha * 1e6).toFixed(1)}×10⁻⁶/°C for ${cond.name}. Verify against the conductor datasheet for critical studies. Creep and ice/wind load changes are not modelled.</div>`;
+    `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Parabolic change-of-state (level-span approximation) with typical final-modulus values: E = ${cond.E} GPa, A = ${cond.area} mm², α = ${(cond.alpha * 1e6).toFixed(1)}×10⁻⁶/°C for ${cond.name} — verify against the conductor datasheet for critical studies. Creep and ice/wind load changes are not modelled.${curves.length === 2 ? ' The band spans the unknown conductor temperature at measurement (ambient … ambient + condition rise); quoted ranges are the exact bounds of that assumption.' : ''} Best practice: measure at minimum load, early morning or overcast — conductor ≈ ambient is then nearly exact.</div>`;
 
-  wrap.innerHTML = svg + table;
+  wrap.innerHTML = svg + verdict + table;
 }
 
 // ==========================================================================
@@ -1501,6 +1563,9 @@ function collectProjectData() {
     photoSpanL: document.getElementById('photo-span-l') ? document.getElementById('photo-span-l').value : '',
     photoHookH: document.getElementById('photo-hook-h') ? document.getElementById('photo-hook-h').value : '',
     tpTempMeas: document.getElementById('tp-temp-meas') ? document.getElementById('tp-temp-meas').value : '',
+    tpTempCond: document.getElementById('tp-temp-cond') ? document.getElementById('tp-temp-cond').value : '',
+    tpTempRise: document.getElementById('tp-temp-rise') ? document.getElementById('tp-temp-rise').value : '',
+    tpTempCold: document.getElementById('tp-temp-cold') ? document.getElementById('tp-temp-cold').value : '',
     photoTracker: (typeof PhotoTracker !== 'undefined') ? PhotoTracker.serialize() : null,
 
 
@@ -1648,6 +1713,9 @@ function applyProjectData(data) {
       setVal('photo-span-l', data.photoSpanL);
       setVal('photo-hook-h', data.photoHookH);
       setVal('tp-temp-meas', data.tpTempMeas);
+      setVal('tp-temp-cond', data.tpTempCond);
+      setVal('tp-temp-rise', data.tpTempRise);
+      setVal('tp-temp-cold', data.tpTempCold);
 
       // Trigger respective layout refreshes
       handleConductorChange('tp');
