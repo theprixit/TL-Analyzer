@@ -1,6 +1,6 @@
 # TL-SAG — Transmission Line Sag & Tension Analyzer
 
-**Current version: v0.4.0-beta** · [Changelog](CHANGELOG.md) · [Live app](https://theprixit.github.io/TL-Analyzer/)
+**Current version: v0.9.0-beta** · [Changelog](CHANGELOG.md) · [Live app](https://theprixit.github.io/TL-Analyzer/)
 
 A browser-based tool for calculating overhead conductor tension from field sag measurements. Built to solve the practical difficulty of quickly verifying conductor tension in transmission lines using simple field instruments — primarily in mountainous and difficult terrain where traditional sag-tension charts are hard to apply.
 
@@ -45,7 +45,7 @@ Time a mechanical wave pulse reflected along the conductor to estimate sag from 
 
 ## Key Features
 
-- **Live catenary SVG visualizer** updating in real-time with inputs
+- **Catenary SVG visualizer** that updates with your inputs
 - **Sag vs. Tension safety curve** with UTS threshold bands
 - **Statistical sensitivity analysis** with RSS error propagation
 - **Print-ready engineering report** — annotated span photograph, span geometry sketch, results & calculation log

@@ -43,6 +43,38 @@
     return (w * L * L) / (8 * sag);
   }
 
+  // Change-of-state (parabolic, level-span approximation): given horizontal
+  // tension T1 (N) at conductor temperature t1 (°C), solve the cubic for the
+  // tension T2 at temperature t2. EA = elastic modulus × area (N),
+  // alpha = coefficient of thermal expansion (/°C).
+  //   T2³ + B·T2² − K = 0,  K = EA·w²·L²/24,
+  //   B = K/T1² + EA·α·(t2−t1) − T1
+  function changeOfState(T1, t1, t2, w, L, EA, alpha) {
+    const K = (EA * w * w * L * L) / 24;
+    const B = K / (T1 * T1) + EA * alpha * (t2 - t1) - T1;
+    const f = T => T * T * T + B * T * T - K;
+    let lo = 1, hi = Math.max(T1 * 4, 1e5);
+    while (f(hi) < 0) hi *= 2;
+    for (let i = 0; i < 200; i++) {
+      const mid = (lo + hi) / 2;
+      if (f(lo) * f(mid) <= 0) hi = mid; else lo = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  // Hook height above base from rangefinder shots taken at one station.
+  // Slant mode: two slant distances + inclinations (deg, +up/−down).
+  function hookHeightFromSlants(sHook, angHookDeg, sBase, angBaseDeg) {
+    const r = Math.PI / 180;
+    return sHook * Math.sin(angHookDeg * r) - sBase * Math.sin(angBaseDeg * r);
+  }
+
+  // Angles mode: horizontal distance + the two inclinations.
+  function hookHeightFromAngles(hd, angHookDeg, angBaseDeg) {
+    const r = Math.PI / 180;
+    return hd * (Math.tan(angHookDeg * r) - Math.tan(angBaseDeg * r));
+  }
+
   // Tension with one input perturbed by delta (sensitivity analysis).
   function perturbedTension(w, L, xp, za, zb, zp, delta, variable) {
     let tL = L, tXp = xp, tZa = za, tZb = zb, tZp = zp;
@@ -341,6 +373,9 @@
     sagOffsetFromZ: sagOffsetFromZ,
     waveSag: waveSag,
     tensionFromMidSag: tensionFromMidSag,
+    changeOfState: changeOfState,
+    hookHeightFromSlants: hookHeightFromSlants,
+    hookHeightFromAngles: hookHeightFromAngles,
     perturbedTension: perturbedTension,
     catenaryY: catenaryY,
     fitParabola: fitParabola,

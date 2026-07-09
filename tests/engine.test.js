@@ -117,6 +117,35 @@ console.log('\n== Fit failure guards ==');
   checkTrue('inverted curvature rejected', E.fitCatenary(inverted).ok === false);
 }
 
+console.log('\n== Change of state (temperature) ==');
+{
+  // ACSR Zebra: A=484.5 mm², E=68.5 GPa -> EA = 33.19e6 N, alpha=19.3e-6
+  const EA = 68.5e9 * 484.5e-6, alpha = 19.3e-6, w = 15.912, L = 300, T1 = 30000, t1 = 25;
+  // Identity: same temperature must return the same tension (cubic root at T1)
+  check('same temp -> same tension', E.changeOfState(T1, t1, 25, w, L, EA, alpha), T1, 0.01);
+  const Thot = E.changeOfState(T1, t1, 85, w, L, EA, alpha);
+  const Tcold = E.changeOfState(T1, t1, 0, w, L, EA, alpha);
+  checkTrue('hotter -> slacker (T drops)', Thot < T1);
+  checkTrue('colder -> tighter (T rises)', Tcold > T1);
+  // Magnitude sanity: 60°C rise on a 300 m Zebra span should shed
+  // roughly 20-60% of tension (typical stringing-chart behaviour)
+  checkTrue('hot tension in plausible range', Thot > 0.35 * T1 && Thot < 0.85 * T1);
+  // Round trip: state at 85°C carried back to 25°C returns the original
+  const Tback = E.changeOfState(Thot, 85, 25, w, L, EA, alpha);
+  check('round trip 25->85->25', Tback, T1, 0.05);
+}
+
+console.log('\n== Rangefinder hook-height helpers ==');
+{
+  // Station 60 m out: hook at +25°, base at -8°
+  const H1 = E.hookHeightFromSlants(66.2, 25, 60.6, -8);
+  // expected: 66.2*sin25 - 60.6*sin(-8) = 27.98 + 8.43 = 36.41
+  check('slant mode', H1, 66.2 * Math.sin(25 * Math.PI / 180) - 60.6 * Math.sin(-8 * Math.PI / 180), 0.01);
+  const H2 = E.hookHeightFromAngles(60, 25, -8);
+  check('angles mode', H2, 60 * (Math.tan(25 * Math.PI / 180) - Math.tan(-8 * Math.PI / 180)), 0.01);
+  checkTrue('both modes agree for consistent geometry', Math.abs(H1 - (60 / Math.cos(25 * Math.PI / 180)) * Math.sin(25 * Math.PI / 180) - 60.6 * Math.sin(8 * Math.PI / 180)) < 2);
+}
+
 console.log('\n== Homography (perspective rectification) ==');
 {
   // Known projective transform: mild perspective + rotation + scale

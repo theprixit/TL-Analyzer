@@ -2,6 +2,15 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.0-beta — 2026-07-09
+
+Field-tester requests: temperature behaviour and tower heights without drawings.
+
+- **Tension vs. Conductor Temperature (change of state)**: enter the conductor temperature at the time of measurement and the app projects tension and sag across 0–85 °C using the parabolic change-of-state equation, anchored at your measured tension — chart plus a key-temperature table (0/15/32/45/65/85 °C with kN, kgf, mid-span sag and %UTS). Uses typical final-modulus E, area and expansion coefficients for the IS 398 ACSR catalogue (stated in the output; verify against datasheets for critical studies). Included in the printed report.
+- **Rangefinder hook-height helper** in the photo panel: when tower drawings aren't available (old lines, poor records), shoot the hook and the tower base from one station — slant distances + inclinations, or horizontal distance + two inclinations — and apply the computed hook-to-base height straight into the Tower A/B fields.
+- Removed "real-time" phrasing from the visualizer and results panels ("updates as you edit the inputs" is what it actually does).
+- Engine: `changeOfState` and hook-height helpers added with 8 new unit tests (44 total).
+
 ## v0.8.1-beta — 2026-07-09
 
 - **"Load a real example project"** on the start screen: one click loads the bundled 220kV Kashang–Bhaba river crossing (788 m span, photo, 60-point conductor trace, perspective calibration) — the fastest way for a new tester to see a fully worked analysis.

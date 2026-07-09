@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.8.1c">
+  <link rel="stylesheet" href="style.css?v=0.9.0-beta">
 </head>
 <body>
 
@@ -156,6 +156,38 @@
                   <label style="font-weight: bold; color: var(--primary);">Tower B Height (m): <span class="unit-label">(blank = same as A)</span></label>
                   <input type="number" id="photo-persp-hb" value="" placeholder="= Tower A" step="0.1" onchange="photoTrackerResolve()">
                 </div>
+                <div class="form-group no-margin">
+                  <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('hh-panel')">📏 No tower drawings? Estimate hook height with a rangefinder…</button>
+                  <div id="hh-panel" class="gps-helper-panel">
+                    <div class="form-group no-margin" style="margin-bottom: 0.6rem;">
+                      <label style="font-weight: bold;">Rangefinder data available:</label>
+                      <select id="hh-mode" onchange="toggleHhMode()">
+                        <option value="slant" selected>Slant distances + inclinations (hook &amp; base)</option>
+                        <option value="angles">Horizontal distance + two inclinations</option>
+                      </select>
+                    </div>
+                    <div id="hh-slant-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                      <div class="form-group no-margin"><label>Slant to hook (m):</label><input type="number" id="hh-s-hook" placeholder="e.g. 66.2" step="0.1" oninput="calcHookHeight()"></div>
+                      <div class="form-group no-margin"><label>Incl. to hook (°, +up):</label><input type="number" id="hh-a-hook" placeholder="e.g. 25.0" step="0.1" oninput="calcHookHeight()"></div>
+                      <div class="form-group no-margin"><label>Slant to base (m):</label><input type="number" id="hh-s-base" placeholder="e.g. 60.6" step="0.1" oninput="calcHookHeight()"></div>
+                      <div class="form-group no-margin"><label>Incl. to base (°, −down):</label><input type="number" id="hh-a-base" placeholder="e.g. -8.0" step="0.1" oninput="calcHookHeight()"></div>
+                    </div>
+                    <div id="hh-angle-fields" style="display: none; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+                      <div class="form-group no-margin"><label>Horizontal distance (m):</label><input type="number" id="hh-hd" placeholder="e.g. 60.0" step="0.1" oninput="calcHookHeight()"></div>
+                      <div></div>
+                      <div class="form-group no-margin"><label>Incl. to hook (°, +up):</label><input type="number" id="hh-ang-hook" placeholder="e.g. 25.0" step="0.1" oninput="calcHookHeight()"></div>
+                      <div class="form-group no-margin"><label>Incl. to base (°, −down):</label><input type="number" id="hh-ang-base" placeholder="e.g. -8.0" step="0.1" oninput="calcHookHeight()"></div>
+                    </div>
+                    <div id="hh-result" style="font-family: var(--font-mono); font-size: 0.85rem; margin: 0.7rem 0; color: var(--success);">
+                      <span style="color: var(--text-muted);">Shoot the hook and the tower base from ONE standing position.</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                      <button type="button" class="btn btn-outline" style="padding: 0.4rem 0.7rem; font-size: 0.8rem;" onclick="applyHookHeight('a')">→ Tower A</button>
+                      <button type="button" class="btn btn-outline" style="padding: 0.4rem 0.7rem; font-size: 0.8rem;" onclick="applyHookHeight('b')">→ Tower B</button>
+                      <button type="button" class="btn btn-outline" style="padding: 0.4rem 0.7rem; font-size: 0.8rem;" onclick="applyHookHeight('tower')">→ Tower Height field</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -268,8 +300,8 @@
       <!-- THREE-POINT GEOMETRY VISUALIZER (secondary to the photo tool) -->
       <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
         <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.35rem;">
-          <span>📐 Live Structural Catenary Visualizer (Three-Point Geometry)</span>
-          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Real-time visual CAD model w.r.t. gravity references</span>
+          <span>📐 Structural Catenary Visualizer (Three-Point Geometry)</span>
+          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Scaled schematic — updates as you edit the inputs</span>
         </h2>
         <div class="visualizer-area" style="width: 100%; height: auto;">
           <svg id="svg-threepoint" class="interactive-svg" viewBox="0 0 800 320" style="border: 1px solid var(--border); border-radius: 8px;">
@@ -1100,7 +1132,7 @@
         <!-- PANEL C: Results Dashboard & Safety Status Checks -->
         <div class="panel">
           <h2>Calculation Results & Safety Checks</h2>
-          <p class="subtitle" style="margin-bottom: 1.2rem;">Real-time engineering values and safety criteria verdicts.</p>
+          <p class="subtitle" style="margin-bottom: 1.2rem;">Engineering values and safety criteria verdicts — update as you edit the inputs.</p>
           
           <!-- Tab A: Three Point results panel -->
           <div id="tp-results" class="tab-pane active">
@@ -1224,6 +1256,21 @@
                     <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
                   </circle>
                 </svg>
+      </div>
+
+      <!-- Temperature variation (change of state) -->
+      <div class="chart-area" style="margin-bottom: 1.5rem;">
+        <div class="chart-title">
+          <span>🌡 Tension vs. Conductor Temperature (Change of State)</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Anchored at your measured tension — projected across 0–85 °C</span>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.6rem;">
+          <div class="form-group no-margin" style="max-width: 320px;">
+            <label style="font-weight: bold;">Conductor temperature at measurement (°C):</label>
+            <input type="number" id="tp-temp-meas" value="" placeholder="e.g. 32 — required for this analysis" step="0.5" oninput="calculateThreePoint()">
+          </div>
+        </div>
+        <div id="temp-plot-wrap"></div>
       </div>
 
       <div class="analysis-grid">
@@ -1395,8 +1442,14 @@
       <div id="pr-chart-box" class="pr-figure-box"></div>
     </div>
 
+    <!-- Temperature variation, mirrored from the live analysis -->
+    <div class="report-section" id="pr-temp-section" style="display: none;">
+      <h2>5. Tension vs. Conductor Temperature</h2>
+      <div id="pr-temp-box" class="pr-figure-box"></div>
+    </div>
+
     <div class="report-section">
-      <h2>5. Conductor Specifications</h2>
+      <h2>6. Conductor Specifications</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Conductor Code Name</th>
@@ -1414,7 +1467,7 @@
     </div>
 
     <div class="report-section">
-      <h2>6. Sag & Tension Calculation Results</h2>
+      <h2>7. Sag & Tension Calculation Results</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Measurement Method</th>
@@ -1442,7 +1495,7 @@
     </div>
 
     <div class="report-section">
-      <h2>7. Geometrical Math Calculation Logs</h2>
+      <h2>8. Geometrical Math Calculation Logs</h2>
       <div class="print-math-box" id="pr-math-steps">
         Three-Point Coordinate Sighting Logic Steps...
       </div>
@@ -1458,8 +1511,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.8.1c"></script>
-  <script src="app.js?v=0.8.1c"></script>
-  <script src="phototracker.js?v=0.8.1c"></script>
+  <script src="engine.js?v=0.9.0-beta"></script>
+  <script src="app.js?v=0.9.0-beta"></script>
+  <script src="phototracker.js?v=0.9.0-beta"></script>
 </body>
 </html>

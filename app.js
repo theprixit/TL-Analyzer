@@ -3,17 +3,21 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.8.1-beta';
+const APP_VERSION = '0.9.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
 // Standard ACSR Conductor Database (IS 398 Part-II Reference Specs)
+// area: total cross-section mm² | E: typical FINAL modulus GPa |
+// alpha: coefficient of thermal expansion /°C.
+// E and alpha are typical published values — verify against the actual
+// conductor datasheet for critical temperature studies.
 const conductorDatabase = {
-  "dog": { name: "ACSR Dog", w: 3.865, mass: 0.394, uts: 32700 },
-  "wolf": { name: "ACSR Wolf", w: 7.122, mass: 0.726, uts: 56400 },
-  "panther": { name: "ACSR Panther", w: 9.555, mass: 0.974, uts: 79700 },
-  "zebra": { name: "ACSR Zebra", w: 15.912, mass: 1.622, uts: 130300 },
-  "moose": { name: "ACSR Moose", w: 19.600, mass: 1.998, uts: 161200 },
+  "dog": { name: "ACSR Dog", w: 3.865, mass: 0.394, uts: 32700, area: 118.5, E: 73.5, alpha: 19.8e-6 },
+  "wolf": { name: "ACSR Wolf", w: 7.122, mass: 0.726, uts: 56400, area: 194.9, E: 79.0, alpha: 17.8e-6 },
+  "panther": { name: "ACSR Panther", w: 9.555, mass: 0.974, uts: 79700, area: 261.5, E: 79.0, alpha: 17.8e-6 },
+  "zebra": { name: "ACSR Zebra", w: 15.912, mass: 1.622, uts: 130300, area: 484.5, E: 68.5, alpha: 19.3e-6 },
+  "moose": { name: "ACSR Moose", w: 19.600, mass: 1.998, uts: 161200, area: 597.0, E: 68.5, alpha: 19.3e-6 },
   "custom": { name: "Custom Conductor", w: 0.0, mass: 0.0, uts: 0.0 }
 };
 
@@ -527,6 +531,106 @@ function calculateThreePoint() {
   } catch (err) {
     console.error("SVG Three-Point Redraw error: ", err);
   }
+
+  // ==========================================
+  // TEMPERATURE VARIATION (CHANGE OF STATE)
+  // ==========================================
+  try {
+    updateTemperaturePlot(T, w, L, cond);
+  } catch (err) {
+    console.error("Temperature plot error: ", err);
+  }
+}
+
+// Render the tension/sag vs conductor temperature analysis. The measured
+// tension T (N) is anchored at the user-entered conductor temperature and
+// carried across 0–85 °C with the parabolic change-of-state equation.
+function updateTemperaturePlot(T, w, L, cond) {
+  const wrap = document.getElementById('temp-plot-wrap');
+  if (!wrap) return;
+
+  if (!(cond.area > 0) || !(cond.E > 0) || !(cond.alpha > 0)) {
+    wrap.innerHTML = '<div style="color: var(--text-muted); font-size: 0.88rem; padding: 0.4rem 0;">Temperature analysis needs the conductor elastic modulus, cross-section area and expansion coefficient — available for the built-in ACSR catalogue conductors.</div>';
+    return;
+  }
+
+  const tempEl = document.getElementById('tp-temp-meas');
+  const tMeas = tempEl ? parseFloat(tempEl.value) : NaN;
+  if (isNaN(tMeas)) {
+    wrap.innerHTML = '<div style="color: var(--warning); font-size: 0.88rem; padding: 0.4rem 0;">⬆ Enter the conductor temperature at the time of measurement to see how tension and sag evolve from 0–85 °C. (On sunny days conductor temperature can run well above ambient.)</div>';
+    return;
+  }
+
+  const EA = cond.E * 1e9 * cond.area * 1e-6; // N
+  const tLo = 0, tHi = 85;
+  const pts = [];
+  for (let t = tLo; t <= tHi; t += 1) {
+    pts.push({ t: t, T: TLEngine.changeOfState(T, tMeas, t, w, L, EA, cond.alpha) });
+  }
+  const Tmax = Math.max(...pts.map(p => p.T));
+  const Tmin = Math.min(...pts.map(p => p.T));
+  const pad = (Tmax - Tmin) * 0.15 || Tmax * 0.05;
+  const yTop = Tmax + pad, yBot = Math.max(0, Tmin - pad);
+
+  // Plot geometry
+  const X0 = 70, X1 = 960, Y0 = 40, Y1 = 300;
+  const xOf = t => X0 + (X1 - X0) * (t - tLo) / (tHi - tLo);
+  const yOf = Tn => Y1 - (Y1 - Y0) * (Tn - yBot) / (yTop - yBot);
+
+  let grid = '';
+  for (let t = 0; t <= 85; t += 10) {
+    grid += `<line x1="${xOf(t)}" y1="${Y0}" x2="${xOf(t)}" y2="${Y1}" stroke="#e2e8f0" stroke-width="0.6"/>` +
+            `<text x="${xOf(t)}" y="${Y1 + 18}" font-size="11" text-anchor="middle" fill="var(--text-muted)">${t}°C</text>`;
+  }
+  let yTicks = '';
+  for (let i = 0; i <= 4; i++) {
+    const Tv = yBot + ((yTop - yBot) * i) / 4;
+    yTicks += `<line x1="${X0}" y1="${yOf(Tv)}" x2="${X1}" y2="${yOf(Tv)}" stroke="#e2e8f0" stroke-width="0.6"/>` +
+              `<text x="${X0 - 6}" y="${yOf(Tv) + 4}" font-size="11" text-anchor="end" fill="var(--text-muted)">${(Tv / 1000).toFixed(1)}</text>`;
+  }
+
+  const curve = pts.map((p, i) => `${i ? 'L' : 'M'} ${xOf(p.t).toFixed(1)},${yOf(p.T).toFixed(1)}`).join(' ');
+  const mX = xOf(tMeas), mY = yOf(T);
+
+  const svg =
+    `<svg id="svg-temp-chart" class="chart-svg" viewBox="0 0 1000 360">` +
+    grid + yTicks +
+    `<line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" class="chart-axis"/>` +
+    `<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" class="chart-axis"/>` +
+    `<path d="${curve}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>` +
+    `<line x1="${mX}" y1="${Y0}" x2="${mX}" y2="${Y1}" stroke="var(--success)" stroke-width="1.2" stroke-dasharray="5,4"/>` +
+    `<circle cx="${mX}" cy="${mY}" r="6" class="chart-dot"/>` +
+    `<text x="${mX + 8}" y="${Y0 + 14}" font-size="11" font-weight="bold" fill="var(--success)">measured @ ${tMeas}°C</text>` +
+    `<text x="${(X0 + X1) / 2}" y="345" font-size="12" text-anchor="middle" font-weight="bold" fill="var(--text-main)">Conductor Temperature (°C)</text>` +
+    `<text x="24" y="${(Y0 + Y1) / 2}" font-size="12" text-anchor="middle" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 24 ${(Y0 + Y1) / 2})">Horizontal Tension T (kN)</text>` +
+    `</svg>`;
+
+  // Key-temperature table (tension + equivalent mid-span sag)
+  const keyTemps = Array.from(new Set([0, 15, 32, 45, 65, 85, Math.round(tMeas)])).sort((a, b) => a - b);
+  let rows = '';
+  for (const t of keyTemps) {
+    const Tt = TLEngine.changeOfState(T, tMeas, t, w, L, EA, cond.alpha);
+    const sag = (w * L * L) / (8 * Tt);
+    const isMeas = t === Math.round(tMeas);
+    rows += `<tr${isMeas ? ' style="background: rgba(15, 118, 110, 0.08); font-weight: bold;"' : ''}>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem;">${t} °C${isMeas ? ' (measured)' : ''}</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${(Tt / 1000).toFixed(2)} kN</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${(Tt / 9.80665).toFixed(0)} kgf</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${sag.toFixed(2)} m</td>` +
+      `<td style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right; font-family: var(--font-mono);">${((Tt / cond.uts) * 100).toFixed(1)} %</td></tr>`;
+  }
+  const table =
+    `<table class="report-table" style="font-size: 0.8rem; width: 100%; border-collapse: collapse; margin-top: 0.8rem;">` +
+    `<thead><tr style="background: var(--bg-dark);">` +
+    `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: left;">Conductor Temp</th>` +
+    `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">Tension</th>` +
+    `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">Tension (kgf)</th>` +
+    `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">Mid-Span Sag</th>` +
+    `<th style="border: 1px solid var(--border); padding: 0.35rem 0.6rem; text-align: right;">% UTS</th>` +
+    `</tr></thead><tbody>${rows}</tbody></table>` +
+    `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Parabolic change-of-state (level-span approximation) using typical final-modulus values: E = ${cond.E} GPa, A = ${cond.area} mm², α = ${(cond.alpha * 1e6).toFixed(1)}×10⁻⁶/°C for ${cond.name}. Verify against the conductor datasheet for critical studies. Creep and ice/wind load changes are not modelled.</div>`;
+
+  wrap.innerHTML = svg + table;
 }
 
 // ==========================================================================
@@ -916,6 +1020,15 @@ function printEngineeringReport() {
     const haveResults = resultsOk && resultsOk.style.display !== 'none';
     chartSection.style.display = haveResults ? 'block' : 'none';
     if (haveResults) cloneSvgInto('svg-sag-tension-chart', 'pr-chart-box');
+  }
+
+  // D3. Temperature variation — only when the user entered a measurement temp
+  const tempSection = document.getElementById('pr-temp-section');
+  if (tempSection) {
+    const wrap = document.getElementById('temp-plot-wrap');
+    const haveTemp = wrap && wrap.querySelector('svg');
+    tempSection.style.display = haveTemp ? 'block' : 'none';
+    if (haveTemp) document.getElementById('pr-temp-box').innerHTML = wrap.innerHTML;
   }
 
   // E. Renumber visible section headings (the photo section hides without a photo)
@@ -1387,6 +1500,7 @@ function collectProjectData() {
     photoPerspHb: document.getElementById('photo-persp-hb') ? document.getElementById('photo-persp-hb').value : '',
     photoSpanL: document.getElementById('photo-span-l') ? document.getElementById('photo-span-l').value : '',
     photoHookH: document.getElementById('photo-hook-h') ? document.getElementById('photo-hook-h').value : '',
+    tpTempMeas: document.getElementById('tp-temp-meas') ? document.getElementById('tp-temp-meas').value : '',
     photoTracker: (typeof PhotoTracker !== 'undefined') ? PhotoTracker.serialize() : null,
 
 
@@ -1533,6 +1647,7 @@ function applyProjectData(data) {
       setVal('photo-persp-hb', data.photoPerspHb);
       setVal('photo-span-l', data.photoSpanL);
       setVal('photo-hook-h', data.photoHookH);
+      setVal('tp-temp-meas', data.tpTempMeas);
 
       // Trigger respective layout refreshes
       handleConductorChange('tp');
@@ -1710,6 +1825,63 @@ function deleteSavedProject(id) {
     updateProjectBadge();
   }
   renderGateProjectList();
+}
+
+// ==========================================================================
+// RANGEFINDER HOOK-HEIGHT HELPER (photo panel)
+// Estimates a tower's hook-to-base height when drawings are unavailable:
+// shoot the hook and the base from one station with a laser rangefinder.
+// ==========================================================================
+let hhLastResult = NaN;
+
+function toggleHhMode() {
+  const mode = document.getElementById('hh-mode').value;
+  document.getElementById('hh-slant-fields').style.display = mode === 'slant' ? 'grid' : 'none';
+  document.getElementById('hh-angle-fields').style.display = mode === 'slant' ? 'none' : 'grid';
+  calcHookHeight();
+}
+
+function calcHookHeight() {
+  const out = document.getElementById('hh-result');
+  if (!out) return;
+  const num = id => parseFloat(document.getElementById(id).value);
+  const mode = document.getElementById('hh-mode').value;
+  let H = NaN;
+
+  if (mode === 'slant') {
+    const sh = num('hh-s-hook'), ah = num('hh-a-hook');
+    const sb = num('hh-s-base'), ab = num('hh-a-base');
+    if (!isNaN(sh) && !isNaN(ah) && !isNaN(sb) && !isNaN(ab)) {
+      H = TLEngine.hookHeightFromSlants(sh, ah, sb, ab);
+    }
+  } else {
+    const hd = num('hh-hd'), ah = num('hh-ang-hook'), ab = num('hh-ang-base');
+    if (!isNaN(hd) && !isNaN(ah) && !isNaN(ab)) {
+      H = TLEngine.hookHeightFromAngles(hd, ah, ab);
+    }
+  }
+
+  hhLastResult = H;
+  if (isNaN(H)) {
+    out.innerHTML = '<span style="color: var(--text-muted);">Fill the fields above — angles are in degrees, + above horizontal, − below.</span>';
+  } else if (H <= 0) {
+    out.innerHTML = `<span style="color: var(--danger);">Result ${H.toFixed(2)} m — the hook shot must be higher than the base shot. Check angle signs (+up / −down).</span>`;
+  } else {
+    out.innerHTML = `Hook height above base: <strong style="font-size: 1.05rem;">${H.toFixed(2)} m</strong>`;
+  }
+}
+
+function applyHookHeight(target) {
+  if (!(hhLastResult > 0)) {
+    alert('Compute a valid hook height first (the result must be positive).');
+    return;
+  }
+  const ids = { a: 'photo-persp-ha', b: 'photo-persp-hb', tower: 'photo-cal-tower-h' };
+  const el = document.getElementById(ids[target]);
+  if (el) {
+    el.value = hhLastResult.toFixed(2);
+    if (typeof photoTrackerResolve === 'function') photoTrackerResolve();
+  }
 }
 
 // Bundled real-world example (Kashang-Bhaba 788 m river crossing) — the
