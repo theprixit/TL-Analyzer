@@ -542,6 +542,22 @@
         L: geo.L, h: geo.h,
         xp: Math.abs(xAbs - geo.Am.x), D: an.sagMax
       };
+
+      // In oblique (perspective-rectified) photos the true max-sag point
+      // does NOT project onto the visually lowest pixel of the curve —
+      // quantify the gap so the UI can reassure the user it's not an error.
+      if (geo.method === 'perspective') {
+        const cat = x => TLEngine.catenaryY(fit.C, fit.x0, fit.y0, x);
+        const xLo = Math.min(geo.Am.x, geo.Bm.x), xHi = Math.max(geo.Am.x, geo.Bm.x);
+        let low = null;
+        for (let i = 0; i <= 100; i++) {
+          const x = xLo + ((xHi - xLo) * i) / 100;
+          const px = geo.worldToImg({ x: x, y: cat(x) });
+          if (!low || px.y > low.y) low = px;
+        }
+        const mk = geo.worldToImg({ x: xAbs, y: cat(xAbs) });
+        state.solved.visualLowOffsetPx = Math.round(Math.hypot(mk.x - low.x, mk.y - low.y));
+      }
       scheduleMonteCarlo();
     } else {
       // Quick mode: single conductor point P against the hook chord.
@@ -698,6 +714,9 @@
         `• <span style="font-size: 0.95rem;">Horizontal Tension T = w·C = <strong>${s.an.T_kN.toFixed(2)} kN</strong> ≈ <strong>${(s.an.T / KGF).toFixed(0)} kgf</strong></span> (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% UTS)<br>` +
         mcBlock +
         `• Max sag from chord: <strong>${s.an.sagMax.toFixed(3)} m</strong> at x = ${s.xp.toFixed(1)} m from Hook A<br>` +
+        ((isPersp && s.visualLowOffsetPx > 15)
+          ? `• <span style="color: var(--text-muted);">ℹ The max-sag marker sits ~${s.visualLowOffsetPx}px away from where the curve <em>looks</em> lowest — this is expected in oblique photos: perspective shifts the visual bottom of the curve away from the true real-world low point. The marker shows the correct world position.</span><br>`
+          : '') +
         `• Mid-span sag: <strong>${s.an.sagMid.toFixed(3)} m</strong><br>` +
         `• Fit quality: <strong style="color: ${q.color};">${q.label}</strong> (RMS residual ${s.an.rmse.toFixed(3)} m)` +
         devWarn + `<br>` + perspNote;

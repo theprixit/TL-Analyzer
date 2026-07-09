@@ -13,6 +13,7 @@ Workspace & report usability pass (from field-test feedback):
 - **Three-point visualizer** moved into the input column so the results panel top-aligns with it (no more dead space beside it).
 - **Print page breaks disciplined**: headings stay with their content; figures, tables, cards and the photo never split across pages.
 - Removed the separate "Detailed CAD Results" page button — the printed report now carries the sketch, chart and distribution, making it redundant. The physics sandbox link moved from the header to the footer.
+- Added a reassurance note in perspective mode: in oblique photos the true max-sag point does not coincide with where the curve *looks* lowest (projection shifts the visual bottom toward the camera) — the tool now says so explicitly when the gap is noticeable, instead of letting users doubt the marker.
 
 ## v0.5.1-beta — 2026-07-09
 
