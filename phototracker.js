@@ -1090,7 +1090,11 @@
       ? `Note: assumes the conductor hangs in the vertical plane through the two towers.`
       : `Note: solve assumes the photo plane is approximately parallel to the span plane.`);
 
-    return { image: exportAnnotatedImage(1600), summary: lines.join('\n') };
+    return {
+      image: exportAnnotatedImage(1600),
+      summary: lines.join('\n'),
+      mcSvg: (s.kind === 'trace' && s.mc) ? mcHistogramSVG(s.mc) : null
+    };
   }
 
   // ======================================================================

@@ -98,11 +98,111 @@
 
     <!-- Focus Label -->
     <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.4rem;">
-      📊 PRIMARY FIELD METHOD: THREE-POINT SURVEYOR SIGHTING
+      📷 FLAGSHIP TOOL: PHOTO CATENARY ANALYSIS — trace the conductor, fit the curve, extract tension
     </div>
 
-      <!-- TOP SECTION: MASSIVE VISUALIZER CANVAS CARD -->
-      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+      <!-- STANDALONE PHOTO SAG TRACKER PANEL -->
+      <div class="panel flagship-panel" id="photo-panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem;">
+          <span>📷 Photo Sag Tracker — Catenary Tracing &amp; Fitting Tool</span>
+          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Upload span photo · Trace the conductor · Fit catenary · Extract tension</span>
+        </h2>
+        <p class="subtitle" style="margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--text-muted);">
+          Photograph the span as square-on (perpendicular) as possible. Mark the two tower hooks, then trace 10–20 points along the conductor — the tool least-squares fits a catenary through your trace and extracts the catenary constant C = T/w, giving horizontal tension directly from the curve shape. Zoom with scroll/pinch; a magnifier loupe appears while placing points.
+        </p>
+
+        <div class="photo-panel-grid">
+          <!-- Left: Controls -->
+          <div>
+            <!-- Measurement mode + calibration -->
+            <div class="form-section" style="margin-bottom: 1rem;">
+              <div class="form-section-title" style="font-size: 0.82rem;">Measurement &amp; Calibration Settings</div>
+              <div class="input-grid-2" style="margin-bottom: 0.8rem;">
+                <div class="form-group no-margin">
+                  <label style="font-weight: bold; color: var(--success);">Measurement Mode:</label>
+                  <select id="photo-mode" onchange="setPhotoMode(this)">
+                    <option value="trace" selected>Full Catenary Trace (recommended)</option>
+                    <option value="quick">Quick 3-Point (single sag point)</option>
+                  </select>
+                </div>
+                <div class="form-group no-margin">
+                  <label style="font-weight: bold; color: var(--success);">Image Calibration Method:</label>
+                  <select id="photo-cal-method" onchange="handlePhotoCalibChange()">
+                    <option value="perspective" selected>Perspective 4-Point — oblique photos (best)</option>
+                    <option value="chord">Chord — square-on photos (needs L, h)</option>
+                    <option value="tower">Tower Height — square-on photos</option>
+                  </select>
+                </div>
+                <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
+                  <input type="number" id="photo-cal-tower-h" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-persp-ha-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Tower A Height — hook to base (m):</label>
+                  <input type="number" id="photo-persp-ha" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-persp-hb-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--primary);">Tower B Height (m): <span class="unit-label">(blank = same as A)</span></label>
+                  <input type="number" id="photo-persp-hb" value="" placeholder="= Tower A" step="0.1" onchange="photoTrackerResolve()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Control buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
+                📁 Upload Span Photo
+              </button>
+              <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
+              <button type="button" id="pt-tool-place" class="btn btn-outline btn-success" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('place')" title="Click/tap to place and drag points">
+                🎯 Place Points
+              </button>
+              <button type="button" id="pt-tool-pan" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('pan')" title="Drag to pan the photo">
+                🖐 Pan
+              </button>
+              <button type="button" id="pt-vert-btn" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">
+                📐 Vertical Ref
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoUndo()">
+                ↩ Undo
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoFitView()">
+                ⤢ Fit View
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleFullscreen()" title="Edit the photo in fullscreen">
+                ⛶ Fullscreen
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
+                🔄 Reset Points
+              </button>
+            </div>
+
+            <!-- Instruction Banner -->
+            <div class="canvas-instructions" id="photo-tracker-instructions" style="font-size: 0.88rem; padding: 0.8rem;">
+              No photo loaded. Click "Upload Span Photo" to begin.
+            </div>
+
+            <!-- Solved results overlay -->
+            <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(16, 185, 129, 0.04); border-left: 3px solid var(--success); padding: 0.8rem; margin-top: 1rem; border-radius: 0 8px 8px 0; color: var(--success); display: none;">
+              Solving...
+            </div>
+
+            <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
+              Apply Solved Sag &amp; Coordinates to Primary Inputs
+            </button>
+          </div>
+
+          <!-- Right: Canvas Workspace -->
+          <div>
+            <div class="canvas-workspace" style="height: 660px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block;">
+              <canvas id="photo-tracker-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- THREE-POINT GEOMETRY VISUALIZER (secondary to the photo tool) -->
+      <div class="panel" style="margin-bottom: 2rem; padding: 1.5rem; max-width: 1100px;">
         <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.35rem;">
           <span>📐 Live Structural Catenary Visualizer (Three-Point Geometry)</span>
           <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Real-time visual CAD model w.r.t. gravity references</span>
@@ -182,106 +282,6 @@
           </svg>
         </div>
       </div>
-      <!-- STANDALONE PHOTO SAG TRACKER PANEL -->
-      <div class="panel" id="photo-panel" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem;">
-          <span>📷 Photo Sag Tracker — Catenary Tracing &amp; Fitting Tool</span>
-          <span style="font-size: 0.88rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Upload span photo · Trace the conductor · Fit catenary · Extract tension</span>
-        </h2>
-        <p class="subtitle" style="margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--text-muted);">
-          Photograph the span as square-on (perpendicular) as possible. Mark the two tower hooks, then trace 10–20 points along the conductor — the tool least-squares fits a catenary through your trace and extracts the catenary constant C = T/w, giving horizontal tension directly from the curve shape. Zoom with scroll/pinch; a magnifier loupe appears while placing points.
-        </p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 1.5rem; align-items: start;">
-          <!-- Left: Controls -->
-          <div>
-            <!-- Measurement mode + calibration -->
-            <div class="form-section" style="margin-bottom: 1rem;">
-              <div class="form-section-title" style="font-size: 0.82rem;">Measurement &amp; Calibration Settings</div>
-              <div class="input-grid-2" style="margin-bottom: 0.8rem;">
-                <div class="form-group no-margin">
-                  <label style="font-weight: bold; color: var(--success);">Measurement Mode:</label>
-                  <select id="photo-mode" onchange="setPhotoMode(this)">
-                    <option value="trace" selected>Full Catenary Trace (recommended)</option>
-                    <option value="quick">Quick 3-Point (single sag point)</option>
-                  </select>
-                </div>
-                <div class="form-group no-margin">
-                  <label style="font-weight: bold; color: var(--success);">Image Calibration Method:</label>
-                  <select id="photo-cal-method" onchange="handlePhotoCalibChange()">
-                    <option value="perspective" selected>Perspective 4-Point (best — handles oblique photos)</option>
-                    <option value="chord">Chord Calibration (square-on photos, requires L and h)</option>
-                    <option value="tower">Tower Height Calibration (square-on photos, hook to base)</option>
-                  </select>
-                </div>
-                <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
-                  <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
-                  <input type="number" id="photo-cal-tower-h" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
-                </div>
-                <div class="form-group no-margin" id="photo-persp-ha-group" style="display: none;">
-                  <label style="font-weight: bold; color: var(--primary);">Tower A Height — hook to base (m):</label>
-                  <input type="number" id="photo-persp-ha" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
-                </div>
-                <div class="form-group no-margin" id="photo-persp-hb-group" style="display: none;">
-                  <label style="font-weight: bold; color: var(--primary);">Tower B Height (m): <span class="unit-label">(blank = same as A)</span></label>
-                  <input type="number" id="photo-persp-hb" value="" placeholder="= Tower A" step="0.1" onchange="photoTrackerResolve()">
-                </div>
-              </div>
-            </div>
-
-            <!-- Canvas Control buttons -->
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; color: var(--success); border-color: var(--success);" onclick="document.getElementById('photo-tracker-uploader').click()">
-                📁 Upload Span Photo
-              </button>
-              <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
-              <button type="button" id="pt-tool-place" class="btn btn-outline btn-success" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('place')" title="Click/tap to place and drag points">
-                🎯 Place Points
-              </button>
-              <button type="button" id="pt-tool-pan" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="setPhotoTool('pan')" title="Drag to pan the photo">
-                🖐 Pan
-              </button>
-              <button type="button" id="pt-vert-btn" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">
-                📐 Vertical Ref
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoUndo()">
-                ↩ Undo
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoFitView()">
-                ⤢ Fit View
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="photoToggleFullscreen()" title="Edit the photo in fullscreen">
-                ⛶ Fullscreen
-              </button>
-              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
-                🔄 Reset Points
-              </button>
-            </div>
-
-            <!-- Instruction Banner -->
-            <div class="canvas-instructions" id="photo-tracker-instructions" style="font-size: 0.88rem; padding: 0.8rem;">
-              No photo loaded. Click "Upload Span Photo" to begin.
-            </div>
-
-            <!-- Solved results overlay -->
-            <div id="photo-solved-text" style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(16, 185, 129, 0.04); border-left: 3px solid var(--success); padding: 0.8rem; margin-top: 1rem; border-radius: 0 8px 8px 0; color: var(--success); display: none;">
-              Solving...
-            </div>
-
-            <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
-              Apply Solved Sag &amp; Coordinates to Primary Inputs
-            </button>
-          </div>
-
-          <!-- Right: Canvas Workspace -->
-          <div>
-            <div class="canvas-workspace" style="height: 560px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block;">
-              <canvas id="photo-tracker-canvas"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- MAIN DASHBOARD CONTENT GRID -->
       <div class="dashboard-grid">
       
@@ -1310,6 +1310,7 @@
       <h2>2. Annotated Span Photograph (Photo Sag Tracker)</h2>
       <img id="pr-photo-img" alt="Annotated span photograph with traced conductor and fitted catenary" style="width: 100%; max-height: 14cm; object-fit: contain; border: 1px solid #999999; background: #111111;">
       <div class="print-math-box" id="pr-photo-summary" style="margin-top: 0.5rem;"></div>
+      <div id="pr-photo-mc" class="pr-figure-box" style="margin-top: 0.4rem;"></div>
     </div>
 
     <!-- Live three-point geometry drawing, cloned from the app at print time -->
@@ -1318,8 +1319,14 @@
       <div id="pr-sketch-box" style="border: 1px solid #999999; border-radius: 4px; background: #ffffff; padding: 0.3cm;"></div>
     </div>
 
+    <!-- Sag vs tension safety curve, cloned from the live dashboard -->
+    <div class="report-section" id="pr-chart-section" style="page-break-inside: avoid;">
+      <h2>4. Sag vs. Tension Safety Curve</h2>
+      <div id="pr-chart-box" class="pr-figure-box"></div>
+    </div>
+
     <div class="report-section">
-      <h2>4. Conductor Specifications</h2>
+      <h2>5. Conductor Specifications</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Conductor Code Name</th>
@@ -1337,7 +1344,7 @@
     </div>
 
     <div class="report-section">
-      <h2>5. Sag & Tension Calculation Results</h2>
+      <h2>6. Sag & Tension Calculation Results</h2>
       <table class="report-table">
         <tr>
           <th style="width: 25%;">Measurement Method</th>
@@ -1365,7 +1372,7 @@
     </div>
 
     <div class="report-section" style="page-break-inside: avoid;">
-      <h2>6. Geometrical Math Calculation Logs</h2>
+      <h2>7. Geometrical Math Calculation Logs</h2>
       <div class="print-math-box" id="pr-math-steps">
         Three-Point Coordinate Sighting Logic Steps...
       </div>
@@ -1381,8 +1388,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.5.0-beta"></script>
-  <script src="app.js?v=0.5.0-beta"></script>
-  <script src="phototracker.js?v=0.5.0-beta"></script>
+  <script src="engine.js?v=0.5.1-beta"></script>
+  <script src="app.js?v=0.5.1-beta"></script>
+  <script src="phototracker.js?v=0.5.1-beta"></script>
 </body>
 </html>

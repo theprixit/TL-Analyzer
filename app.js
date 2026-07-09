@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.5.0-beta';
+const APP_VERSION = '0.5.1-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -855,6 +855,11 @@ function printEngineeringReport() {
     if (photoData && photoData.image) {
       document.getElementById('pr-photo-img').src = photoData.image;
       document.getElementById('pr-photo-summary').innerText = photoData.summary;
+      const mcBox = document.getElementById('pr-photo-mc');
+      if (mcBox) {
+        mcBox.innerHTML = photoData.mcSvg || '';
+        mcBox.style.display = photoData.mcSvg ? 'block' : 'none';
+      }
       annex.style.display = 'block';
     } else {
       annex.style.display = 'none';
@@ -862,17 +867,28 @@ function printEngineeringReport() {
   }
 
   // D. Engineering sketch — clone the live three-point geometry drawing
-  const sketchBox = document.getElementById('pr-sketch-box');
-  if (sketchBox) {
-    sketchBox.innerHTML = '';
-    const svg = document.getElementById('svg-threepoint');
+  const cloneSvgInto = (svgId, boxId) => {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    box.innerHTML = '';
+    const svg = document.getElementById(svgId);
     if (svg) {
       const clone = svg.cloneNode(true);
       clone.removeAttribute('id');
       clone.removeAttribute('class');
       clone.setAttribute('style', 'width: 100%; height: auto; display: block;');
-      sketchBox.appendChild(clone);
+      box.appendChild(clone);
     }
+  };
+  cloneSvgInto('svg-threepoint', 'pr-sketch-box');
+
+  // D2. Sag vs tension safety curve — only when a valid result exists
+  const chartSection = document.getElementById('pr-chart-section');
+  if (chartSection) {
+    const resultsOk = document.getElementById('tp-results-ok');
+    const haveResults = resultsOk && resultsOk.style.display !== 'none';
+    chartSection.style.display = haveResults ? 'block' : 'none';
+    if (haveResults) cloneSvgInto('svg-sag-tension-chart', 'pr-chart-box');
   }
 
   // E. Renumber visible section headings (the photo section hides without a photo)

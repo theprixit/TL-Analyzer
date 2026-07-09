@@ -722,12 +722,14 @@ code {
   /* HIDE ALL REGULAR INTERACTIVE DASHBOARD ELEMENTS */
   body {
     background-color: #ffffff !important;
-    color: #000000 !important;
-    font-family: "Times New Roman", Georgia, serif !important;
+    color: #0f172a !important;
+    font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif !important;
     padding: 0 !important;
     margin: 0 !important;
-    font-size: 11pt !important;
-    line-height: 1.4 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .container, header, .tabs, .dashboard-grid, .panel, footer {
@@ -743,26 +745,42 @@ code {
     padding: 20mm !important;
   }
 
-  /* Report Styling */
+  /* Report Styling — carries the app's visual identity into print */
+  #printable-report {
+    padding: 0 !important;
+  }
+
   .report-header {
-    border-bottom: 3px double #000000;
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
-    text-align: center;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 3px solid #1d4ed8;
+    padding-bottom: 0.7rem;
+    margin-bottom: 1.6rem;
+  }
+
+  .report-header::before {
+    content: "⚡ TL-SAG";
+    font-size: 15pt;
+    font-weight: 800;
+    color: #1d4ed8;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .report-header h1 {
-    font-size: 24pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin-bottom: 0.2rem;
-    color: #000000;
+    font-size: 17pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
   }
 
   .report-header p {
-    font-size: 12pt;
-    color: #555555;
-    font-style: italic;
+    font-size: 9.5pt;
+    color: #475569;
+    margin: 0;
+    text-align: right;
   }
 
   .report-grid {
@@ -773,103 +791,126 @@ code {
   }
 
   .report-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1.6rem;
   }
 
   .report-section h2 {
-    font-size: 14pt;
-    font-weight: bold;
-    border-bottom: 1px solid #000000;
-    padding-bottom: 0.3rem;
-    margin-bottom: 1rem;
+    font-size: 12pt;
+    font-weight: 800;
+    color: #1d4ed8;
+    border-bottom: 2px solid #dbeafe;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.8rem;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
-  /* Structural tabular spacing */
   table.report-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
+    border-radius: 8px;
+    overflow: hidden;
   }
 
   table.report-table th, table.report-table td {
-    border: 1px solid #444444;
-    padding: 0.5rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    padding: 0.45rem 0.7rem;
     text-align: left;
-    font-size: 10.5pt;
+    font-size: 9.5pt;
   }
 
   table.report-table th {
-    background-color: #f2f2f2 !important;
-    font-weight: bold;
+    background-color: #eff6ff !important;
+    color: #1e3a5f;
+    font-weight: 700;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Safety Verdict Banner */
+  table.report-table td {
+    background-color: #ffffff !important;
+  }
+
+  /* Figures cloned from the live dashboard (sketch, chart, MC histogram) */
+  .pr-figure-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc !important;
+    padding: 0.35cm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #pr-sketch-box {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Safety Assessment Banner — app-style status card */
   .print-verdict-box {
-    border: 2px solid #000000;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    text-align: center;
-    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    border-left: 8px solid #64748b;
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 1.6rem;
+    text-align: left;
   }
 
   .print-verdict-box.print-safe {
-    background-color: #e6f7ed !important;
-    border-color: #10b981;
+    background-color: #ecfdf5 !important;
+    border-left-color: #10b981;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .print-verdict-box.print-caution {
     background-color: #fffbeb !important;
-    border-color: #f59e0b;
+    border-left-color: #f59e0b;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .print-verdict-box.print-danger {
     background-color: #fef2f2 !important;
-    border-color: #ef4444;
+    border-left-color: #ef4444;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .print-verdict-box h3 {
-    font-size: 16pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin-bottom: 0.3rem;
+    font-size: 13pt;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
   }
 
-  /* Formal Monospace Math Print box */
+  .print-verdict-box.print-safe h3 { color: #047857; }
+  .print-verdict-box.print-caution h3 { color: #b45309; }
+  .print-verdict-box.print-danger h3 { color: #b91c1c; }
+
+  .print-verdict-box p {
+    font-size: 9.5pt;
+    color: #334155;
+    margin: 0;
+  }
+
+  /* Calculation log — console-style monospace card */
   .print-math-box {
-    background-color: #fafafa !important;
-    border: 1px dashed #777777;
-    padding: 1rem;
-    font-family: var(--font-mono);
-    font-size: 9pt;
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #1d4ed8;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.5pt;
     white-space: pre-wrap;
-    line-height: 1.3;
-    margin-bottom: 2rem;
+    line-height: 1.35;
+    margin-bottom: 1.2rem;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  /* Official signature blocks */
-  .signature-block {
-    margin-top: 4rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 3rem;
-  }
-
-  .sig-line {
-    border-top: 1px solid #000000;
-    text-align: center;
-    padding-top: 0.5rem;
-    font-size: 10pt;
   }
 }
 
@@ -971,6 +1012,29 @@ code {
 .import-export-container {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Flagship photo tool panel: visually the star of the page */
+.flagship-panel {
+  border-top: 4px solid var(--success);
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.10);
+}
+
+.photo-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* The controls column is narrow — stack its fields so long select
+   labels (calibration methods) are not truncated */
+#photo-panel .input-grid-2 {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 1100px) {
+  .photo-panel-grid { grid-template-columns: 1fr; }
 }
 
 /* App version badge + update notice */

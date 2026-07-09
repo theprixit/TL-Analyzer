@@ -2,6 +2,14 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.5.1-beta — 2026-07-09
+
+UI & report polish pass:
+
+- **Photo tool promoted to flagship position** — now the first, full-width panel with a much larger canvas (660px); the three-point geometry visualizer moved below it at reduced width.
+- **Report redesigned** to carry the app's visual identity: modern typography, colored section headings, app-style assessment card, and two new embedded figures — the **Sag vs. Tension safety curve** and the **Monte-Carlo tension distribution** now print alongside the photo and sketch.
+- Fixed truncated calibration-method dropdowns in the photo panel (labels were cut off); shortened option labels and stacked the control fields.
+
 ## v0.5.0-beta — 2026-07-09
 
 Driven by the first real field test (oblique river-crossing photo with a distant, blurry far tower):
