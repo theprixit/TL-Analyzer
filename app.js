@@ -3,8 +3,8 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.4.0-beta';
-const APP_VERSION_DATE = '2026-07-08';
+const APP_VERSION = '0.5.0-beta';
+const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
 // Standard ACSR Conductor Database (IS 398 Part-II Reference Specs)
@@ -282,7 +282,7 @@ function calculateThreePoint() {
   document.getElementById('tp-results-ok').style.display = 'block';
   toggleAnalysisPanel(true);
 
-  document.getElementById('tp-val-tension').innerText = T_kN.toFixed(2) + " kN";
+  document.getElementById('tp-val-tension').innerText = `${T_kN.toFixed(2)} kN  ·  ${(T / 9.80665).toFixed(0)} kgf`;
   document.getElementById('tp-val-sag').innerText = dMid.toFixed(2) + " m";
   document.getElementById('tp-val-offset').innerText = offsetD.toFixed(2) + " m";
   document.getElementById('tp-val-sf').innerText = safetyFactor.toFixed(2);
@@ -725,32 +725,41 @@ function updateStatusVerdict(cardId, pctUTS, safetyFactor, uts, T_kN) {
 // 3. OFFICIAL CALCULATION SHEET - BROWSER PRINT GENERATOR
 // ==========================================================================
 function printEngineeringReport() {
-  // Bind form variables dynamically to the printable A4 DOM elements before printing
+  // Bind form variables dynamically to the printable DOM elements before printing
 
-  // Project reference
-  const prProject = document.getElementById('pr-project-name');
-  if (prProject) prProject.innerText = currentProject.name || 'Ad-hoc session (no project)';
+  // A. Adaptive metadata table — report only what the user actually entered.
+  const gv = id => { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+  const gpsText = (lat, lon, elev) => {
+    const coords = [lat, lon].filter(Boolean).join(' / ');
+    if (!coords && !elev) return '';
+    return coords + (elev ? `${coords ? ' ' : ''}(Elev: ${elev} m)` : '');
+  };
+  const metaFields = [
+    ['Project Reference', currentProject.name],
+    ['Line Voltage Level', gv('line-voltage')],
+    ['Line Circuits Config', gv('line-circuits')],
+    ['Lower Tower A ID', gv('tower-a-id')],
+    ['Higher Tower B ID', gv('tower-b-id')],
+    ['Circuits Configuration', gv('line-config')],
+    ['Conductor Bundling', gv('line-bundling')],
+    ['Earth Peaks / Earthwires', gv('line-peaks')],
+    ['Earthwire/OPGW Spec', gv('line-opgw-size')],
+    ['Tower A Coordinates', gpsText(gv('tower-a-lat'), gv('tower-a-lon'), gv('tower-a-elev'))],
+    ['Tower B Coordinates', gpsText(gv('tower-b-lat'), gv('tower-b-lon'), gv('tower-b-elev'))]
+  ].filter(f => f[1]);
 
-  // A. Conductor metadata
-  const condName = document.getElementById('line-voltage').value;
-  document.getElementById('pr-voltage').innerText = condName ? condName : 'N/A';
-  document.getElementById('pr-tower-a').innerText = document.getElementById('tower-a-id').value || 'Tower A';
-  document.getElementById('pr-tower-b').innerText = document.getElementById('tower-b-id').value || 'Tower B';
-  document.getElementById('pr-circuits').innerText = document.getElementById('line-circuits').value || 'Single';
-  document.getElementById('pr-config').innerText = document.getElementById('line-config').value || 'Vertical';
-  document.getElementById('pr-peaks').innerText = document.getElementById('line-peaks').value || '1';
-  document.getElementById('pr-opgw').innerText = document.getElementById('line-opgw-size').value || 'N/A';
-  document.getElementById('pr-bundling').innerText = document.getElementById('line-bundling').value || 'Single';
-  
-  const gpsA_lat = document.getElementById('tower-a-lat').value || '-';
-  const gpsA_lon = document.getElementById('tower-a-lon').value || '-';
-  const gpsA_el = document.getElementById('tower-a-elev').value || '-';
-  document.getElementById('pr-gps-a').innerText = `${gpsA_lat} / ${gpsA_lon} (Elev: ${gpsA_el} m)`;
-
-  const gpsB_lat = document.getElementById('tower-b-lat').value || '-';
-  const gpsB_lon = document.getElementById('tower-b-lon').value || '-';
-  const gpsB_el = document.getElementById('tower-b-elev').value || '-';
-  document.getElementById('pr-gps-b').innerText = `${gpsB_lat} / ${gpsB_lon} (Elev: ${gpsB_el} m)`;
+  const metaBody = document.getElementById('pr-meta-body');
+  if (metaBody) {
+    let html = '';
+    for (let i = 0; i < metaFields.length; i += 2) {
+      const a = metaFields[i], b = metaFields[i + 1];
+      html += `<tr><th style="width: 25%;">${a[0]}</th><td style="width: 25%; font-weight: bold;">${escapeHtml(a[1])}</td>`;
+      html += b
+        ? `<th style="width: 25%;">${b[0]}</th><td style="width: 25%;">${escapeHtml(b[1])}</td></tr>`
+        : `<th style="width: 25%;"></th><td style="width: 25%;"></td></tr>`;
+    }
+    metaBody.innerHTML = html || '<tr><td style="color: #777777;">No line metadata entered for this session.</td></tr>';
+  }
 
   // Timestamp + generating app version (traceability of engineering outputs)
   document.getElementById('pr-date').innerText = new Date().toLocaleString();
@@ -787,16 +796,16 @@ function printEngineeringReport() {
     // Apply safety status banner color to A4 sheet
     if (statusCard.classList.contains('safe')) {
       reportVerdictBox.classList.add('print-safe');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: APPROVED (SAFE TENSION)";
-      document.getElementById('pr-verdict-desc').innerText = "The measured everyday tension complies fully with safety code limits (<20% of Conductor UTS). The conductor tension is safe from long-term aeolian vibration breakage.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: ESTIMATED TENSION WITHIN SAFE LIMITS";
+      document.getElementById('pr-verdict-desc').innerText = "The estimated everyday tension lies within safety code guidelines (<20% of Conductor UTS), indicating low risk of long-term aeolian vibration fatigue. Estimate is subject to the measurement uncertainties stated in this report.";
     } else if (statusCard.classList.contains('caution')) {
       reportVerdictBox.classList.add('print-caution');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: BORDERLINE COMPLIANCE (CAUTION)";
-      document.getElementById('pr-verdict-desc').innerText = "The conductor tension is within maximum design structural load limits but exceeds everyday vibration limits. Installation of Stockbridge dampers is strictly recommended.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: BORDERLINE ESTIMATE — CAUTION ADVISED";
+      document.getElementById('pr-verdict-desc').innerText = "The estimated tension is within maximum design structural load limits but exceeds everyday vibration guidelines. Verification by direct measurement and installation of Stockbridge dampers are recommended.";
     } else {
       reportVerdictBox.classList.add('print-danger');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: REJECTED (CRITICAL OVER-TENSIONED)";
-      document.getElementById('pr-verdict-desc').innerText = "The conductor everyday tension exceeds the 50% UTS utility limit. Critical risk of wire breakage. Readjust line tension immediately.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: ESTIMATE EXCEEDS SAFE TENSION LIMIT";
+      document.getElementById('pr-verdict-desc').innerText = "The estimated everyday tension exceeds the 50% UTS utility guideline, indicating elevated risk of conductor fatigue or breakage. Field verification and tension readjustment are strongly advised.";
     }
   } else {
     // Wave timing method data binding
@@ -824,16 +833,16 @@ function printEngineeringReport() {
     // Apply safety status banner color to A4 sheet
     if (statusCard.classList.contains('safe')) {
       reportVerdictBox.classList.add('print-safe');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: APPROVED (SAFE TENSION)";
-      document.getElementById('pr-verdict-desc').innerText = "The timed conductor tension complies with code limits (<20% of Conductor UTS). The conductor tension is safe from wind vibration breakage.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: ESTIMATED TENSION WITHIN SAFE LIMITS";
+      document.getElementById('pr-verdict-desc').innerText = "The tension estimated from wave timing lies within code guidelines (<20% of Conductor UTS). Estimate is subject to stopwatch and span-length uncertainties.";
     } else if (statusCard.classList.contains('caution')) {
       reportVerdictBox.classList.add('print-caution');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: BORDERLINE COMPLIANCE (CAUTION)";
-      document.getElementById('pr-verdict-desc').innerText = "The conductor tension exceeds standard everyday vibration limits but remains within stormy loading margins. Vibration dampers are highly recommended.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: BORDERLINE ESTIMATE — CAUTION ADVISED";
+      document.getElementById('pr-verdict-desc').innerText = "The estimated tension exceeds everyday vibration guidelines but remains within storm loading margins. Verification and vibration dampers are recommended.";
     } else {
       reportVerdictBox.classList.add('print-danger');
-      document.getElementById('pr-verdict-title').innerText = "VERDICT: REJECTED (CRITICAL OVER-TENSIONED)";
-      document.getElementById('pr-verdict-desc').innerText = "Tension exceeds the 50% UTS utility safety limit. Conductor snapping hazard. Readjust line tension immediately.";
+      document.getElementById('pr-verdict-title').innerText = "ASSESSMENT: ESTIMATE EXCEEDS SAFE TENSION LIMIT";
+      document.getElementById('pr-verdict-desc').innerText = "The estimated tension exceeds the 50% UTS utility guideline. Field verification and tension readjustment are strongly advised.";
     }
   }
 
@@ -1331,6 +1340,8 @@ function collectProjectData() {
     // Canvas Photo Sag Tracker state (v2 catenary tracer)
     photoCalMethod: document.getElementById('photo-cal-method').value,
     photoCalTowerH: document.getElementById('photo-cal-tower-h').value,
+    photoPerspHa: document.getElementById('photo-persp-ha') ? document.getElementById('photo-persp-ha').value : '',
+    photoPerspHb: document.getElementById('photo-persp-hb') ? document.getElementById('photo-persp-hb').value : '',
     photoTracker: (typeof PhotoTracker !== 'undefined') ? PhotoTracker.serialize() : null,
 
 
@@ -1473,6 +1484,8 @@ function applyProjectData(data) {
 
       setVal('photo-cal-method', data.photoCalMethod);
       setVal('photo-cal-tower-h', data.photoCalTowerH);
+      setVal('photo-persp-ha', data.photoPerspHa);
+      setVal('photo-persp-hb', data.photoPerspHb);
 
       // Trigger respective layout refreshes
       handleConductorChange('tp');

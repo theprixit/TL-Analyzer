@@ -2,6 +2,20 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.5.0-beta — 2026-07-09
+
+Driven by the first real field test (oblique river-crossing photo with a distant, blurry far tower):
+
+- **Probabilistic tension estimate**: after every catenary trace, the tool re-solves ~160 times with realistic click scatter (±3 px on hooks/bases, ±2 px on trace points) and reports a **90% probable tension range with a distribution plot** — because clicking a blurry far tower a few pixels off changes the answer, a single number is deceptive.
+- **Tension shown in kgf** alongside kN everywhere (results, photo tool, report).
+- **Adaptive report**: empty fields are no longer printed — the metadata table only lists what was actually entered.
+- **Landscape report** orientation, giving the annotated photograph and geometry sketch full width.
+- **Estimation language**: report assessments now say "estimated tension within safe limits" etc. instead of "APPROVED / REJECTED" — the tool estimates, it does not certify.
+- Trace points recoloured from pink to **cyan with a white ring** — visible against rock, vegetation and sky.
+- Fixed: perspective tower heights (A/B) were not saved in project files, so re-imported projects lost their calibration.
+
+## v0.4.0-beta — 2026-07-08
+
 ## v0.4.0-beta — 2026-07-08
 
 ### Photo Sag Tracker v2 (major rebuild)

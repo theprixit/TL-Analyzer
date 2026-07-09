@@ -325,12 +325,12 @@
             <div class="input-grid-2">
               <div class="form-group">
                 <label for="tower-a-id">Tower A (Lower ID):</label>
-                <input type="text" id="tower-a-id" value="Tower 45" placeholder="e.g. AP 45">
+                <input type="text" id="tower-a-id" value="" placeholder="e.g. AP 45">
                 <span class="field-tooltip">Reference name of the lower-elevation support tower.</span>
               </div>
               <div class="form-group">
                 <label for="tower-b-id">Tower B (Higher ID):</label>
-                <input type="text" id="tower-b-id" value="Tower 46" placeholder="e.g. AP 46">
+                <input type="text" id="tower-b-id" value="" placeholder="e.g. AP 46">
                 <span class="field-tooltip">Reference name of the higher-elevation support tower.</span>
               </div>
             </div>
@@ -379,34 +379,34 @@
             <div class="input-grid-3">
               <div class="form-group">
                 <label>Tower A Lat:</label>
-                <input type="text" id="tower-a-lat" value="30.27408" placeholder="e.g. 30.274">
+                <input type="text" id="tower-a-lat" value="" placeholder="e.g. 30.274">
                 <span class="field-tooltip">GPS Latitude of Tower A.</span>
               </div>
               <div class="form-group">
                 <label>Tower A Long:</label>
-                <input type="text" id="tower-a-lon" value="78.00214" placeholder="e.g. 78.002">
+                <input type="text" id="tower-a-lon" value="" placeholder="e.g. 78.002">
                 <span class="field-tooltip">GPS Longitude of Tower A.</span>
               </div>
               <div class="form-group">
                 <label>Tower A Elev (Z):</label>
-                <input type="number" id="tower-a-elev" value="642.5" placeholder="meters">
+                <input type="number" id="tower-a-elev" value="" placeholder="meters">
                 <span class="field-tooltip">Absolute elevation (vertical w.r.t. gravity) above sea level datum.</span>
               </div>
             </div>
             <div class="input-grid-3" style="margin-bottom: 0;">
               <div class="form-group no-margin">
                 <label>Tower B Lat:</label>
-                <input type="text" id="tower-b-lat" value="30.27552" placeholder="e.g. 30.275">
+                <input type="text" id="tower-b-lat" value="" placeholder="e.g. 30.275">
                 <span class="field-tooltip">GPS Latitude of Tower B.</span>
               </div>
               <div class="form-group no-margin">
                 <label>Tower B Long:</label>
-                <input type="text" id="tower-b-lon" value="78.00398" placeholder="e.g. 78.003">
+                <input type="text" id="tower-b-lon" value="" placeholder="e.g. 78.003">
                 <span class="field-tooltip">GPS Longitude of Tower B.</span>
               </div>
               <div class="form-group no-margin">
                 <label>Tower B Elev (Z):</label>
-                <input type="number" id="tower-b-elev" value="682.0" placeholder="meters">
+                <input type="number" id="tower-b-elev" value="" placeholder="meters">
                 <span class="field-tooltip">Absolute elevation (vertical w.r.t. gravity) above sea level datum.</span>
               </div>
             </div>
@@ -1299,40 +1299,9 @@
     <div class="report-section">
       <h2>1. Line & Tower Infrastructure Metadata</h2>
       <table class="report-table">
-        <tr>
-          <th style="width: 25%;">Project Reference</th>
-          <td colspan="3" id="pr-project-name" style="font-weight: bold;">-</td>
-        </tr>
-        <tr>
-          <th style="width: 25%;">Line Voltage Level</th>
-          <td style="width: 25%; font-weight: bold;" id="pr-voltage">220 kV</td>
-          <th style="width: 25%;">Line Circuits Config</th>
-          <td style="width: 25%;" id="pr-circuits">Double Circuit</td>
-        </tr>
-        <tr>
-          <th>Lower Tower A ID</th>
-          <td id="pr-tower-a" style="font-weight: bold;">Tower 45</td>
-          <th>Higher Tower B ID</th>
-          <td id="pr-tower-b" style="font-weight: bold;">Tower 46</td>
-        </tr>
-        <tr>
-          <th>Circuits Configuration</th>
-          <td id="pr-config">Vertical Spacing</td>
-          <th>Conductor Bundling</th>
-          <td id="pr-bundling">Single Conductor</td>
-        </tr>
-        <tr>
-          <th>Earth Peaks / Earthwires</th>
-          <td id="pr-peaks">2 Peaks</td>
-          <th>Earthwire/OPGW Spec</th>
-          <td id="pr-opgw">7/3.15 mm Galvanized</td>
-        </tr>
-        <tr>
-          <th>Tower A Coordinates</th>
-          <td id="pr-gps-a">-</td>
-          <th>Tower B Coordinates</th>
-          <td id="pr-gps-b">-</td>
-        </tr>
+        <tbody id="pr-meta-body">
+          <!-- Populated adaptively at print time — only fields the user filled in -->
+        </tbody>
       </table>
     </div>
 
@@ -1412,8 +1381,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.4.0-beta"></script>
-  <script src="app.js?v=0.4.0-beta"></script>
-  <script src="phototracker.js?v=0.4.0-beta"></script>
+  <script src="engine.js?v=0.5.0-beta"></script>
+  <script src="app.js?v=0.5.0-beta"></script>
+  <script src="phototracker.js?v=0.5.0-beta"></script>
 </body>
 </html>

@@ -400,15 +400,15 @@
   // Calibration: meters-per-pixel scale + span L + hook height diff h,
   // computed in the roll-rectified frame. Returns { error } when the user
   // has not yet supplied the real-world reference the scale needs.
-  function calibration(angle, pivot) {
-    const A = rect(state.points.A, angle, pivot);
-    const B = rect(state.points.B, angle, pivot);
+  function calibration(angle, pivot, pts) {
+    const A = rect(pts.A, angle, pivot);
+    const B = rect(pts.B, angle, pivot);
     const pxChord = Math.hypot(B.x - A.x, B.y - A.y);
     if (pxChord <= 0) return { error: 'Hook A and Hook B are on the same pixel — re-place them.' };
 
     if (calMethod() === 'tower') {
-      if (!state.points.baseA) return null; // next click will place it
-      const base = rect(state.points.baseA, angle, pivot);
+      if (!pts.baseA) return null; // next click will place it
+      const base = rect(pts.baseA, angle, pivot);
       const pxTower = Math.hypot(base.x - A.x, base.y - A.y);
       if (pxTower <= 0) return { error: 'Tower base and hook are on the same pixel — re-place them.' };
       const H = parseFloat(document.getElementById('photo-cal-tower-h').value);
@@ -431,10 +431,11 @@
 
   // Geometry abstraction: both calibration families produce the same
   // interface — L, h, hook positions in metres, and image<->world mappers.
-  function scaleGeometry() {
+  function scaleGeometry(pts) {
+    pts = pts || state.points;
     const angle = rollAngle();
     const pivot = imgCenter();
-    const cal = calibration(angle, pivot);
+    const cal = calibration(angle, pivot, pts);
     if (!cal) return null;
     if (cal.error) return { error: cal.error };
     const S = cal.S;
@@ -451,8 +452,9 @@
   // Full perspective rectification: both hooks + both tower bases with
   // known world geometry give a homography from the photo to the span
   // plane — oblique camera angles and roll are handled exactly.
-  function perspectiveGeometry() {
-    if (!state.points.baseA || !state.points.baseB) return null; // still placing
+  function perspectiveGeometry(pts) {
+    pts = pts || state.points;
+    if (!pts.baseA || !pts.baseB) return null; // still placing
     const g = primaryLh();
     if (!g) return { error: 'Perspective calibration needs the real Span Length L — enter it in the Primary Inputs below.' };
     const HA = parseFloat(document.getElementById('photo-persp-ha').value);
@@ -466,7 +468,7 @@
       { x: 0, y: -HA },        // base A
       { x: g.L, y: g.h - HB }  // base B
     ];
-    const imgRefs = [state.points.A, state.points.B, state.points.baseA, state.points.baseB];
+    const imgRefs = [pts.A, pts.B, pts.baseA, pts.baseB];
     const H = TLEngine.computeHomography(imgRefs, worldRefs);
     const Hinv = TLEngine.computeHomography(worldRefs, imgRefs);
     if (!H || !Hinv) return { error: 'Degenerate 4-point layout — hooks and bases must not be collinear. Re-place the points.' };
@@ -506,6 +508,7 @@
         L: geo.L, h: geo.h,
         xp: Math.abs(xAbs - geo.Am.x), D: an.sagMax
       };
+      scheduleMonteCarlo();
     } else {
       // Quick mode: single conductor point P against the hook chord.
       if (!state.points.P) { renderResults(); return; }
@@ -519,6 +522,91 @@
       };
     }
     renderResults();
+  }
+
+  // ======================================================================
+  // MONTE-CARLO UNCERTAINTY: clicking a blurry far tower a few pixels off
+  // changes the answer — so re-solve many times with the reference and
+  // trace points jittered by a realistic pixel scatter, and report the
+  // resulting tension DISTRIBUTION instead of a single deceptive number.
+  // ======================================================================
+  const MC_RUNS = 160;
+  const MC_SIGMA_REF = 3;   // px scatter on hook/base clicks
+  const MC_SIGMA_TRACE = 2; // px scatter on trace clicks
+  let mcTimer = null;
+
+  function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function jitterPt(p, s) { return { x: p.x + randn() * s, y: p.y + randn() * s }; }
+
+  function scheduleMonteCarlo() {
+    if (mcTimer) clearTimeout(mcTimer);
+    mcTimer = setTimeout(runMonteCarlo, 350);
+  }
+
+  function runMonteCarlo() {
+    const s = state.solved;
+    if (!s || s.error || s.kind !== 'trace') return;
+    const isPersp = calMethod() === 'perspective';
+    const w = s.cond.w;
+    const Ts = [];
+
+    for (let i = 0; i < MC_RUNS; i++) {
+      const jp = {
+        A: jitterPt(state.points.A, MC_SIGMA_REF),
+        B: jitterPt(state.points.B, MC_SIGMA_REF),
+        P: null,
+        baseA: state.points.baseA ? jitterPt(state.points.baseA, MC_SIGMA_REF) : null,
+        baseB: state.points.baseB ? jitterPt(state.points.baseB, MC_SIGMA_REF) : null
+      };
+      const geo = isPersp ? perspectiveGeometry(jp) : scaleGeometry(jp);
+      if (!geo || geo.error) continue;
+      const traceW = state.trace.map(p => geo.imgToWorld(jitterPt(p, MC_SIGMA_TRACE)));
+      const fit = TLEngine.fitCatenary(traceW);
+      if (!fit.ok) continue;
+      Ts.push(w * fit.C);
+    }
+
+    if (state.solved !== s) return; // a newer solve superseded this run
+    if (Ts.length < 30) { s.mc = null; renderResults(); return; }
+
+    Ts.sort((a, b) => a - b);
+    const q = f => Ts[Math.min(Ts.length - 1, Math.max(0, Math.round(f * (Ts.length - 1))))];
+    const lo = q(0.01), hi = q(0.99);
+    const BINS = 18;
+    const hist = new Array(BINS).fill(0);
+    for (const t of Ts) {
+      if (t < lo || t > hi) continue;
+      hist[Math.min(BINS - 1, Math.floor(((t - lo) / ((hi - lo) || 1)) * BINS))]++;
+    }
+    s.mc = { n: Ts.length, p5: q(0.05), p50: q(0.5), p95: q(0.95), lo: lo, hi: hi, hist: hist };
+    renderResults();
+  }
+
+  function mcHistogramSVG(mc) {
+    const W = 460, H = 118, padX = 10, padT = 8, padB = 30;
+    const maxC = Math.max.apply(null, mc.hist) || 1;
+    const bw = (W - 2 * padX) / mc.hist.length;
+    const xOf = t => padX + (W - 2 * padX) * (t - mc.lo) / ((mc.hi - mc.lo) || 1);
+    let bars = '';
+    mc.hist.forEach((c, i) => {
+      const bh = (H - padT - padB) * c / maxC;
+      const t0 = mc.lo + ((mc.hi - mc.lo) * i) / mc.hist.length;
+      const t1 = mc.lo + ((mc.hi - mc.lo) * (i + 1)) / mc.hist.length;
+      const inBand = t1 >= mc.p5 && t0 <= mc.p95;
+      bars += `<rect x="${(padX + i * bw).toFixed(1)}" y="${(H - padB - bh).toFixed(1)}" width="${Math.max(1, bw - 1.5).toFixed(1)}" height="${bh.toFixed(1)}" fill="${inBand ? 'var(--success)' : 'var(--border)'}" opacity="${inBand ? 0.8 : 0.55}"/>`;
+    });
+    const mark = (t, color, dy) =>
+      `<line x1="${xOf(t).toFixed(1)}" x2="${xOf(t).toFixed(1)}" y1="${padT}" y2="${H - padB}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
+      `<text x="${xOf(t).toFixed(1)}" y="${H - padB + 10 + (dy || 0)}" font-size="9" fill="${color}" text-anchor="middle">${(t / 1000).toFixed(1)}</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; height: auto; display: block; margin-top: 0.35rem;">` +
+      bars + mark(mc.p5, 'var(--warning)') + mark(mc.p50, 'var(--primary)', 9) + mark(mc.p95, 'var(--warning)') +
+      `<text x="${W / 2}" y="${H - 2}" font-size="9" fill="var(--text-muted)" text-anchor="middle">Probable horizontal tension (kN) — ${mc.n} re-fits with ±${MC_SIGMA_REF}px hook / ±${MC_SIGMA_TRACE}px trace click scatter</text>` +
+      `</svg>`;
   }
 
   function qualityVerdict(rmse, sagMax) {
@@ -563,11 +651,18 @@
       const devWarn = (Math.abs(s.an.endDevA) > Math.max(0.5, 0.05 * s.an.sagMax) || Math.abs(s.an.endDevB) > Math.max(0.5, 0.05 * s.an.sagMax))
         ? `<br><span style="color: var(--warning);">⚠ Fitted curve misses a hook by ${Math.max(Math.abs(s.an.endDevA), Math.abs(s.an.endDevB)).toFixed(2)} m — check hook clicks, or the conductor attachment (insulator offset / uneven sub-conductor tension).</span>`
         : '';
+      const KGF = 9.80665;
+      const mcBlock = s.mc
+        ? `• Probable range (90% band): <strong>${(s.mc.p5 / 1000).toFixed(2)} – ${(s.mc.p95 / 1000).toFixed(2)} kN</strong> ` +
+          `(${(s.mc.p5 / KGF).toFixed(0)} – ${(s.mc.p95 / KGF).toFixed(0)} kgf), median ${(s.mc.p50 / 1000).toFixed(2)} kN<br>` +
+          mcHistogramSVG(s.mc)
+        : `• <span style="color: var(--text-muted);">⏳ Estimating click-uncertainty band (Monte-Carlo)…</span><br>`;
       out.innerHTML =
         `<strong>Catenary Fit Result (${state.trace.length} traced points):</strong><br>` +
         rollNote + hNote + scaleNote +
         `• Catenary constant C = T/w: <strong>${s.fit.C.toFixed(1)} m</strong><br>` +
-        `• <span style="font-size: 0.95rem;">Horizontal Tension T = w·C = <strong>${s.an.T_kN.toFixed(2)} kN</strong></span> (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% UTS)<br>` +
+        `• <span style="font-size: 0.95rem;">Horizontal Tension T = w·C = <strong>${s.an.T_kN.toFixed(2)} kN</strong> ≈ <strong>${(s.an.T / KGF).toFixed(0)} kgf</strong></span> (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% UTS)<br>` +
+        mcBlock +
         `• Max sag from chord: <strong>${s.an.sagMax.toFixed(3)} m</strong> at x = ${s.xp.toFixed(1)} m from Hook A<br>` +
         `• Mid-span sag: <strong>${s.an.sagMid.toFixed(3)} m</strong><br>` +
         `• Fit quality: <strong style="color: ${q.color};">${q.label}</strong> (RMS residual ${s.an.rmse.toFixed(3)} m)` +
@@ -626,7 +721,9 @@
   // ======================================================================
   // DRAWING
   // ======================================================================
-  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#ec4899', vert: '#06b6d4', fit: '#facc15', sag: '#ef4444' };
+  // Trace = bright cyan with white ring — stays visible against rock,
+  // vegetation and sky (pink was getting lost on real terrain photos).
+  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#22d3ee', vert: '#a3e635', fit: '#facc15', sag: '#ef4444' };
   const LABELS = { A: 'Hook A', B: 'Hook B', P: 'Point P', baseA: 'Base A', baseB: 'Base B' };
 
   function redraw() {
@@ -678,8 +775,8 @@
       drawLine(i2c(state.points.B), i2c(state.points.baseB), COLORS.baseB, 2);
     }
 
-    // Trace points
-    state.trace.forEach(p => drawMarker(i2c(p), COLORS.trace, 3.5));
+    // Trace points (white ring keeps them visible on any background)
+    state.trace.forEach(p => drawMarker(i2c(p), COLORS.trace, 3.5, true));
 
     // Fitted catenary + sag indicator
     if (state.solved && !state.solved.error && state.solved.kind === 'trace') {
@@ -976,8 +1073,12 @@
     }
     lines.push(`Span L / hook diff h  : ${s.L.toFixed(2)} m / ${s.h.toFixed(3)} m${s.geo.hKnown === false ? ' (h assumed 0 — not entered)' : ''}`);
     if (s.kind === 'trace') {
+      const KGF = 9.80665;
       lines.push(`Catenary constant C   : ${s.fit.C.toFixed(1)} m`);
-      lines.push(`Horizontal tension T  : ${s.an.T_kN.toFixed(2)} kN  (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% of UTS)`);
+      lines.push(`Horizontal tension T  : ${s.an.T_kN.toFixed(2)} kN  =  ${(s.an.T / KGF).toFixed(0)} kgf  (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% of UTS)`);
+      if (s.mc) {
+        lines.push(`Probable range (90%)  : ${(s.mc.p5 / 1000).toFixed(2)} - ${(s.mc.p95 / 1000).toFixed(2)} kN  (${(s.mc.p5 / KGF).toFixed(0)} - ${(s.mc.p95 / KGF).toFixed(0)} kgf), from ${s.mc.n} Monte-Carlo re-fits with +/-${MC_SIGMA_REF}px reference / +/-${MC_SIGMA_TRACE}px trace click scatter`);
+      }
       lines.push(`Max sag from chord    : ${s.an.sagMax.toFixed(3)} m at x = ${s.xp.toFixed(1)} m from Hook A`);
       lines.push(`Mid-span sag          : ${s.an.sagMid.toFixed(3)} m`);
       lines.push(`Fit RMS residual      : ${s.an.rmse.toFixed(3)} m`);

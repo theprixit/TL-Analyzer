@@ -712,6 +712,13 @@ code {
 }
 
 @media print {
+  /* Landscape orientation: gives the annotated photograph and geometry
+     sketch the full page width they deserve */
+  @page {
+    size: A4 landscape;
+    margin: 1.2cm;
+  }
+
   /* HIDE ALL REGULAR INTERACTIVE DASHBOARD ELEMENTS */
   body {
     background-color: #ffffff !important;
