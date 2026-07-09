@@ -113,7 +113,7 @@
     /* Grid Layout for visualizer cards */
     .panel-grid {
       display: grid;
-      grid-template-columns: 1.5fr 0.5fr;
+      grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr);
       gap: 2rem;
       align-items: start;
     }
@@ -239,7 +239,7 @@
 
     .calc-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 1rem;
     }
 

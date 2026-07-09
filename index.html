@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.8.0-beta">
+  <link rel="stylesheet" href="style.css?v=0.8.1c">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
       <button type="button" class="gate-close" title="Close (continue without switching project)" onclick="closeProjectGate()">✕</button>
       <div class="gate-brand">
         <h1>⚡ TL-SAG</h1>
-        <p>Overhead Line Sag-Tension Safety &amp; Compliance Calculator</p>
+        <p>Overhead Line Sag-Tension Calculator</p>
       </div>
 
       <div id="gate-step-start">
@@ -32,6 +32,10 @@
         <div class="gate-new-row">
           <input type="text" id="gate-project-name" placeholder="e.g. 220kV Bhaba–Kashang · Span T45–T46 river crossing" onkeydown="if(event.key==='Enter') gateCreateProject()">
           <button type="button" class="btn btn-success" onclick="gateCreateProject()">➕ Create Project</button>
+        </div>
+
+        <div style="margin-top: 0.9rem; font-size: 0.88rem; color: var(--text-muted);">
+          New here? <button type="button" id="gate-example-btn" class="gate-skip" style="color: var(--success); font-weight: 600;" onclick="loadExampleProject()">🧪 Load a real example project</button> — 220kV river crossing, 788 m span, with photo, traced conductor and perspective calibration included.
         </div>
 
         <h3 class="gate-list-title">Resume a saved project</h3>
@@ -77,7 +81,7 @@
     <header>
       <div class="header-title">
         <h1>TL-SAG <span id="app-version-badge" class="version-badge"></span></h1>
-        <p>Overhead Line Sag-Tension Safety & Compliance Calculator</p>
+        <p>Overhead Line Sag-Tension Calculator</p>
       </div>
       <div class="header-actions">
         <span id="project-badge" title="Active project">📁 <span id="project-name-display">No project</span></span>
@@ -1454,8 +1458,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.8.0-beta"></script>
-  <script src="app.js?v=0.8.0-beta"></script>
-  <script src="phototracker.js?v=0.8.0-beta"></script>
+  <script src="engine.js?v=0.8.1c"></script>
+  <script src="app.js?v=0.8.1c"></script>
+  <script src="phototracker.js?v=0.8.1c"></script>
 </body>
 </html>

@@ -2,6 +2,12 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.8.1-beta — 2026-07-09
+
+- **"Load a real example project"** on the start screen: one click loads the bundled 220kV Kashang–Bhaba river crossing (788 m span, photo, 60-point conductor trace, perspective calibration) — the fastest way for a new tester to see a fully worked analysis.
+- Fixed the Physics Sandbox sidebar layout — the Quick Calculator inputs and labels were truncated by an over-narrow column.
+- Tagline simplified to "Overhead Line Sag-Tension Calculator".
+
 ## v0.8.0-beta — 2026-07-09
 
 - **Physics Sandbox integrated**: rebranded as *TL-SAG Physics Sandbox* with a back-link to the app, a callout pointing to the flagship Photo Catenary method's in-app explainer, and a footer with license/source links. (All three interactive simulations verified working.)

@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.8.0-beta';
+const APP_VERSION = '0.8.1-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -1710,6 +1710,28 @@ function deleteSavedProject(id) {
     updateProjectBadge();
   }
   renderGateProjectList();
+}
+
+// Bundled real-world example (Kashang-Bhaba 788 m river crossing) — the
+// fastest way for a new tester to see a fully worked photo analysis.
+function loadExampleProject() {
+  const btn = document.getElementById('gate-example-btn');
+  const original = btn ? btn.innerText : '';
+  if (btn) btn.innerText = '⏳ Loading example (~2 MB photo)…';
+  fetch('examples/kashang-bhaba-demo.json')
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      applyProjectData(data);
+      currentProject = {
+        id: data.projectId || 'example-kashang-bhaba',
+        name: data.projectName || 'Example project'
+      };
+      updateProjectBadge();
+      saveCurrentProject(false);
+      closeProjectGate();
+    })
+    .catch(e => alert('Could not load the example project (' + e.message + ').\nThe example needs the app served over http(s) — use the live site.'))
+    .finally(() => { if (btn) btn.innerText = original; });
 }
 
 function gateSkipProject() {
