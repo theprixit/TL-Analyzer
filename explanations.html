@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transmission Line Sag & Tension Visualizer</title>
+  <title>TL-SAG Physics Sandbox — Interactive Method Explanations</title>
   <!-- Modern Font from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -384,8 +384,17 @@
 <body>
 
   <header>
-    <h1>Transmission Line Sag & Tension Visualizer</h1>
+    <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+      <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none; color: var(--primary); font-weight: 600; border: 1px solid var(--border-color); border-radius: 50px; padding: 0.5rem 1.2rem; background: var(--bg-card);">← Back to the TL-SAG App</a>
+    </div>
+    <h1>⚡ TL-SAG Physics Sandbox</h1>
     <p>Understand the physics, mathematics, and field application of sag measurement methods</p>
+    <div style="max-width: 900px; margin: 1.4rem auto 0; background: var(--bg-card); border: 1px solid var(--accent-neon); border-left: 5px solid var(--accent-neon); border-radius: 12px; padding: 0.9rem 1.3rem; text-align: left; font-size: 0.95rem; color: var(--text-muted);">
+      📷 <strong style="color: var(--text-main);">Looking for the flagship Photo Catenary method?</strong>
+      Trace the conductor in a span photograph and the app fits a catenary — tension comes directly from the curve shape (T&nbsp;=&nbsp;w·C). Its geometry model and accuracy physics are explained inside the app itself, under
+      <em>"How the photo calibration works"</em> in the <a href="index.html" style="color: var(--accent-neon); font-weight: 600;">Photo Sag Tracker panel</a>.
+      The three classical methods below remain the best cross-checks for it.
+    </div>
   </header>
 
   <div class="container">
@@ -1294,5 +1303,11 @@
       update3ptSimulation();
     };
   </script>
+
+  <footer style="text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.85rem;">
+    TL-SAG Physics Sandbox · part of <a href="index.html" style="color: var(--primary);">TL-SAG</a> ·
+    <a href="https://github.com/theprixit/TL-Analyzer/blob/master/LICENSE" target="_blank" rel="noopener" style="color: var(--primary);">MIT License</a> ·
+    <a href="https://github.com/theprixit/TL-Analyzer" target="_blank" rel="noopener" style="color: var(--primary);">Source on GitHub</a>
+  </footer>
 </body>
 </html>

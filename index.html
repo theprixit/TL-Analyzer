@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.7.1-beta">
+  <link rel="stylesheet" href="style.css?v=0.8.0-beta">
 </head>
 <body>
 
@@ -1169,54 +1169,54 @@
                   <span>📈 Sag vs. Tension Safety Curve (UTS Clearance)</span>
                   <span id="chart-overlay-val" style="font-size: 0.8rem; font-weight: bold; color: var(--primary); text-transform: none;">Operating Point: -</span>
                 </div>
-                <svg id="svg-sag-tension-chart" class="chart-svg" viewBox="0 0 1000 320">
+                <svg id="svg-sag-tension-chart" class="chart-svg" viewBox="0 0 1000 400">
                   <defs>
-                    <pattern id="chart-grid" width="44.5" height="24" patternUnits="userSpaceOnUse">
-                      <path d="M 44.5 0 L 0 0 0 24" fill="none" stroke="#e2e8f0" stroke-width="0.6"/>
+                    <pattern id="chart-grid" width="44.5" height="30" patternUnits="userSpaceOnUse">
+                      <path d="M 44.5 0 L 0 0 0 30" fill="none" stroke="#e2e8f0" stroke-width="0.6"/>
                     </pattern>
                   </defs>
 
                   <!-- Grid -->
-                  <rect x="70" y="30" width="890" height="240" fill="url(#chart-grid)"/>
+                  <rect x="70" y="30" width="890" height="300" fill="url(#chart-grid)"/>
 
-                  <!-- Safety Bands -->
-                  <rect id="chart-band-safe" x="70" y="222" width="890" height="48" class="chart-band-safe"/>
-                  <rect id="chart-band-caution" x="70" y="210" width="890" height="12" class="chart-band-caution"/>
-                  <rect id="chart-band-warning" x="70" y="150" width="890" height="60" class="chart-band-warning"/>
-                  <rect id="chart-band-danger" x="70" y="30" width="890" height="120" class="chart-band-danger"/>
+                  <!-- Safety Bands (300px = 100% UTS) -->
+                  <rect id="chart-band-safe" x="70" y="270" width="890" height="60" class="chart-band-safe"/>
+                  <rect id="chart-band-caution" x="70" y="255" width="890" height="15" class="chart-band-caution"/>
+                  <rect id="chart-band-warning" x="70" y="180" width="890" height="75" class="chart-band-warning"/>
+                  <rect id="chart-band-danger" x="70" y="30" width="890" height="150" class="chart-band-danger"/>
 
                   <!-- Axes -->
-                  <line x1="70" y1="270" x2="960" y2="270" class="chart-axis"/>
-                  <line x1="70" y1="30" x2="70" y2="270" class="chart-axis"/>
-
-                  <!-- Y-axis threshold labels -->
-                  <text x="64" y="274" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">0 kN</text>
-                  <text id="chart-lbl-uts-20" x="64" y="226" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--success)">20% UTS</text>
-                  <text id="chart-lbl-uts-25" x="64" y="212" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--warning)">25% UTS</text>
-                  <text id="chart-lbl-uts-50" x="64" y="154" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--danger)">50% UTS</text>
-                  <text id="chart-lbl-uts-max" x="64" y="34" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">Max kN</text>
+                  <line x1="70" y1="330" x2="960" y2="330" class="chart-axis"/>
+                  <line x1="70" y1="30" x2="70" y2="330" class="chart-axis"/>
 
                   <!-- Threshold lines -->
-                  <line id="line-uts-20" x1="70" y1="222" x2="960" y2="222" stroke="var(--success)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
-                  <line id="line-uts-25" x1="70" y1="210" x2="960" y2="210" stroke="var(--warning)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
-                  <line id="line-uts-50" x1="70" y1="150" x2="960" y2="150" stroke="var(--danger)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+                  <line id="line-uts-20" x1="70" y1="270" x2="960" y2="270" stroke="var(--success)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+                  <line id="line-uts-25" x1="70" y1="255" x2="960" y2="255" stroke="var(--warning)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+                  <line id="line-uts-50" x1="70" y1="180" x2="960" y2="180" stroke="var(--danger)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+
+                  <!-- Threshold labels INSIDE the plot, right edge (clear of curve & y-title) -->
+                  <text x="64" y="334" font-size="11" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">0 kN</text>
+                  <text id="chart-lbl-uts-20" x="954" y="266" font-size="11" text-anchor="end" font-family="var(--font-sans)" fill="var(--success)">20% UTS</text>
+                  <text id="chart-lbl-uts-25" x="954" y="251" font-size="11" text-anchor="end" font-family="var(--font-sans)" fill="var(--warning)">25% UTS</text>
+                  <text id="chart-lbl-uts-50" x="954" y="176" font-size="11" text-anchor="end" font-family="var(--font-sans)" fill="var(--danger)">50% UTS</text>
+                  <text id="chart-lbl-uts-max" x="954" y="44" font-size="11" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">Max kN</text>
 
                   <!-- X-axis labels -->
-                  <text id="chart-xlbl-0" x="70" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
-                  <text id="chart-xlbl-1" x="292.5" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
-                  <text id="chart-xlbl-2" x="515" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
-                  <text id="chart-xlbl-3" x="737.5" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
-                  <text id="chart-xlbl-4" x="960" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
+                  <text id="chart-xlbl-0" x="70" y="350" font-size="11" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
+                  <text id="chart-xlbl-1" x="292.5" y="350" font-size="11" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
+                  <text id="chart-xlbl-2" x="515" y="350" font-size="11" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
+                  <text id="chart-xlbl-3" x="737.5" y="350" font-size="11" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
+                  <text id="chart-xlbl-4" x="960" y="350" font-size="11" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
 
                   <!-- Axis titles -->
-                  <text x="515" y="311" font-size="11" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
-                  <text x="24" y="150" font-size="11" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 24 150)">Horizontal Tension T (kN)</text>
+                  <text x="515" y="386" font-size="12" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
+                  <text x="26" y="180" font-size="12" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 26 180)">Horizontal Tension T (kN)</text>
 
                   <!-- Tension curve -->
                   <path id="chart-curve-path" d="" class="chart-curve"/>
 
                   <!-- Operating point -->
-                  <circle id="chart-active-dot" cx="70" cy="270" r="6" class="chart-dot">
+                  <circle id="chart-active-dot" cx="70" cy="330" r="6" class="chart-dot">
                     <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
                   </circle>
                 </svg>
@@ -1454,8 +1454,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.7.1-beta"></script>
-  <script src="app.js?v=0.7.1-beta"></script>
-  <script src="phototracker.js?v=0.7.1-beta"></script>
+  <script src="engine.js?v=0.8.0-beta"></script>
+  <script src="app.js?v=0.8.0-beta"></script>
+  <script src="phototracker.js?v=0.8.0-beta"></script>
 </body>
 </html>

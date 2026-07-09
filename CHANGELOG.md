@@ -2,6 +2,11 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.8.0-beta — 2026-07-09
+
+- **Physics Sandbox integrated**: rebranded as *TL-SAG Physics Sandbox* with a back-link to the app, a callout pointing to the flagship Photo Catenary method's in-app explainer, and a footer with license/source links. (All three interactive simulations verified working.)
+- **Safety curve v2**: taller plot (no longer artificially squeezed) and the UTS threshold labels moved inside the plot's right edge — they previously collided with the rotated tension-axis title.
+
 ## v0.7.1-beta — 2026-07-09
 
 Analysis section polish:

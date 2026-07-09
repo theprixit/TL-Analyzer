@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.7.1-beta';
+const APP_VERSION = '0.8.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -325,7 +325,7 @@ function calculateThreePoint() {
         }
       }
 
-      // Wide chart geometry: plot area x 70..960, y 30..270 (240px = 100% UTS)
+      // Wide chart geometry: plot area x 70..960, y 30..330 (300px = 100% UTS)
       let pathD = "";
       const steps = 95;
       for (let k = 0; k <= steps; k++) {
@@ -335,10 +335,10 @@ function calculateThreePoint() {
         const tempP = tempT / uts;
 
         const curX = 70 + 890 * (s - sMin) / (sMax - sMin);
-        const curY = 270 - 240 * tempP;
+        const curY = 330 - 300 * tempP;
 
-        // Clamp Y visually within grid boundaries (30 to 270)
-        const clampedY = Math.max(30, Math.min(270, curY));
+        // Clamp Y visually within grid boundaries (30 to 330)
+        const clampedY = Math.max(30, Math.min(330, curY));
 
         if (pathD === "") {
           pathD = `M ${curX},${clampedY}`;
@@ -354,11 +354,11 @@ function calculateThreePoint() {
 
       // Map dynamic active operating dot position
       let dotX = 70 + 890 * (offsetD - sMin) / (sMax - sMin);
-      let dotY = 270 - 240 * (T / uts);
+      let dotY = 330 - 300 * (T / uts);
 
       // Clamp active dot within visual grid boundaries
       dotX = Math.max(70, Math.min(960, dotX));
-      dotY = Math.max(30, Math.min(270, dotY));
+      dotY = Math.max(30, Math.min(330, dotY));
 
       const activeDot = document.getElementById('chart-active-dot');
       if (activeDot) {
