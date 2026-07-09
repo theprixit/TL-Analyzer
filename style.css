@@ -1054,6 +1054,18 @@ code {
   grid-template-columns: 1fr;
 }
 
+/* Photo calibration explainer: diagram left, physics right */
+.explainer-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1rem 0.4rem;
+}
+@media (max-width: 1000px) {
+  .explainer-grid { grid-template-columns: 1fr; }
+}
+
 /* Photo fit results: text bullets left, probability chart right */
 .photo-results-grid {
   display: grid;

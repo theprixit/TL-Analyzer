@@ -410,25 +410,41 @@
   function rect(p, angle, pivot) { return TLEngine.rotatePoints([p], angle, pivot)[0]; }
   function unrect(p, angle, pivot) { return TLEngine.rotatePoints([p], -angle, pivot)[0]; }
 
-  // Read span geometry from the primary inputs. Returns null when the span
-  // is missing — the solver must NEVER fall back to sample values silently.
+  // Read span geometry. The photo panel's own L / h fields take priority;
+  // the Primary Inputs below are the fallback. Never fall back to sample
+  // values silently.
   function primaryLh() {
-    const L = parseFloat(document.getElementById('tp-span').value);
+    // Span L: photo panel field first, then primary inputs
+    const lEl = document.getElementById('photo-span-l');
+    let L = lEl ? parseFloat(lEl.value) : NaN;
+    let lSrc = 'photo';
+    if (!(L > 0)) {
+      L = parseFloat(document.getElementById('tp-span').value);
+      lSrc = 'primary';
+    }
     if (!(L > 0)) return null;
+
+    // Hook elevation difference h: photo panel field first
     let h = 0.0;
     let hKnown = true;
-    const im = document.getElementById('tp-input-mode').value;
-    if (im === 'z-coords') {
-      const za = parseFloat(document.getElementById('tp-za').value);
-      const zb = parseFloat(document.getElementById('tp-zb').value);
-      if (isNaN(za) || isNaN(zb)) { h = 0.0; hKnown = false; }
-      else h = zb - za;
+    const hEl = document.getElementById('photo-hook-h');
+    const hPhoto = hEl ? parseFloat(hEl.value) : NaN;
+    if (!isNaN(hPhoto)) {
+      h = hPhoto;
     } else {
-      const hd = parseFloat(document.getElementById('tp-height-diff').value);
-      if (isNaN(hd)) { h = 0.0; hKnown = false; }
-      else h = hd;
+      const im = document.getElementById('tp-input-mode').value;
+      if (im === 'z-coords') {
+        const za = parseFloat(document.getElementById('tp-za').value);
+        const zb = parseFloat(document.getElementById('tp-zb').value);
+        if (isNaN(za) || isNaN(zb)) { h = 0.0; hKnown = false; }
+        else h = zb - za;
+      } else {
+        const hd = parseFloat(document.getElementById('tp-height-diff').value);
+        if (isNaN(hd)) { h = 0.0; hKnown = false; }
+        else h = hd;
+      }
     }
-    return { L: L, h: h, hKnown: hKnown };
+    return { L: L, h: h, hKnown: hKnown, lSrc: lSrc };
   }
 
   // Calibration: meters-per-pixel scale + span L + hook height diff h,
@@ -455,7 +471,7 @@
 
     const g = primaryLh();
     if (!g) {
-      return { error: 'Chord calibration needs the real Span Length L — enter it in the Primary Inputs below (or switch to Tower Height calibration).' };
+      return { error: 'Chord calibration needs the real Span Length L — enter it in the calibration settings on the left (or switch to Tower Height calibration).' };
     }
     const realChord = Math.sqrt(g.L * g.L + g.h * g.h);
     return { S: realChord / pxChord, L: g.L, h: g.h, A: A, B: B, hKnown: g.hKnown };
@@ -490,7 +506,7 @@
     pts = pts || state.points;
     if (!pts.baseA || !pts.baseB) return null; // still placing
     const g = primaryLh();
-    if (!g) return { error: 'Perspective calibration needs the real Span Length L — enter it in the Primary Inputs below.' };
+    if (!g) return { error: 'Perspective calibration needs the real Span Length L — enter it in the calibration settings on the left.' };
     const HA = parseFloat(document.getElementById('photo-persp-ha').value);
     if (!(HA > 0)) return { error: 'Enter Tower A structural height (hook to base, from tower drawings) — required to rectify perspective.' };
     const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
@@ -831,6 +847,38 @@
     }
     if (state.points.B && state.points.baseB) {
       drawLine(i2c(state.points.B), i2c(state.points.baseB), COLORS.baseB, 2);
+    }
+
+    // Calibration values annotated at the geometry they describe
+    if (state.points.A && state.points.B) {
+      const g = primaryLh();
+      if (g) {
+        const a = i2c(state.points.A), b = i2c(state.points.B);
+        drawText(`L = ${g.L.toFixed(1)} m`, { x: (a.x + b.x) / 2 - 34, y: (a.y + b.y) / 2 - 10 }, '#ffffff');
+        if (g.hKnown) {
+          drawText(`h = ${g.h >= 0 ? '+' : ''}${g.h.toFixed(1)} m`, { x: b.x + 12, y: b.y + 26 }, COLORS.vert);
+        }
+      }
+    }
+    const cm = calMethod();
+    if (cm === 'perspective') {
+      const HAv = parseFloat(document.getElementById('photo-persp-ha').value);
+      const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+      const HBv = HBraw > 0 ? HBraw : HAv;
+      if (state.points.A && state.points.baseA && HAv > 0) {
+        const a = i2c(state.points.A), ba = i2c(state.points.baseA);
+        drawText(`H_A = ${HAv} m`, { x: (a.x + ba.x) / 2 + 8, y: (a.y + ba.y) / 2 }, COLORS.baseA);
+      }
+      if (state.points.B && state.points.baseB && HBv > 0) {
+        const b = i2c(state.points.B), bb = i2c(state.points.baseB);
+        drawText(`H_B = ${HBv} m`, { x: (b.x + bb.x) / 2 + 8, y: (b.y + bb.y) / 2 }, COLORS.baseB);
+      }
+    } else if (cm === 'tower') {
+      const Hv = parseFloat(document.getElementById('photo-cal-tower-h').value);
+      if (state.points.A && state.points.baseA && Hv > 0) {
+        const a = i2c(state.points.A), ba = i2c(state.points.baseA);
+        drawText(`H = ${Hv} m`, { x: (a.x + ba.x) / 2 + 8, y: (a.y + ba.y) / 2 }, COLORS.baseA);
+      }
     }
 
     // Trace points (white ring keeps them visible on any background)
@@ -1222,9 +1270,14 @@
     const towerGrp = document.getElementById('photo-tower-h-group');
     const haGrp = document.getElementById('photo-persp-ha-group');
     const hbGrp = document.getElementById('photo-persp-hb-group');
+    const spanGrp = document.getElementById('photo-span-group');
+    const hGrp = document.getElementById('photo-h-group');
     if (towerGrp) towerGrp.style.display = method === 'tower' ? 'block' : 'none';
     if (haGrp) haGrp.style.display = method === 'perspective' ? 'block' : 'none';
     if (hbGrp) hbGrp.style.display = method === 'perspective' ? 'block' : 'none';
+    // Tower-height method solves L and h from the image itself
+    if (spanGrp) spanGrp.style.display = method === 'tower' ? 'none' : 'block';
+    if (hGrp) hGrp.style.display = method === 'tower' ? 'none' : 'block';
     // Changing the calibration source invalidates the base points; keep hooks/trace.
     state.points.baseA = null;
     state.points.baseB = null;

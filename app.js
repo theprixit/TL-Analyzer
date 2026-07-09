@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.6.0-beta';
+const APP_VERSION = '0.7.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -1374,6 +1374,8 @@ function collectProjectData() {
     photoCalTowerH: document.getElementById('photo-cal-tower-h').value,
     photoPerspHa: document.getElementById('photo-persp-ha') ? document.getElementById('photo-persp-ha').value : '',
     photoPerspHb: document.getElementById('photo-persp-hb') ? document.getElementById('photo-persp-hb').value : '',
+    photoSpanL: document.getElementById('photo-span-l') ? document.getElementById('photo-span-l').value : '',
+    photoHookH: document.getElementById('photo-hook-h') ? document.getElementById('photo-hook-h').value : '',
     photoTracker: (typeof PhotoTracker !== 'undefined') ? PhotoTracker.serialize() : null,
 
 
@@ -1518,6 +1520,8 @@ function applyProjectData(data) {
       setVal('photo-cal-tower-h', data.photoCalTowerH);
       setVal('photo-persp-ha', data.photoPerspHa);
       setVal('photo-persp-hb', data.photoPerspHb);
+      setVal('photo-span-l', data.photoSpanL);
+      setVal('photo-hook-h', data.photoHookH);
 
       // Trigger respective layout refreshes
       handleConductorChange('tp');

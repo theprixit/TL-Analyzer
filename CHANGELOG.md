@@ -2,6 +2,17 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.7.0-beta — 2026-07-09
+
+Calibration inputs live with the photo tool, and the tool now teaches its own physics:
+
+- **Span L and hook elevation difference h are now entered directly in the photo panel** (they fall back to the Primary Inputs if left blank) — calibration data lives together with the tool that uses it.
+- **Entered values are annotated on the photo itself**: L on the chord, h at Hook B, and the tower heights along their tower lines — so a wrong entry is visible at the geometry it describes.
+- **New "How the photo calibration works" explainer** built into the photo panel (collapsible): the world-model diagram, why different ground elevations are handled automatically, and the input-sensitivity physics — h barely affects tension (shear has no curvature), tower heights matter ~1:1, span matters ~2:1 (T ∝ L²/H).
+- Project files now save/restore the photo-panel L and h fields.
+
+## v0.6.0-beta — 2026-07-09
+
 ## v0.6.0-beta — 2026-07-09
 
 Workspace & report usability pass (from field-test feedback):

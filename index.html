@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.6.0-beta">
+  <link rel="stylesheet" href="style.css?v=0.7.0-beta">
 </head>
 <body>
 
@@ -132,6 +132,14 @@
                     <option value="tower">Tower Height — square-on photos</option>
                   </select>
                 </div>
+                <div class="form-group no-margin" id="photo-span-group">
+                  <label style="font-weight: bold; color: var(--primary);">Span Length L (m):</label>
+                  <input type="number" id="photo-span-l" value="" placeholder="from survey (falls back to Primary Inputs)" step="0.01" oninput="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-h-group">
+                  <label style="font-weight: bold; color: var(--primary);">Hook Elev. Difference h = B − A (m):</label>
+                  <input type="number" id="photo-hook-h" value="" placeholder="0 if unknown — tension barely affected" step="0.001" oninput="photoTrackerResolve()">
+                </div>
                 <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
                   <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
                   <input type="number" id="photo-cal-tower-h" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
@@ -190,6 +198,61 @@
         <button type="button" class="btn btn-success btn-block" style="padding: 0.6rem; font-size: 0.9rem; margin-top: 1rem;" onclick="applyPhotoTrackerReadings()">
           Apply Solved Sag &amp; Coordinates to Primary Inputs
         </button>
+
+        <!-- How it works: geometry model + input sensitivity explainer -->
+        <button class="collapsible-trigger" style="margin-top: 1.2rem;" onclick="toggleCollapsible('photo-explainer', 'photo-explainer-arrow')">
+          📖 How the photo calibration works — and which inputs your accuracy depends on <span id="photo-explainer-arrow">▼</span>
+        </button>
+        <div id="photo-explainer" class="collapsible-content">
+          <div class="explainer-grid">
+            <div>
+              <svg viewBox="0 0 760 400" role="img" style="width: 100%; height: auto;" font-family="var(--font-sans, sans-serif)">
+                <title>World model of the 4-point perspective calibration</title>
+                <path d="M 20,300 L 150,300 L 380,375 L 600,255 L 740,250" fill="none" stroke="var(--text-muted)" stroke-width="1.5"/>
+                <text x="380" y="393" font-size="11" fill="var(--text-muted)" text-anchor="middle">valley floor — different ground elevations at the two towers are FINE</text>
+                <line x1="85" y1="120" x2="85" y2="300" stroke="var(--text-main)" stroke-width="3"/>
+                <line x1="85" y1="120" x2="70" y2="300" stroke="var(--text-main)" stroke-width="1.2"/>
+                <line x1="85" y1="120" x2="100" y2="300" stroke="var(--text-main)" stroke-width="1.2"/>
+                <line x1="640" y1="165" x2="640" y2="262" stroke="var(--text-main)" stroke-width="3"/>
+                <line x1="640" y1="165" x2="629" y2="262" stroke="var(--text-main)" stroke-width="1.2"/>
+                <line x1="640" y1="165" x2="651" y2="262" stroke="var(--text-main)" stroke-width="1.2"/>
+                <path d="M 85,120 Q 360,330 640,165" fill="none" stroke="#d97706" stroke-width="2.2"/>
+                <circle cx="85" cy="120" r="6" fill="var(--primary)"/>
+                <text x="98" y="116" font-size="12.5" font-weight="700" fill="var(--primary)">① Hook A = (0, 0)</text>
+                <text x="98" y="131" font-size="10.5" fill="var(--text-muted)">origin of the world frame</text>
+                <circle cx="85" cy="300" r="6" fill="var(--primary)"/>
+                <text x="98" y="296" font-size="12.5" font-weight="700" fill="var(--primary)">③ Base A = (0, −H_A)</text>
+                <text x="98" y="311" font-size="10.5" fill="var(--text-muted)">plumb below its OWN hook</text>
+                <line x1="52" y1="120" x2="52" y2="300" stroke="var(--primary)" stroke-width="1" stroke-dasharray="4,3"/>
+                <text x="44" y="215" font-size="12" font-weight="700" fill="var(--primary)" text-anchor="end">H_A</text>
+                <circle cx="640" cy="165" r="6" fill="var(--danger)"/>
+                <text x="628" y="152" font-size="12.5" font-weight="700" fill="var(--danger)" text-anchor="end">② Hook B = (L, h)</text>
+                <circle cx="640" cy="262" r="6" fill="var(--danger)"/>
+                <text x="655" y="278" font-size="12.5" font-weight="700" fill="var(--danger)">④ Base B = (L, h−H_B)</text>
+                <text x="655" y="293" font-size="10.5" fill="var(--text-muted)">plumb below its OWN hook</text>
+                <line x1="676" y1="165" x2="676" y2="262" stroke="var(--danger)" stroke-width="1" stroke-dasharray="4,3"/>
+                <text x="684" y="218" font-size="12" font-weight="700" fill="var(--danger)">H_B ≠ H_A</text>
+                <line x1="85" y1="120" x2="740" y2="120" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,4"/>
+                <line x1="712" y1="120" x2="712" y2="165" stroke="var(--success)" stroke-width="1.2"/>
+                <text x="720" y="146" font-size="12" font-weight="700" fill="var(--success)">h</text>
+                <line x1="85" y1="30" x2="640" y2="30" stroke="var(--text-muted)" stroke-width="1"/>
+                <text x="362" y="24" font-size="12" font-weight="700" fill="var(--text-main)" text-anchor="middle">L (horizontal span)</text>
+              </svg>
+            </div>
+            <div style="font-size: 0.88rem; line-height: 1.55;">
+              <p style="margin-bottom: 0.7rem;"><strong>The world model.</strong> Your four clicks are assigned the real-world coordinates shown in the sketch. The solver finds the unique perspective mapping between the photo and that plane, so every traced point converts to true metres. Because each base is defined relative to <em>its own</em> hook, <strong>different ground elevations at the two towers are handled automatically</strong> — only each tower's own hook-to-base height matters.</p>
+              <p style="margin-bottom: 0.7rem;"><strong>The physics.</strong> Tension is read from the wire's <em>curvature</em> (T = w·C). Each input distorts the reconstruction differently:</p>
+              <table class="report-table" style="font-size: 0.8rem; width: 100%; border-collapse: collapse; margin-bottom: 0.7rem;">
+                <tr><th style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Input</th><th style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Distortion</th><th style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Effect on tension</th></tr>
+                <tr><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Hook diff <strong>h</strong></td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">shear (tilt)</td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">≈ none — a tilt has no curvature. (It does shift the sag/null-point position.)</td></tr>
+                <tr><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Tower heights <strong>H_A, H_B</strong></td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">vertical stretch</td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;"><strong>~1:1</strong> — 10% height error → ~10% tension error. A wrong far-tower height is especially strong.</td></tr>
+                <tr><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Span <strong>L</strong></td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">horizontal stretch</td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;"><strong>~2:1</strong> — T ∝ L², so 5% span error → ~10% tension error.</td></tr>
+              </table>
+              <p style="margin-bottom: 0.4rem;">Rule of thumb: <strong>T<sub>est</sub> ≈ T<sub>true</sub> × (L<sub>entered</sub>/L<sub>true</sub>)² × (H<sub>true</sub>/H<sub>entered</sub>)</strong></p>
+              <p style="color: var(--text-muted); font-size: 0.82rem;">Field guidance: take L from the survey/tower schedule; take each tower's hook-to-base height from its drawing <em>including body extensions</em>; click each base point plumb below its hook (below the crossarm tip, not the tower centreline); enter both heights when the towers differ.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- MAIN DASHBOARD CONTENT GRID -->
@@ -1377,8 +1440,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.6.0-beta"></script>
-  <script src="app.js?v=0.6.0-beta"></script>
-  <script src="phototracker.js?v=0.6.0-beta"></script>
+  <script src="engine.js?v=0.7.0-beta"></script>
+  <script src="app.js?v=0.7.0-beta"></script>
+  <script src="phototracker.js?v=0.7.0-beta"></script>
 </body>
 </html>
