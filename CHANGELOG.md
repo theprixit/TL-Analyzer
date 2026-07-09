@@ -2,6 +2,15 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.7.1-beta — 2026-07-09
+
+Analysis section polish:
+
+- **Sag-vs-Tension safety curve redesigned in a wide format** and given full-panel width — same emphasis as the photo tool and the geometry visualizer; sensitivity analysis and the calculation log now sit side by side beneath it.
+- **Three-point visualizer upgraded**: lattice tower bracing, crossarms and insulator strings at both hooks (Tower B's ride its dynamic hook), foundation blocks, arrowheaded dimension lines, and a cased conductor stroke for contrast.
+- **Calculation log numbering fixed**: in chord/offset input mode the steps jumped from 2 to 4; they now number continuously.
+- Measurement Guidelines & Survey Procedures section collapsed into a dropdown (like the photo calibration explainer) — less scroll for daily use, still one click away.
+
 ## v0.7.0-beta — 2026-07-09
 
 Calibration inputs live with the photo tool, and the tool now teaches its own physics:

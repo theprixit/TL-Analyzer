@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.7.0-beta';
+const APP_VERSION = '0.7.1-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -267,13 +267,15 @@ function calculateThreePoint() {
   const pctUTS = (T / uts) * 100;
   const safetyFactor = uts / T;
 
-  calculationStepsText += 
-    `4. Calculate horizontal tension (T) in the conductor:\n` +
+  // Continue step numbering from whichever input mode produced the offset
+  const stepN = (inputMode === 'z-coords') ? 4 : 3;
+  calculationStepsText +=
+    `${stepN}. Calculate horizontal tension (T) in the conductor:\n` +
     `   T = (w * xp * (L - xp)) / (2 * D)\n` +
     `   T = (${w.toFixed(3)} * ${xp.toFixed(2)} * (${L.toFixed(2)} - ${xp.toFixed(2)})) / (2 * ${offsetD.toFixed(3)})\n` +
     `   T = (${w.toFixed(3)} * ${xp.toFixed(2)} * ${(L - xp).toFixed(2)}) / ${(2 * offsetD).toFixed(3)}\n` +
     `   T = ${(w * xp * (L - xp)).toFixed(1)} / ${(2 * offsetD).toFixed(3)} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN\n\n` +
-    `5. Calculate equivalent level-ground mid-span sag (D_mid):\n` +
+    `${stepN + 1}. Calculate equivalent level-ground mid-span sag (D_mid):\n` +
     `   D_mid = (w * L^2) / (8 * T)\n` +
     `   D_mid = (${w.toFixed(3)} * ${L.toFixed(2)}^2) / (8 * ${T.toFixed(1)})\n` +
     `   D_mid = ${(w * L * L).toFixed(1)} / ${(8 * T).toFixed(1)} = ${dMid.toFixed(3)} m`;
@@ -323,6 +325,7 @@ function calculateThreePoint() {
         }
       }
 
+      // Wide chart geometry: plot area x 70..960, y 30..270 (240px = 100% UTS)
       let pathD = "";
       const steps = 95;
       for (let k = 0; k <= steps; k++) {
@@ -331,11 +334,11 @@ function calculateThreePoint() {
         const tempT = (w * xp * (L - xp)) / (2 * s); // in Newtons
         const tempP = tempT / uts;
 
-        const curX = 50 + 420 * (s - sMin) / (sMax - sMin);
-        const curY = 220 - 200 * tempP;
+        const curX = 70 + 890 * (s - sMin) / (sMax - sMin);
+        const curY = 270 - 240 * tempP;
 
-        // Clamp Y visually within grid boundaries (20 to 220)
-        const clampedY = Math.max(20, Math.min(220, curY));
+        // Clamp Y visually within grid boundaries (30 to 270)
+        const clampedY = Math.max(30, Math.min(270, curY));
 
         if (pathD === "") {
           pathD = `M ${curX},${clampedY}`;
@@ -350,12 +353,12 @@ function calculateThreePoint() {
       }
 
       // Map dynamic active operating dot position
-      let dotX = 50 + 420 * (offsetD - sMin) / (sMax - sMin);
-      let dotY = 220 - 200 * (T / uts);
-      
+      let dotX = 70 + 890 * (offsetD - sMin) / (sMax - sMin);
+      let dotY = 270 - 240 * (T / uts);
+
       // Clamp active dot within visual grid boundaries
-      dotX = Math.max(50, Math.min(470, dotX));
-      dotY = Math.max(20, Math.min(220, dotY));
+      dotX = Math.max(70, Math.min(960, dotX));
+      dotY = Math.max(30, Math.min(270, dotY));
 
       const activeDot = document.getElementById('chart-active-dot');
       if (activeDot) {
@@ -439,6 +442,12 @@ function calculateThreePoint() {
     document.getElementById('svg-threepoint').querySelector('circle[cx="680"]').setAttribute('cy', supportB_Y);
     document.getElementById('svg-threepoint').querySelector('text[x="685"]').setAttribute('y', supportB_Y - 5);
 
+    // Keep Tower B's crossarm and insulator riding at the hook
+    const armB = document.getElementById('tower-b-arm');
+    if (armB) { armB.setAttribute('y1', supportB_Y - 4); armB.setAttribute('y2', supportB_Y - 4); }
+    const insB = document.getElementById('tower-b-ins');
+    if (insB) { insB.setAttribute('y1', supportB_Y - 4); insB.setAttribute('y2', supportB_Y); }
+
     // Update Chord line connecting support hooks
     document.getElementById('chord-line-3pt').setAttribute('y2', supportB_Y);
 
@@ -450,6 +459,8 @@ function calculateThreePoint() {
       pathStr += `L ${x},${y} `;
     }
     document.getElementById('conductor-3pt').setAttribute('d', pathStr);
+    const casing = document.getElementById('conductor-casing');
+    if (casing) casing.setAttribute('d', pathStr);
 
     // Calculate Y coordinates at measurement point P on wire
     const pY = supportA_Y + (supportB_Y - supportA_Y) * ratio_p + 4 * screenSag * ratio_p * (1 - ratio_p);

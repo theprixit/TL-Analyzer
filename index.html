@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.7.0-beta">
+  <link rel="stylesheet" href="style.css?v=0.7.1-beta">
 </head>
 <body>
 
@@ -273,30 +273,43 @@
               <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
                 <path d="M 20 0 L 0 0 0 20" fill="none" class="cad-grid-line" stroke-width="0.5"/>
               </pattern>
+              <marker id="dim-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0.5,0.5 L 7.5,4 L 0.5,7.5 z" fill="var(--primary)"/>
+              </marker>
             </defs>
             <!-- Grid background -->
             <rect x="0" y="0" width="100%" height="100%" fill="url(#cad-grid)"/>
             <path d="M 0,280 Q 200,290 400,270 T 800,290 L 800,320 L 0,320 Z" class="cad-grid-line" style="fill: var(--bg-dark); fill-opacity: 0.4; stroke-width: 1;"/>
             
             <!-- Towers -->
-            <!-- Tower A (Left, Lower) -->
+            <!-- Tower A (Left, Lower): lattice body, crossarm, insulator, foundations -->
             <line x1="80" y1="140" x2="80" y2="280" class="cad-line-primary" stroke-width="4"/>
             <line x1="80" y1="140" x2="60" y2="280" class="cad-line-primary" stroke-width="2"/>
             <line x1="80" y1="140" x2="100" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <path d="M 66,245 L 94,245 M 68,235 L 80,245 M 92,235 L 80,245 M 70,210 L 90,210 M 71,200 L 80,210 M 89,200 L 80,210 M 73,180 L 87,180 M 74,171 L 80,180 M 86,171 L 80,180 M 76,155 L 84,155" fill="none" class="cad-line-primary" stroke-width="1" opacity="0.75"/>
+            <line x1="66" y1="136" x2="94" y2="136" class="cad-line-primary" stroke-width="2.5"/>
+            <line x1="80" y1="136" x2="80" y2="140" class="cad-line-muted" stroke-width="1.5"/>
+            <rect x="56" y="278" width="9" height="5" class="cad-line-primary" style="fill: var(--bg-dark);" stroke-width="1"/>
+            <rect x="96" y="278" width="9" height="5" class="cad-line-primary" style="fill: var(--bg-dark);" stroke-width="1"/>
             <circle cx="80" cy="140" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
-            <text x="60" y="135" class="cad-text-main" font-size="10">A (0, yA)</text>
+            <text x="56" y="128" class="cad-text-main" font-size="10">A (0, yA)</text>
             
             <!-- Tower B (Right, Higher) with dynamic structural legs -->
             <line id="tower-b-center" x1="680" y1="60" x2="680" y2="280" class="cad-line-primary" stroke-width="4"/>
             <line id="tower-b-leg-l" x1="680" y1="60" x2="660" y2="280" class="cad-line-primary" stroke-width="2"/>
             <line id="tower-b-leg-r" x1="680" y1="60" x2="700" y2="280" class="cad-line-primary" stroke-width="2"/>
+            <line id="tower-b-arm" x1="666" y1="56" x2="694" y2="56" class="cad-line-primary" stroke-width="2.5"/>
+            <line id="tower-b-ins" x1="680" y1="56" x2="680" y2="60" class="cad-line-muted" stroke-width="1.5"/>
+            <rect x="656" y="278" width="9" height="5" class="cad-line-primary" style="fill: var(--bg-dark);" stroke-width="1"/>
+            <rect x="696" y="278" width="9" height="5" class="cad-line-primary" style="fill: var(--bg-dark);" stroke-width="1"/>
             <circle cx="680" cy="60" r="4" class="cad-line-danger" style="fill: var(--danger);"/>
             <text x="685" y="55" class="cad-text-main" font-size="10">B (L, yB)</text>
             
             <!-- Chord line (Dashed Black) -->
             <line id="chord-line-3pt" x1="80" y1="140" x2="680" y2="60" class="cad-line-muted" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
-            <!-- Conductor Path -->
-            <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" class="cad-line-success" stroke-width="3"/>
+            <!-- Conductor Path (casing underlay + wire) -->
+            <path id="conductor-casing" d="M 80,140 Q 380,240 680,60" fill="none" stroke="var(--bg-panel)" stroke-width="5.5" stroke-linecap="round" opacity="0.85"/>
+            <path id="conductor-3pt" d="M 80,140 Q 380,240 680,60" fill="none" class="cad-line-success" stroke-width="3" stroke-linecap="round"/>
             
             <!-- Total Station on Ground -->
             <polygon points="340,280 360,280 350,250" class="cad-line-warning" style="fill: var(--warning);"/>
@@ -322,12 +335,12 @@
               <text id="tp-datum-label" x="400" y="274" class="cad-text-muted" font-size="8" letter-spacing="0.05em" text-anchor="middle">GRAVITY HORIZONTAL DATUM PLANE</text>
               
               <!-- Span L Dimension -->
-              <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" class="cad-line-primary" stroke-dasharray="2,2"/>
+              <line id="tp-dim-L" x1="80" y1="300" x2="680" y2="300" class="cad-line-primary" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>
               <path id="tp-dim-L-ticks" d="M 80,295 L 80,305 M 680,295 L 680,305" class="cad-line-primary"/>
               <text id="tp-dim-L-text" x="380" y="312" class="cad-text-primary" font-size="9" text-anchor="middle" font-weight="bold">L = 300.0 m</text>
 
               <!-- Position xp Dimension -->
-              <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" class="cad-line-primary" stroke-dasharray="2,2"/>
+              <line id="tp-dim-xp" x1="80" y1="285" x2="280" y2="285" class="cad-line-primary" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>
               <path id="tp-dim-xp-ticks" d="M 80,280 L 80,290 M 280,280 L 280,290" class="cad-line-primary"/>
               <text id="tp-dim-xp-text" x="180" y="297" class="cad-text-primary" font-size="9" text-anchor="middle">xp = 100.0 m</text>
 
@@ -1150,71 +1163,66 @@
     <!-- FULL-WIDTH ANALYSIS SECTION: safety curve, accuracy & calculation log -->
     <div class="panel" id="tp-analysis-panel" style="margin-top: 2rem; padding: 1.5rem;">
       <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1.2rem; font-size: 1.2rem;">📈 Analysis — Safety Curve, Accuracy &amp; Calculation Log</h2>
-      <div class="analysis-grid">
-        <div>
-              <!-- Dynamic Sag vs. Tension Chart Card -->
-              <div class="chart-area">
+      <!-- Dynamic Sag vs. Tension Chart Card: full width, flagship emphasis -->
+      <div class="chart-area" style="margin-bottom: 1.5rem;">
                 <div class="chart-title">
                   <span>📈 Sag vs. Tension Safety Curve (UTS Clearance)</span>
                   <span id="chart-overlay-val" style="font-size: 0.8rem; font-weight: bold; color: var(--primary); text-transform: none;">Operating Point: -</span>
                 </div>
-                <svg id="svg-sag-tension-chart" class="chart-svg" viewBox="0 0 500 250">
+                <svg id="svg-sag-tension-chart" class="chart-svg" viewBox="0 0 1000 320">
                   <defs>
-                    <pattern id="chart-grid" width="40" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+                    <pattern id="chart-grid" width="44.5" height="24" patternUnits="userSpaceOnUse">
+                      <path d="M 44.5 0 L 0 0 0 24" fill="none" stroke="#e2e8f0" stroke-width="0.6"/>
                     </pattern>
                   </defs>
-                  
+
                   <!-- Grid -->
-                  <rect x="50" y="20" width="420" height="200" fill="url(#chart-grid)"/>
+                  <rect x="70" y="30" width="890" height="240" fill="url(#chart-grid)"/>
 
                   <!-- Safety Bands -->
-                  <!-- 20% UTS (Safe: green) -->
-                  <rect id="chart-band-safe" x="50" y="180" width="420" height="40" class="chart-band-safe"/>
-                  <!-- 20% to 25% UTS (Borderline: amber) -->
-                  <rect id="chart-band-caution" x="50" y="170" width="420" height="10" class="chart-band-caution"/>
-                  <!-- 25% to 50% UTS (Caution: orange) -->
-                  <rect id="chart-band-warning" x="50" y="120" width="420" height="50" class="chart-band-warning"/>
-                  <!-- >50% UTS (Unsafe: red) -->
-                  <rect id="chart-band-danger" x="50" y="20" width="420" height="100" class="chart-band-danger"/>
+                  <rect id="chart-band-safe" x="70" y="222" width="890" height="48" class="chart-band-safe"/>
+                  <rect id="chart-band-caution" x="70" y="210" width="890" height="12" class="chart-band-caution"/>
+                  <rect id="chart-band-warning" x="70" y="150" width="890" height="60" class="chart-band-warning"/>
+                  <rect id="chart-band-danger" x="70" y="30" width="890" height="120" class="chart-band-danger"/>
 
                   <!-- Axes -->
-                  <line x1="50" y1="220" x2="470" y2="220" class="chart-axis"/>
-                  <line x1="50" y1="20" x2="50" y2="220" class="chart-axis"/>
+                  <line x1="70" y1="270" x2="960" y2="270" class="chart-axis"/>
+                  <line x1="70" y1="30" x2="70" y2="270" class="chart-axis"/>
 
-                  <!-- Axes labels & ticks -->
-                  <text x="45" y="224" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">0 kN</text>
-                  <text id="chart-lbl-uts-20" x="45" y="184" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--success)">20% UTS</text>
-                  <text id="chart-lbl-uts-25" x="45" y="174" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--warning)">25% UTS</text>
-                  <text id="chart-lbl-uts-50" x="45" y="124" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--danger)">50% UTS</text>
-                  <text id="chart-lbl-uts-max" x="45" y="24" font-size="8" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">Max kN</text>
+                  <!-- Y-axis threshold labels -->
+                  <text x="64" y="274" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">0 kN</text>
+                  <text id="chart-lbl-uts-20" x="64" y="226" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--success)">20% UTS</text>
+                  <text id="chart-lbl-uts-25" x="64" y="212" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--warning)">25% UTS</text>
+                  <text id="chart-lbl-uts-50" x="64" y="154" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--danger)">50% UTS</text>
+                  <text id="chart-lbl-uts-max" x="64" y="34" font-size="10" text-anchor="end" font-family="var(--font-sans)" fill="var(--text-muted)">Max kN</text>
 
-                  <!-- Horizontal Limit Lines -->
-                  <line id="line-uts-20" x1="50" y1="180" x2="470" y2="180" stroke="var(--success)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
-                  <line id="line-uts-25" x1="50" y1="170" x2="470" y2="170" stroke="var(--warning)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
-                  <line id="line-uts-50" x1="50" y1="120" x2="470" y2="120" stroke="var(--danger)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+                  <!-- Threshold lines -->
+                  <line id="line-uts-20" x1="70" y1="222" x2="960" y2="222" stroke="var(--success)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+                  <line id="line-uts-25" x1="70" y1="210" x2="960" y2="210" stroke="var(--warning)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
+                  <line id="line-uts-50" x1="70" y1="150" x2="960" y2="150" stroke="var(--danger)" stroke-width="1" stroke-dasharray="4,4" opacity="0.7"/>
 
-                  <!-- X-Axis labels -->
-                  <text id="chart-xlbl-0" x="50" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
-                  <text id="chart-xlbl-1" x="155" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
-                  <text id="chart-xlbl-2" x="260" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
-                  <text id="chart-xlbl-3" x="365" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
-                  <text id="chart-xlbl-4" x="470" y="235" font-size="8" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
+                  <!-- X-axis labels -->
+                  <text id="chart-xlbl-0" x="70" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">1.0m</text>
+                  <text id="chart-xlbl-1" x="292.5" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">5.0m</text>
+                  <text id="chart-xlbl-2" x="515" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">10.0m</text>
+                  <text id="chart-xlbl-3" x="737.5" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">15.0m</text>
+                  <text id="chart-xlbl-4" x="960" y="288" font-size="10" text-anchor="middle" font-family="var(--font-sans)" fill="var(--text-muted)">20.0m</text>
 
-                  <!-- Axis Title Labels -->
-                  <text x="260" y="247" font-size="9" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
-                  <text x="15" y="120" font-size="9" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 15 120)">Horizontal Tension T (kN)</text>
+                  <!-- Axis titles -->
+                  <text x="515" y="311" font-size="11" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)">Conductor Chord-Sag D(xp) (meters)</text>
+                  <text x="24" y="150" font-size="11" text-anchor="middle" font-family="var(--font-sans)" font-weight="bold" fill="var(--text-main)" transform="rotate(-90 24 150)">Horizontal Tension T (kN)</text>
 
-                  <!-- Tension Curve Path -->
+                  <!-- Tension curve -->
                   <path id="chart-curve-path" d="" class="chart-curve"/>
 
-                  <!-- Flashing Active Coordinate Dot -->
-                  <circle id="chart-active-dot" cx="50" cy="220" r="6" class="chart-dot">
+                  <!-- Operating point -->
+                  <circle id="chart-active-dot" cx="70" cy="270" r="6" class="chart-dot">
                     <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
                   </circle>
                 </svg>
-              </div>
-        </div>
+      </div>
+
+      <div class="analysis-grid">
         <div>
               <!-- Dynamic Sensitivity & Accuracy Analysis Card -->
               <div class="chart-area">
@@ -1271,17 +1279,22 @@
                 </div>
               </div>
         </div>
-      </div>
+        <div>
               <!-- Monospaced steps -->
-              <div class="steps-title" style="margin-top: 1.5rem;">Analytical Calculation Steps Log</div>
+              <div class="steps-title">Analytical Calculation Steps Log</div>
               <div class="steps-box" id="tp-steps">
                 Calculating...
               </div>
+        </div>
+      </div>
     </div>
 
-    <!-- PANEL D: Survey guidelines and measurement instructions -->
-    <div class="panel" style="margin-top: 1rem;">
-      <h2>Measurement Guidelines & Survey Procedures</h2>
+    <!-- PANEL D: Survey guidelines and measurement instructions (collapsible) -->
+    <button class="collapsible-trigger" style="margin-top: 1rem;" onclick="toggleCollapsible('guidelines-content', 'guidelines-arrow')">
+      🧭 Measurement Guidelines &amp; Survey Procedures <span id="guidelines-arrow">▼</span>
+    </button>
+    <div id="guidelines-content" class="collapsible-content">
+    <div class="panel" style="margin-top: 0.6rem;">
       
       <div class="guide-content">
         <p>To ensure high-precision calculations, field crews and surveyors must adhere to standardized measurement guidelines. Below are instructions for gathering the input values in the field.</p>
@@ -1327,6 +1340,7 @@
           <li><strong>Maximum Design Load Limit:</strong> Under statutory worst-case stormy conditions (maximum wind load pressure + minimum temperature + maximum ice thickness), the total mechanical load must never exceed <strong>50% of the conductor UTS</strong>. Crossing this absolute threshold will cause plastic structural deformation, extreme sag slippage, or cable snapping.</li>
         </ul>
       </div>
+    </div>
     </div>
 
     <!-- Engineering Credits Footer -->
@@ -1440,8 +1454,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.7.0-beta"></script>
-  <script src="app.js?v=0.7.0-beta"></script>
-  <script src="phototracker.js?v=0.7.0-beta"></script>
+  <script src="engine.js?v=0.7.1-beta"></script>
+  <script src="app.js?v=0.7.1-beta"></script>
+  <script src="phototracker.js?v=0.7.1-beta"></script>
 </body>
 </html>
