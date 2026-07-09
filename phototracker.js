@@ -638,7 +638,7 @@
   }
 
   function mcHistogramSVG(mc) {
-    const W = 460, H = 118, padX = 10, padT = 8, padB = 30;
+    const W = 460, H = 136, padX = 10, padT = 8, padB = 48;
     const maxC = Math.max.apply(null, mc.hist) || 1;
     const bw = (W - 2 * padX) / mc.hist.length;
     const xOf = t => padX + (W - 2 * padX) * (t - mc.lo) / ((mc.hi - mc.lo) || 1);
@@ -653,9 +653,10 @@
     const mark = (t, color, dy) =>
       `<line x1="${xOf(t).toFixed(1)}" x2="${xOf(t).toFixed(1)}" y1="${padT}" y2="${H - padB}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3"/>` +
       `<text x="${xOf(t).toFixed(1)}" y="${H - padB + 10 + (dy || 0)}" font-size="9" fill="${color}" text-anchor="middle">${(t / 1000).toFixed(1)}</text>`;
-    return `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-width: 680px; height: auto; display: block; margin-top: 0.35rem;">` +
+    return `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-width: 640px; height: auto; display: block; margin: 0.35rem auto 0;">` +
       bars + mark(mc.p5, 'var(--warning)') + mark(mc.p50, 'var(--primary)', 9) + mark(mc.p95, 'var(--warning)') +
-      `<text x="${W / 2}" y="${H - 2}" font-size="9" fill="var(--text-muted)" text-anchor="middle">Probable horizontal tension (kN) — ${mc.n} re-fits with ±${MC_SIGMA_REF}px hook / ±${MC_SIGMA_TRACE}px trace click scatter</text>` +
+      `<text x="${W / 2}" y="${H - 16}" font-size="9.5" font-weight="bold" fill="var(--text-muted)" text-anchor="middle">Probable horizontal tension (kN)</text>` +
+      `<text x="${W / 2}" y="${H - 4}" font-size="8.5" fill="var(--text-muted)" text-anchor="middle">${mc.n} Monte-Carlo re-fits · ±${MC_SIGMA_REF}px hook / ±${MC_SIGMA_TRACE}px trace click scatter</text>` +
       `</svg>`;
   }
 
@@ -702,24 +703,28 @@
         ? `<br><span style="color: var(--warning);">⚠ Fitted curve misses a hook by ${Math.max(Math.abs(s.an.endDevA), Math.abs(s.an.endDevB)).toFixed(2)} m — check hook clicks, or the conductor attachment (insulator offset / uneven sub-conductor tension).</span>`
         : '';
       const KGF = 9.80665;
-      const mcBlock = s.mc
-        ? `• Probable range (90% band): <strong>${(s.mc.p5 / 1000).toFixed(2)} – ${(s.mc.p95 / 1000).toFixed(2)} kN</strong> ` +
-          `(${(s.mc.p5 / KGF).toFixed(0)} – ${(s.mc.p95 / KGF).toFixed(0)} kgf), median ${(s.mc.p50 / 1000).toFixed(2)} kN<br>` +
+      const mcCell = s.mc
+        ? `<div style="margin-bottom: 0.2rem;">Probable range (90% band): <strong>${(s.mc.p5 / 1000).toFixed(2)} – ${(s.mc.p95 / 1000).toFixed(2)} kN</strong> ` +
+          `(${(s.mc.p5 / KGF).toFixed(0)} – ${(s.mc.p95 / KGF).toFixed(0)} kgf) · median ${(s.mc.p50 / 1000).toFixed(2)} kN</div>` +
           mcHistogramSVG(s.mc)
-        : `• <span style="color: var(--text-muted);">⏳ Estimating click-uncertainty band (Monte-Carlo)…</span><br>`;
+        : `<div style="color: var(--text-muted);">⏳ Estimating click-uncertainty band (Monte-Carlo)…</div>`;
       out.innerHTML =
+        `<div class="photo-results-grid">` +
+        `<div>` +
         `<strong>Catenary Fit Result (${state.trace.length} traced points):</strong><br>` +
         rollNote + hNote + scaleNote +
         `• Catenary constant C = T/w: <strong>${s.fit.C.toFixed(1)} m</strong><br>` +
         `• <span style="font-size: 0.95rem;">Horizontal Tension T = w·C = <strong>${s.an.T_kN.toFixed(2)} kN</strong> ≈ <strong>${(s.an.T / KGF).toFixed(0)} kgf</strong></span> (${s.cond.name}, ${s.an.pctUTS.toFixed(1)}% UTS)<br>` +
-        mcBlock +
         `• Max sag from chord: <strong>${s.an.sagMax.toFixed(3)} m</strong> at x = ${s.xp.toFixed(1)} m from Hook A<br>` +
         ((isPersp && s.visualLowOffsetPx > 15)
           ? `• <span style="color: var(--text-muted);">ℹ The max-sag marker sits ~${s.visualLowOffsetPx}px away from where the curve <em>looks</em> lowest — this is expected in oblique photos: perspective shifts the visual bottom of the curve away from the true real-world low point. The marker shows the correct world position.</span><br>`
           : '') +
         `• Mid-span sag: <strong>${s.an.sagMid.toFixed(3)} m</strong><br>` +
         `• Fit quality: <strong style="color: ${q.color};">${q.label}</strong> (RMS residual ${s.an.rmse.toFixed(3)} m)` +
-        devWarn + `<br>` + perspNote;
+        devWarn + `<br>` + perspNote +
+        `</div>` +
+        `<div class="mc-cell">` + mcCell + `</div>` +
+        `</div>`;
     } else {
       out.innerHTML =
         `<strong>Quick 3-Point Photo Solve:</strong><br>` +
