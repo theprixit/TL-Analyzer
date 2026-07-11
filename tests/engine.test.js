@@ -117,6 +117,36 @@ console.log('\n== Fit failure guards ==');
   checkTrue('inverted curvature rejected', E.fitCatenary(inverted).ok === false);
 }
 
+console.log('\n== Catenary-exact from chord sag ==');
+{
+  // Forward: build a catenary with known C through (0,0),(788,55), measure its
+  // chord sag at xp, then invert — must recover C.
+  const C = 999.5, L = 788, h = 55, xp = 390;
+  const a = L / C;
+  const u = Math.asinh((h / C) / (2 * Math.sinh(a / 2))) - a / 2;
+  const yrel = x => C * (Math.cosh(x / C + u) - Math.cosh(u));
+  const D = (h * xp) / L - yrel(xp);
+  checkTrue('forward sag positive', D > 0);
+  const Crec = E.catenaryCFromChordSag(L, h, xp, D);
+  check('recovered C from chord sag', Crec, C, 0.05);
+
+  // Small-sag limit: catenary and parabola tensions agree closely
+  const w = 15.912;
+  const Dsmall = 5.0, Ls = 300, xs = 150;
+  const Cs = E.catenaryCFromChordSag(Ls, 0, xs, Dsmall);
+  const Tcat = w * Cs;
+  const Tpar = E.tensionThreePoint(w, Ls, xs, Dsmall);
+  check('small-sag catenary ≈ parabola', Tcat, Tpar, 0.2);
+
+  // Deep-sag: for the SAME chord-sag the catenary needs a larger C than the
+  // parabola (cosh outgrows x²), so the parabolic field formula UNDER-reads
+  // tension on deep-sag spans.
+  const Cd = E.catenaryCFromChordSag(788, 0, 394, 80);
+  checkTrue('deep-sag: catenary > parabola', w * Cd > E.tensionThreePoint(w, 788, 394, 80));
+  checkTrue('deep-sag gap >0.5%', ((w * Cd) / E.tensionThreePoint(w, 788, 394, 80) - 1) > 0.005);
+  checkTrue('invalid inputs -> null', E.catenaryCFromChordSag(0, 0, 10, 5) === null);
+}
+
 console.log('\n== Change of state (temperature) ==');
 {
   // ACSR Zebra: A=484.5 mm², E=68.5 GPa -> EA = 33.19e6 N, alpha=19.3e-6

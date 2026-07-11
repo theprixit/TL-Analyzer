@@ -43,6 +43,30 @@
     return (w * L * L) / (8 * sag);
   }
 
+  // Exact catenary through hooks A(0,0) and B(L,h) with vertical chord-sag D
+  // at position xp: solves for the catenary constant C (bisection; D is
+  // strictly decreasing in C). Returns C in the same length units, or null.
+  // Horizontal tension is then T = w·C — the "catenary-exact" counterpart of
+  // the parabolic field formula, which overestimates T on deep-sag spans.
+  function catenaryCFromChordSag(L, h, xp, D) {
+    if (!(L > 0) || !(xp > 0) || !(xp < L) || !(D > 0)) return null;
+    const sagAt = C => {
+      const a = L / C;
+      // Endpoint condition in closed form: 2·sinh(a/2)·sinh(u + a/2) = h/C
+      const u = Math.asinh((h / C) / (2 * Math.sinh(a / 2))) - a / 2;
+      const yrel = x => C * (Math.cosh(x / C + u) - Math.cosh(u));
+      return (h * xp) / L - yrel(xp);
+    };
+    // Bracket: sag grows without bound as C -> 0, vanishes as C -> inf.
+    let lo = L / 1000, hi = L * 1000;
+    if (sagAt(lo) < D || sagAt(hi) > D) return null;
+    for (let i = 0; i < 200; i++) {
+      const mid = Math.sqrt(lo * hi); // geometric mid — C spans decades
+      if (sagAt(mid) > D) lo = mid; else hi = mid;
+    }
+    return Math.sqrt(lo * hi);
+  }
+
   // Change-of-state (parabolic, level-span approximation): given horizontal
   // tension T1 (N) at conductor temperature t1 (°C), solve the cubic for the
   // tension T2 at temperature t2. EA = elastic modulus × area (N),
@@ -373,6 +397,7 @@
     sagOffsetFromZ: sagOffsetFromZ,
     waveSag: waveSag,
     tensionFromMidSag: tensionFromMidSag,
+    catenaryCFromChordSag: catenaryCFromChordSag,
     changeOfState: changeOfState,
     hookHeightFromSlants: hookHeightFromSlants,
     hookHeightFromAngles: hookHeightFromAngles,

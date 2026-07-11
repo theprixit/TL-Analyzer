@@ -2,6 +2,12 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.4-beta — 2026-07-11
+
+- **Catenary-exact cross-check** in the Calculation Results panel: for the entered L/h/xp/D the engine now also solves the exact catenary (new `catenaryCFromChordSag`, bisection on the hook-anchored catenary), and whenever it diverges from the parabolic field formula by more than 0.3% a note shows both figures. On deep-sag spans (D/L ≳ 5%) the parabolic formula **under-reads** tension — ~1.2% on the 788 m example.
+- Clarifies the photo-vs-panel difference testers noticed: the Photo Sag Tracker's tension comes from a least-squares fit through the *traced wire* (hook clicks only calibrate scale), so it can sit slightly to either side of the hook-anchored figures — that spread is real click-uncertainty, echoed by the Monte-Carlo band.
+- 6 new engine tests (50 total) — including one that corrected the author's own sign expectation for the parabola/catenary gap.
+
 ## v0.9.3-beta — 2026-07-11
 
 - Example project refreshed with a recalibrated Kashang–Bhaba trace (36 points, per-tower heights 27.5 m / 24 m, fit RMS under 1 m); the example download is now version-cache-busted so updates reach returning browsers.

@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.9.3-beta';
+const APP_VERSION = '0.9.4-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -290,6 +290,22 @@ function calculateThreePoint() {
   toggleAnalysisPanel(true);
 
   document.getElementById('tp-val-tension').innerText = `${T_kN.toFixed(2)} kN  ·  ${(T / 9.80665).toFixed(0)} kgf`;
+
+  // Catenary-exact cross-check: the parabolic field formula above
+  // overestimates tension on deep-sag spans; show the exact figure
+  // whenever the two models diverge noticeably.
+  const catNote = document.getElementById('tp-catenary-note');
+  if (catNote) {
+    const Ccat = TLEngine.catenaryCFromChordSag(L, h, xp, offsetD);
+    const Tcat = Ccat ? w * Ccat : null;
+    const divergence = Tcat ? (T / Tcat - 1) * 100 : 0;
+    if (Tcat && Math.abs(divergence) > 0.3) {
+      catNote.style.display = 'block';
+      catNote.innerHTML = `Catenary-exact for these inputs: <strong>${(Tcat / 1000).toFixed(2)} kN · ${(Tcat / 9.80665).toFixed(0)} kgf</strong> — the parabolic field formula above under-reads by ${Math.abs(divergence).toFixed(1)}% at this sag ratio (D/L ≈ ${((offsetD / L) * 100).toFixed(1)}%). Prefer the catenary figure on deep-sag spans. (A photo catenary fit can differ slightly from both — it follows the traced wire rather than the hook clicks.)`;
+    } else {
+      catNote.style.display = 'none';
+    }
+  }
   document.getElementById('tp-val-sag').innerText = dMid.toFixed(2) + " m";
   document.getElementById('tp-val-offset').innerText = offsetD.toFixed(2) + " m";
   document.getElementById('tp-val-sf').innerText = safetyFactor.toFixed(2);
