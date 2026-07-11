@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.9.5-beta">
+  <link rel="stylesheet" href="style.css?v=0.10.0-beta">
 </head>
 <body>
 
@@ -149,6 +149,7 @@
                   <label style="font-weight: bold; color: var(--success);">Image Calibration Method:</label>
                   <select id="photo-cal-method" onchange="handlePhotoCalibChange()">
                     <option value="perspective" selected>Perspective 4-Point — oblique photos (best)</option>
+                    <option value="camera">📷 Camera + tower heights — span-free (EXPERIMENTAL)</option>
                     <option value="chord">Chord — square-on photos (needs L, h)</option>
                     <option value="tower">Tower Height — square-on photos</option>
                   </select>
@@ -160,6 +161,15 @@
                 <div class="form-group no-margin" id="photo-h-group">
                   <label style="font-weight: bold; color: var(--primary);">Hook Elev. Difference h = B − A (m):</label>
                   <input type="number" id="photo-hook-h" value="" placeholder="0 if unknown — tension barely affected" step="0.001" oninput="photoTrackerResolve()">
+                </div>
+                <div class="form-group no-margin" id="photo-camera-group" style="display: none;">
+                  <label style="font-weight: bold; color: var(--warning);">Camera focal — 35mm equiv (mm): <span class="unit-label">(auto from photo EXIF)</span></label>
+                  <input type="number" id="photo-f35" value="" placeholder="auto from EXIF — or enter manually" step="0.1" oninput="photoCameraChanged()">
+                  <div id="photo-camera-status" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.45;"></div>
+                  <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem;">
+                    <input type="number" id="photo-calib-span" placeholder="known span of THIS photo (m)" step="0.01" style="flex: 1;">
+                    <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;" onclick="calibrateCameraFromSpan()">🎯 Calibrate camera</button>
+                  </div>
                 </div>
                 <div class="form-group no-margin" id="photo-tower-h-group" style="display: none;">
                   <label style="font-weight: bold; color: var(--primary);">Actual Tower ZA Height (m):</label>
@@ -302,6 +312,7 @@
                 <tr><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">Span <strong>L</strong></td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;">horizontal stretch</td><td style="border: 1px solid var(--border); padding: 0.3rem 0.5rem;"><strong>~2:1</strong> — T ∝ L², so 5% span error → ~10% tension error.</td></tr>
               </table>
               <p style="margin-bottom: 0.4rem;">Rule of thumb: <strong>T<sub>est</sub> ≈ T<sub>true</sub> × (L<sub>entered</sub>/L<sub>true</sub>)² × (H<sub>true</sub>/H<sub>entered</sub>)</strong></p>
+              <p style="margin-bottom: 0.7rem;"><strong>Span-free camera mode (experimental).</strong> With the photo's focal length (EXIF) the homography can be metrically decomposed, so the span becomes an <em>output</em> — only the tower heights are needed. Phone focal data is nominal, so this mode must be <strong>calibrated once per camera</strong> against a single known span; the correction is remembered and applied to every later photo from that camera.</p>
               <p style="color: var(--text-muted); font-size: 0.82rem;">Field guidance: take L from the survey/tower schedule; take each tower's hook-to-base height from its drawing <em>including body extensions</em>; click each base point plumb below its hook (below the crossarm tip, not the tower centreline); enter both heights when the towers differ.</p>
             </div>
           </div>
@@ -1547,8 +1558,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.9.5-beta"></script>
-  <script src="app.js?v=0.9.5-beta"></script>
-  <script src="phototracker.js?v=0.9.5-beta"></script>
+  <script src="engine.js?v=0.10.0-beta"></script>
+  <script src="app.js?v=0.10.0-beta"></script>
+  <script src="phototracker.js?v=0.10.0-beta"></script>
 </body>
 </html>

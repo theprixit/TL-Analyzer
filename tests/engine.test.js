@@ -231,6 +231,46 @@ console.log('\n== Perspective catenary recovery (oblique Wangtoo-style shot) =='
   check('recovered tension through perspective', an.T, T, 0.5);
 }
 
+console.log('\n== Span-free camera solver ==');
+{
+  // Synthetic camera: K known exactly, span plane at an oblique pose.
+  // World: hooks (0,0),(L,h); bases (0,-HA),(L,h-HB). Project via K[r1 r2 t].
+  const fx = 4200, cx = 1600, cy = 720;
+  const L = 788, h = 55, HA = 27.5, HB = 24;
+  const yaw = 0.6, pitch = 0.08; // strong obliquity
+  const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  // r1 = world X axis, r2 = world Y axis in camera coords; t = plane origin
+  const r1 = [cyaw, 0, -syaw];
+  const r2 = [syaw * sp, cp, cyaw * sp];
+  const t = [-300, -40, 900];
+  const proj = p => {
+    const X = r1[0] * p.x + r2[0] * p.y + t[0];
+    const Y = r1[1] * p.x + r2[1] * p.y + t[1];
+    const Z = r1[2] * p.x + r2[2] * p.y + t[2];
+    return { x: fx * X / Z + cx, y: fx * Y / Z + cy };
+  };
+  const refs = [proj({ x: 0, y: 0 }), proj({ x: L, y: h }), proj({ x: 0, y: -HA }), proj({ x: L, y: h - HB })];
+
+  const solved = E.solveSpanFromCamera(refs, HA, HB, fx, cx, cy, null);
+  checkTrue('camera solve returns', solved !== null);
+  check('recovered span L', solved.L, L, 1.0);
+  checkTrue('recovered h within 3 m', Math.abs(solved.h - h) < 3);
+
+  // hFixed path: better conditioned, same answer
+  const solvedHF = E.solveSpanFromCamera(refs, HA, HB, fx, cx, cy, h);
+  check('recovered L with h fixed', solvedHF.L, L, 1.0);
+
+  // Calibration inverse: hide the true fx, recover it from the known span
+  const fxRec = E.focalForSpan(refs, HA, HB, L, h, cx, cy, fx * 0.75);
+  check('focalForSpan recovers fx', fxRec, fx, 2.0);
+
+  // Guards
+  checkTrue('missing focal -> null', E.solveSpanFromCamera(refs, HA, HB, 0, cx, cy, null) === null);
+  checkTrue('bad refs -> null', E.solveSpanFromCamera([refs[0]], HA, HB, fx, cx, cy, null) === null);
+  check('fxFrom35mm width convention', E.fxFrom35mm(48, 3200), 3200 * 48 / 36, 0.001);
+}
+
 console.log('\n== Roll correction helpers ==');
 {
   // A segment tilted 5° from vertical must come back to vertical after rotation.

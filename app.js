@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.9.5-beta';
+const APP_VERSION = '0.10.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -1596,6 +1596,7 @@ function collectProjectData() {
     photoPerspHb: document.getElementById('photo-persp-hb') ? document.getElementById('photo-persp-hb').value : '',
     photoSpanL: document.getElementById('photo-span-l') ? document.getElementById('photo-span-l').value : '',
     photoHookH: document.getElementById('photo-hook-h') ? document.getElementById('photo-hook-h').value : '',
+    photoF35: document.getElementById('photo-f35') ? document.getElementById('photo-f35').value : '',
     tpTempMeas: document.getElementById('tp-temp-meas') ? document.getElementById('tp-temp-meas').value : '',
     tpTempCond: document.getElementById('tp-temp-cond') ? document.getElementById('tp-temp-cond').value : '',
     tpTempRise: document.getElementById('tp-temp-rise') ? document.getElementById('tp-temp-rise').value : '',
@@ -1746,6 +1747,7 @@ function applyProjectData(data) {
       setVal('photo-persp-hb', data.photoPerspHb);
       setVal('photo-span-l', data.photoSpanL);
       setVal('photo-hook-h', data.photoHookH);
+      setVal('photo-f35', data.photoF35);
       setVal('tp-temp-meas', data.tpTempMeas);
       setVal('tp-temp-cond', data.tpTempCond);
       setVal('tp-temp-rise', data.tpTempRise);

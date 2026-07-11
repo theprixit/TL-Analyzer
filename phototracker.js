@@ -101,10 +101,101 @@
   // ======================================================================
   // IMAGE LOADING
   // ======================================================================
+  // Minimal JPEG/TIFF EXIF reader — only the tags the camera mode needs.
+  // (Canvas re-encoding strips EXIF, so this must run on the ORIGINAL file.)
+  function parseExif(buf) {
+    try {
+      const v = new DataView(buf);
+      if (v.getUint16(0) !== 0xFFD8) return null;
+      let i = 2, tiff = -1;
+      while (i < v.byteLength - 4) {
+        if (v.getUint8(i) !== 0xFF) break;
+        const marker = v.getUint8(i + 1);
+        const len = v.getUint16(i + 2);
+        if (marker === 0xE1 && v.getUint32(i + 4) === 0x45786966) { tiff = i + 10; break; }
+        if (marker === 0xDA) break;
+        i += 2 + len;
+      }
+      if (tiff < 0) return null;
+      const le = v.getUint16(tiff) === 0x4949;
+      const u16 = o => v.getUint16(tiff + o, le);
+      const u32 = o => v.getUint32(tiff + o, le);
+      const out = {};
+      const readIfd = off => {
+        const n = u16(off);
+        for (let k = 0; k < n; k++) {
+          const e = off + 2 + k * 12;
+          const tag = u16(e), typ = u16(e + 2), cnt = u32(e + 4);
+          if (tag === 0x8769) out._sub = u32(e + 8);
+          if (tag === 0xA405 && typ === 3) out.f35 = u16(e + 8);
+          if ((tag === 0x010F || tag === 0x0110) && typ === 2) {
+            const base = cnt > 4 ? tiff + u32(e + 8) : tiff + e + 8;
+            let str = '';
+            for (let j = 0; j < Math.min(cnt, 64); j++) {
+              const ch = v.getUint8(base + j);
+              if (!ch) break;
+              str += String.fromCharCode(ch);
+            }
+            out[tag === 0x010F ? 'make' : 'model'] = str.trim();
+          }
+        }
+      };
+      readIfd(u32(4));
+      if (out._sub) { readIfd(out._sub); delete out._sub; }
+      return (out.f35 || out.make || out.model) ? out : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Camera profiles: per-camera focal correction learned from ONE known span.
+  function cameraProfileKey() {
+    const f35 = parseFloat((document.getElementById('photo-f35') || {}).value);
+    if (!(f35 > 0)) return null;
+    const ex = state.exif || {};
+    return ((ex.make || 'unknown') + '|' + (ex.model || 'camera') + '|' + f35).toLowerCase();
+  }
+
+  function getCameraProfiles() {
+    try { return JSON.parse(localStorage.getItem('tlsag_camera_profiles')) || {}; }
+    catch (e) { return {}; }
+  }
+
+  function getCameraProfile() {
+    const k = cameraProfileKey();
+    return k ? (getCameraProfiles()[k] || null) : null;
+  }
+
+  function updateCameraStatus() {
+    const el = document.getElementById('photo-camera-status');
+    if (!el) return;
+    const ex = state.exif || {};
+    const cam = (ex.make || ex.model) ? ((ex.make || '') + ' ' + (ex.model || '')).trim() : null;
+    const f35 = parseFloat((document.getElementById('photo-f35') || {}).value);
+    if (!(f35 > 0)) {
+      el.innerHTML = (cam ? 'Camera: <strong>' + cam + '</strong> — ' : '') +
+        '<span style="color: var(--danger);">no focal length. Auto-read fails on WhatsApp-forwarded images (EXIF stripped) — use the original file, or enter the 35mm-equivalent focal manually.</span>';
+      return;
+    }
+    const prof = getCameraProfile();
+    el.innerHTML = 'Camera: <strong>' + (cam || 'manual focal') + '</strong> · ' + f35 + ' mm equiv — ' +
+      (prof
+        ? '<span style="color: var(--success);">✅ calibrated ×' + prof.k.toFixed(3) + ' (' + prof.date + ')</span>'
+        : '<span style="color: var(--warning);">⚠ UNCALIBRATED — phone focals are nominal; expect up to ±25% span error. Calibrate once below using any photo of a span with a known length.</span>');
+  }
+
   function loadImageFile(file) {
-    const reader = new FileReader();
-    reader.onload = e => loadImageSrc(e.target.result, true);
-    reader.readAsDataURL(file);
+    const fr = new FileReader();
+    fr.onload = e => {
+      state.exif = parseExif(e.target.result);
+      const f35El = document.getElementById('photo-f35');
+      if (f35El) f35El.value = (state.exif && state.exif.f35) ? state.exif.f35 : '';
+      updateCameraStatus();
+      const fr2 = new FileReader();
+      fr2.onload = ev => loadImageSrc(ev.target.result, true);
+      fr2.readAsDataURL(file);
+    };
+    fr.readAsArrayBuffer(file);
   }
 
   function loadImageSrc(src, isNewPhoto) {
@@ -166,8 +257,8 @@
     if (!state.points.A) return 'A';
     if (!state.points.B) return 'B';
     const cm = calMethod();
-    if ((cm === 'tower' || cm === 'perspective') && !state.points.baseA) return 'baseA';
-    if (cm === 'perspective' && !state.points.baseB) return 'baseB';
+    if ((cm === 'tower' || cm === 'perspective' || cm === 'camera') && !state.points.baseA) return 'baseA';
+    if ((cm === 'perspective' || cm === 'camera') && !state.points.baseB) return 'baseB';
     if (state.mode === 'quick') return state.points.P ? null : 'P';
     return 'trace';
   }
@@ -531,12 +622,65 @@
     };
   }
 
+  // Span-free calibration: camera intrinsics + tower heights. EXPERIMENTAL.
+  // Same return shape as perspectiveGeometry so everything downstream works.
+  function cameraGeometry(pts, opts) {
+    pts = pts || state.points;
+    opts = opts || {};
+    if (!pts.baseA || !pts.baseB) return null; // still placing
+    const f35 = parseFloat(document.getElementById('photo-f35').value);
+    if (!(f35 > 0)) {
+      return { error: 'Camera mode needs the 35mm-equivalent focal length — read automatically from the photo EXIF, or enter it manually. (WhatsApp-forwarded images have EXIF stripped: use the original file.)' };
+    }
+    const HA = parseFloat(document.getElementById('photo-persp-ha').value);
+    if (!(HA > 0)) {
+      return { error: 'Enter Tower A structural height (hook to base) — the one known length this mode needs.' };
+    }
+    const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+    const HB = HBraw > 0 ? HBraw : HA;
+
+    const prof = getCameraProfile();
+    const k = prof ? prof.k : 1;
+    const fx = TLEngine.fxFrom35mm(f35, state.img.naturalWidth) * k * (opts.fxScale || 1);
+    const cx = state.img.naturalWidth / 2, cy = state.img.naturalHeight / 2;
+
+    const hEl = document.getElementById('photo-hook-h');
+    const hv = hEl ? parseFloat(hEl.value) : NaN;
+    const hFixed = isNaN(hv) ? null : hv;
+
+    const imgRefs = [pts.A, pts.B, pts.baseA, pts.baseB];
+    const sol = TLEngine.solveSpanFromCamera(imgRefs, HA, HB, fx, cx, cy, hFixed, opts.init || null);
+    if (!sol) return { error: 'Camera solve failed — check the four reference points, heights and focal length.' };
+
+    const worldRefs = [
+      { x: 0, y: 0 }, { x: sol.L, y: sol.h },
+      { x: 0, y: -HA }, { x: sol.L, y: sol.h - HB }
+    ];
+    const H = TLEngine.computeHomography(imgRefs, worldRefs);
+    const Hinv = TLEngine.computeHomography(worldRefs, imgRefs);
+    if (!H || !Hinv) return { error: 'Degenerate reference layout — re-place the points.' };
+    return {
+      method: 'camera', angle: 0,
+      L: sol.L, h: sol.h, hKnown: hFixed !== null, hSolved: hFixed === null,
+      HA: HA, HB: HB, solvedL: true,
+      calibrated: !!prof, profileK: k, f35: f35, _sol: { L: sol.L, h: sol.h },
+      camLabel: (state.exif && (state.exif.make || state.exif.model))
+        ? ((state.exif.make || '') + ' ' + (state.exif.model || '')).trim() : 'manual focal',
+      Am: worldRefs[0], Bm: worldRefs[1],
+      imgToWorld: p => TLEngine.applyHomography(H, p),
+      worldToImg: p => TLEngine.applyHomography(Hinv, p)
+    };
+  }
+
   function solve() {
     state.solved = null;
 
     if (!state.img || !state.points.A || !state.points.B) { renderResults(); return; }
 
-    const geo = calMethod() === 'perspective' ? perspectiveGeometry() : scaleGeometry();
+    const cm0 = calMethod();
+    const geo = cm0 === 'perspective' ? perspectiveGeometry()
+      : cm0 === 'camera' ? cameraGeometry()
+      : scaleGeometry();
     if (!geo) { renderResults(); return; }
     if (geo.error) { state.solved = { error: geo.error }; renderResults(); return; }
 
@@ -562,7 +706,7 @@
       // In oblique (perspective-rectified) photos the true max-sag point
       // does NOT project onto the visually lowest pixel of the curve —
       // quantify the gap so the UI can reassure the user it's not an error.
-      if (geo.method === 'perspective') {
+      if (geo.method === 'perspective' || geo.method === 'camera') {
         const cat = x => TLEngine.catenaryY(fit.C, fit.x0, fit.y0, x);
         const xLo = Math.min(geo.Am.x, geo.Bm.x), xHi = Math.max(geo.Am.x, geo.Bm.x);
         let low = null;
@@ -617,11 +761,15 @@
   function runMonteCarlo() {
     const s = state.solved;
     if (!s || s.error || s.kind !== 'trace') return;
-    const isPersp = calMethod() === 'perspective';
+    const method = calMethod();
     const w = s.cond.w;
     const Ts = [];
+    // Camera mode: each resample re-solves the span (warm-started) and also
+    // jitters the focal — post-calibration ±2%, uncalibrated ±10%.
+    const fxSigma = method === 'camera' ? (s.geo.calibrated ? 0.02 : 0.10) : 0;
+    const runs = method === 'camera' ? 80 : MC_RUNS;
 
-    for (let i = 0; i < MC_RUNS; i++) {
+    for (let i = 0; i < runs; i++) {
       const jp = {
         A: jitterPt(state.points.A, MC_SIGMA_REF),
         B: jitterPt(state.points.B, MC_SIGMA_REF),
@@ -629,7 +777,9 @@
         baseA: state.points.baseA ? jitterPt(state.points.baseA, MC_SIGMA_REF) : null,
         baseB: state.points.baseB ? jitterPt(state.points.baseB, MC_SIGMA_REF) : null
       };
-      const geo = isPersp ? perspectiveGeometry(jp) : scaleGeometry(jp);
+      const geo = method === 'perspective' ? perspectiveGeometry(jp)
+        : method === 'camera' ? cameraGeometry(jp, { fxScale: 1 + randn() * fxSigma, init: s.geo._sol })
+        : scaleGeometry(jp);
       if (!geo || geo.error) continue;
       const traceW = state.trace.map(p => geo.imgToWorld(jitterPt(p, MC_SIGMA_TRACE)));
       const fit = TLEngine.fitCatenary(traceW);
@@ -697,7 +847,7 @@
       return;
     }
 
-    const isPersp = s.geo && s.geo.method === 'perspective';
+    const isPersp = s.geo && (s.geo.method === 'perspective' || s.geo.method === 'camera');
     const rollNote = isPersp
       ? `• <span style="color: var(--success);">Perspective rectified (4-point homography) — oblique camera angle and roll handled exactly.</span><br>`
       : (state.vertRef.length === 2
@@ -706,7 +856,11 @@
     const hNote = (s.geo && s.geo.hKnown === false)
       ? `• <span style="color: var(--warning);">Hook height difference h assumed 0 m — enter hook elevations (ZA/ZB or h) in Primary Inputs for slope correction.</span><br>`
       : '';
-    const scaleNote = isPersp
+    const scaleNote = s.geo.method === 'camera'
+      ? `• <strong style="color: var(--warning);">SPAN-FREE (EXPERIMENTAL)</strong> · Camera: ${s.geo.camLabel} · ${s.geo.f35} mm equiv ${s.geo.calibrated ? `· <span style="color: var(--success);">calibrated ×${s.geo.profileK.toFixed(3)}</span>` : `· <span style="color: var(--danger);">UNCALIBRATED — span may be off by ±25%; calibrate this camera on one known span</span>`}<br>` +
+        `• Solved from camera geometry: <strong>Span L = ${s.geo.L.toFixed(1)} m</strong>${s.geo.hSolved ? `, hook diff h = ${s.geo.h.toFixed(1)} m <span style="color: var(--text-muted);">(h is only weakly constrained by the photo — enter it above if known)</span>` : ` (h = ${s.geo.h.toFixed(1)} m entered)`}<br>` +
+        `• Tower heights used: <strong>A = ${s.geo.HA} m</strong>, <strong>B = ${s.geo.HB} m</strong><br>`
+      : isPersp
       ? `• Tower heights used: <strong>A = ${s.geo.HA} m</strong>, <strong>B = ${s.geo.HB} m</strong><br>`
       : `• Calibrated scale: <strong>${(1 / s.geo.S).toFixed(1)} px/m</strong><br>`;
     const perspNote = isPersp
@@ -1172,11 +1326,15 @@
     const s = state.solved;
     if (!state.img || !s || s.error) return null;
 
-    const isPersp = s.geo.method === 'perspective';
-    const calNames = { perspective: 'Perspective 4-point homography (hooks + tower bases)', tower: 'Tower structural height (Hook-to-Base)', chord: 'Span chord (known L and h)' };
+    const isPersp = s.geo.method === 'perspective' || s.geo.method === 'camera';
+    const calNames = { perspective: 'Perspective 4-point homography (hooks + tower bases)', tower: 'Tower structural height (Hook-to-Base)', chord: 'Span chord (known L and h)', camera: 'Camera intrinsics — SPAN-FREE (EXPERIMENTAL)' };
     const lines = [];
     lines.push(`Measurement mode      : ${s.kind === 'trace' ? 'Full Catenary Trace (' + state.trace.length + ' points, least-squares fit)' : 'Quick 3-Point Photo Solve'}`);
     lines.push(`Calibration method    : ${calNames[calMethod()] || calMethod()}`);
+    if (s.geo.method === 'camera') {
+      lines.push(`Camera                : ${s.geo.camLabel} · ${s.geo.f35} mm equiv · ${s.geo.calibrated ? 'calibrated ×' + s.geo.profileK.toFixed(3) : 'UNCALIBRATED (span may be off by ±25%)'}`);
+      lines.push(`Solved span           : L = ${s.geo.L.toFixed(1)} m${s.geo.hSolved ? ', h = ' + s.geo.h.toFixed(1) + ' m (both solved from camera geometry)' : ''}`);
+    }
     if (isPersp) {
       lines.push(`Tower heights         : A = ${s.geo.HA} m, B = ${s.geo.HB} m (hook to base)`);
       lines.push(`Camera obliquity/roll : rectified exactly via planar homography`);
@@ -1217,6 +1375,7 @@
     return {
       version: 2,
       imgSrc: state.imgSrc,
+      exif: state.exif || null,
       mode: state.mode,
       points: state.points,
       trace: state.trace,
@@ -1226,6 +1385,8 @@
 
   function restore(data) {
     clearAnnotations();
+    state.exif = (data && data.exif) || null;
+    updateCameraStatus();
     if (!data || !data.imgSrc) {
       state.img = null;
       state.imgSrc = null;
@@ -1279,17 +1440,21 @@
     const hbGrp = document.getElementById('photo-persp-hb-group');
     const spanGrp = document.getElementById('photo-span-group');
     const hGrp = document.getElementById('photo-h-group');
+    const isProj = method === 'perspective' || method === 'camera';
     if (towerGrp) towerGrp.style.display = method === 'tower' ? 'block' : 'none';
-    if (haGrp) haGrp.style.display = method === 'perspective' ? 'block' : 'none';
-    if (hbGrp) hbGrp.style.display = method === 'perspective' ? 'block' : 'none';
+    if (haGrp) haGrp.style.display = isProj ? 'block' : 'none';
+    if (hbGrp) hbGrp.style.display = isProj ? 'block' : 'none';
     // The vertical-reference (roll correction) tool only affects the scale
-    // calibrations — perspective mode handles roll exactly via the homography.
+    // calibrations — the homography methods handle roll exactly.
     const vertBtn = document.getElementById('pt-vert-btn');
-    if (vertBtn) vertBtn.style.display = method === 'perspective' ? 'none' : '';
-    if (method === 'perspective') state.placingVertRef = false;
-    // Tower-height method solves L and h from the image itself
-    if (spanGrp) spanGrp.style.display = method === 'tower' ? 'none' : 'block';
+    if (vertBtn) vertBtn.style.display = isProj ? 'none' : '';
+    if (isProj) state.placingVertRef = false;
+    // Tower-height and camera methods solve L from the image itself
+    if (spanGrp) spanGrp.style.display = (method === 'tower' || method === 'camera') ? 'none' : 'block';
     if (hGrp) hGrp.style.display = method === 'tower' ? 'none' : 'block';
+    const camGrp = document.getElementById('photo-camera-group');
+    if (camGrp) camGrp.style.display = method === 'camera' ? 'block' : 'none';
+    if (method === 'camera') updateCameraStatus();
     // Changing the calibration source invalidates the base points; keep hooks/trace.
     state.points.baseA = null;
     state.points.baseB = null;
@@ -1347,6 +1512,43 @@
     updateInstructions();
     updateToolButtons();
     redraw();
+  };
+
+  window.photoCameraChanged = function () {
+    updateCameraStatus();
+    if (state.img) { solve(); redraw(); }
+  };
+
+  // One-time camera calibration: solve the focal that makes the current
+  // photo's solved span equal a KNOWN span; store it as a camera profile.
+  window.calibrateCameraFromSpan = function () {
+    const LTrue = parseFloat(document.getElementById('photo-calib-span').value);
+    if (!(LTrue > 0)) { alert('Enter the known span length of THIS photo (from survey records) to calibrate the camera.'); return; }
+    const pts = state.points;
+    if (!(state.img && pts.A && pts.B && pts.baseA && pts.baseB)) { alert('Place all four reference points first (both hooks and both bases).'); return; }
+    const f35 = parseFloat(document.getElementById('photo-f35').value);
+    if (!(f35 > 0)) { alert('Camera focal (35mm equivalent) is needed — from EXIF or manual entry.'); return; }
+    const HA = parseFloat(document.getElementById('photo-persp-ha').value);
+    if (!(HA > 0)) { alert('Enter Tower A height first.'); return; }
+    const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+    const HB = HBraw > 0 ? HBraw : HA;
+    const hEl = document.getElementById('photo-hook-h');
+    const hv = hEl ? parseFloat(hEl.value) : NaN;
+    const hFixed = isNaN(hv) ? null : hv;
+
+    const fx0 = TLEngine.fxFrom35mm(f35, state.img.naturalWidth);
+    const cx = state.img.naturalWidth / 2, cy = state.img.naturalHeight / 2;
+    const fxCal = TLEngine.focalForSpan([pts.A, pts.B, pts.baseA, pts.baseB], HA, HB, LTrue, hFixed, cx, cy, fx0);
+    if (!fxCal) { alert('Calibration failed — the known span could not be matched. Check the reference points and tower heights.'); return; }
+
+    const key = cameraProfileKey();
+    const profiles = getCameraProfiles();
+    profiles[key] = { k: fxCal / fx0, date: new Date().toISOString().slice(0, 10), note: 'calibrated on L = ' + LTrue + ' m' };
+    try { localStorage.setItem('tlsag_camera_profiles', JSON.stringify(profiles)); } catch (e) {}
+    updateCameraStatus();
+    solve();
+    redraw();
+    alert('Camera calibrated — correction x' + (fxCal / fx0).toFixed(3) + ' stored for: ' + key + '. Future photos from this camera can be measured WITHOUT knowing the span.');
   };
 
   // Re-solve when primary inputs that feed the calibration change.

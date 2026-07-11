@@ -371,6 +371,110 @@
     };
   }
 
+  // ========================================================================
+  // SPAN-FREE CALIBRATION (camera intrinsics)
+  // With the camera focal length known, the world→image homography must
+  // decompose as K·[r1 r2 t] with r1 ⊥ r2 and |r1| = |r2|. Only the true
+  // (L, h) satisfy that, so span length becomes an OUTPUT. Consumer-camera
+  // EXIF focals are nominal, hence the per-camera calibration (focalForSpan).
+  // ========================================================================
+
+  // 35mm-equivalent focal → pixels, width convention fx = W·f35/36. The
+  // convention error (diagonal vs width, sensor crops) is absorbed by the
+  // camera-profile correction factor by design.
+  function fxFrom35mm(f35, imageWidthPx) {
+    return (imageWidthPx * f35) / 36;
+  }
+
+  // Orthonormality cost of the plane pose implied by (L, h).
+  function cameraPoseCost(imgRefs, HA, HB, fx, cx, cy, L, h) {
+    const world = [
+      { x: 0, y: 0 }, { x: L, y: h },
+      { x: 0, y: -HA }, { x: L, y: h - HB }
+    ];
+    const H = computeHomography(world, imgRefs); // world -> image
+    if (!H) return 1e9;
+    // Columns of M = K⁻¹·H
+    const m1 = [(H[0] - cx * H[6]) / fx, (H[3] - cy * H[6]) / fx, H[6]];
+    const m2 = [(H[1] - cx * H[7]) / fx, (H[4] - cy * H[7]) / fx, H[7]];
+    const n1 = Math.hypot(m1[0], m1[1], m1[2]);
+    const n2 = Math.hypot(m2[0], m2[1], m2[2]);
+    if (!(n1 > 0) || !(n2 > 0)) return 1e9;
+    const c1 = (m1[0] * m2[0] + m1[1] * m2[1] + m1[2] * m2[2]) / (n1 * n2);
+    const c2 = (n1 - n2) / ((n1 + n2) / 2);
+    return c1 * c1 + c2 * c2;
+  }
+
+  // Solve span L (and hook difference h unless hFixed is a number) from the
+  // four reference clicks + tower heights + focal. Coarse grid, then
+  // coordinate-descent refine. Returns { L, h, cost } or null.
+  function solveSpanFromCamera(imgRefs, HA, HB, fx, cx, cy, hFixed, init) {
+    if (!imgRefs || imgRefs.length !== 4 || !(HA > 0) || !(HB > 0) || !(fx > 0)) return null;
+    const hFree = !(typeof hFixed === 'number' && isFinite(hFixed));
+    const cost = (L, h) => cameraPoseCost(imgRefs, HA, HB, fx, cx, cy, L, h);
+
+    let best = null;
+    if (init && init.L > 0) {
+      // Warm start (Monte-Carlo resamples): skip the coarse grid.
+      best = { L: init.L, h: hFree ? (init.h || 0) : hFixed, cost: cost(init.L, hFree ? (init.h || 0) : hFixed) };
+    }
+    if (!best) {
+      for (let L = 100; L <= 3000; L += 25) {
+        if (hFree) {
+          for (let h = -150; h <= 150; h += 10) {
+            const c = cost(L, h);
+            if (!best || c < best.cost) best = { L: L, h: h, cost: c };
+          }
+        } else {
+          const c = cost(L, hFixed);
+          if (!best || c < best.cost) best = { L: L, h: hFixed, cost: c };
+        }
+      }
+    }
+    if (!best || best.cost >= 1e9) return null;
+
+    let { L, h } = best;
+    let c = best.cost;
+    let stepL = 12, stepH = 4;
+    for (let it = 0; it < 300; it++) {
+      let moved = false;
+      const moves = hFree
+        ? [[stepL, 0], [-stepL, 0], [0, stepH], [0, -stepH]]
+        : [[stepL, 0], [-stepL, 0]];
+      for (const [dL, dh] of moves) {
+        const cc = cost(L + dL, h + dh);
+        if (cc < c) { c = cc; L += dL; h += dh; moved = true; }
+      }
+      if (!moved) {
+        stepL *= 0.5; stepH *= 0.5;
+        if (stepL < 0.05) break;
+      }
+    }
+    if (!(L > 0)) return null;
+    return { L: L, h: h, cost: c };
+  }
+
+  // Camera calibration: which fx makes the solved span equal a KNOWN span?
+  // L is monotone increasing in fx, so bisection converges cleanly.
+  function focalForSpan(imgRefs, HA, HB, LTrue, hFixed, cx, cy, fxGuess) {
+    if (!(LTrue > 0)) return null;
+    const solvedL = fx => {
+      const r = solveSpanFromCamera(imgRefs, HA, HB, fx, cx, cy, hFixed);
+      return r ? r.L : NaN;
+    };
+    let lo = (fxGuess || 3000) / 4, hi = (fxGuess || 3000) * 4;
+    let Llo = solvedL(lo), Lhi = solvedL(hi);
+    if (!(Llo < LTrue) || !(Lhi > LTrue)) return null; // out of bracket
+    for (let i = 0; i < 40; i++) {
+      const mid = Math.sqrt(lo * hi);
+      const Lm = solvedL(mid);
+      if (!isFinite(Lm)) return null;
+      if (Lm < LTrue) lo = mid; else hi = mid;
+      if (Math.abs(Lm - LTrue) < 0.2) return mid;
+    }
+    return Math.sqrt(lo * hi);
+  }
+
   // Rotate points by angle (radians) about a pivot — used to correct
   // camera roll once the user marks a known-vertical reference.
   function rotatePoints(pts, angle, pivot) {
@@ -411,6 +515,9 @@
     rollFromVerticalRef: rollFromVerticalRef,
     solveLinear: solveLinear,
     computeHomography: computeHomography,
-    applyHomography: applyHomography
+    applyHomography: applyHomography,
+    fxFrom35mm: fxFrom35mm,
+    solveSpanFromCamera: solveSpanFromCamera,
+    focalForSpan: focalForSpan
   };
 });

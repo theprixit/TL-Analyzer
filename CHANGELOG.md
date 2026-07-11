@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.10.0-beta — 2026-07-11
+
+**Span-free photo calibration (EXPERIMENTAL)** — measure a span without knowing its length:
+
+- New calibration method **"📷 Camera + tower heights — span-free"**: using the photo's focal length (read automatically from EXIF) the perspective mapping is metrically decomposed, so **span length and hook difference become outputs** — only the tower heights are needed.
+- **Camera profiles**: phone EXIF focals are nominal (validation on the real 788 m Kashang–Bhaba span showed a −24% systematic bias), so the mode requires a **one-time calibration per camera**: point it at any span with a known length, press *Calibrate camera*, and the correction (×1.343 for the test phone) is stored and auto-applied to every later photo from that camera. Calibrated, the test photo solves L = 788.1 m from the image alone.
+- Uncalibrated results carry an explicit ±25% warning; the Monte-Carlo band includes focal uncertainty (±2% calibrated / ±10% not) and span re-solving per sample. WhatsApp-forwarded images (EXIF stripped) are detected with guidance to use the original file.
+- Engine: `solveSpanFromCamera`, `focalForSpan`, `fxFrom35mm` with 8 new unit tests (58 total) including exact synthetic-camera span recovery.
+
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
 ## v0.9.5-beta — 2026-07-11
