@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.3-beta — 2026-07-11
+
+Touch fixes from continued iPhone testing:
+
+- **Black-screen trap eliminated at the root**: (1) the view is now rubber-band clamped — the photo can never be panned/zoomed fully off-screen, so there is no blackness to get lost in; (2) ghost-pointer self-healing — iOS system gestures sometimes swallow a touch-release, which previously left the canvas believing a pinch was in progress and killed all gestures until reload.
+- **Selection now survives panning** (the whole point of the crosshair-move flow — pan to aim, then press Move here). Deselecting is a deliberate *tap* on empty photo; a quick double-tap on empty photo snaps to Fit view.
+- While the fullscreen editor is active, native page-zoom is blocked app-wide (previously a pinch straddling the canvas edge could still zoom the page).
+
 ## v0.11.2-beta — 2026-07-11
 
 Landscape editing + crosshair point-moving (real-iPhone feedback):

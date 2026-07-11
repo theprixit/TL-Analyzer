@@ -62,6 +62,13 @@
     canvas.addEventListener('touchmove', e => {
       if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
+    // Global purge: pointer releases that never reach the canvas, tab
+    // switches, or system gestures must not leave ghost pointers behind.
+    window.addEventListener('pointerup', e => { state.pointers.delete(e.pointerId); if (!state.pointers.size) { state.pan = null; state.pinch = null; } });
+    window.addEventListener('pointercancel', e => { state.pointers.delete(e.pointerId); if (!state.pointers.size) { state.pan = null; state.pinch = null; } });
+    window.addEventListener('blur', resetGestureState);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) resetGestureState(); });
+
     window.addEventListener('resize', () => {
       resizeCanvas();
       redraw();
@@ -401,9 +408,22 @@
   // ======================================================================
   // POINTER / GESTURE HANDLING
   // ======================================================================
+  function resetGestureState() {
+    state.pointers.clear();
+    state.pan = null;
+    state.pinch = null;
+    state.placing = null;
+    state.dragging = null;
+  }
+
   function onPointerDown(e) {
     if (!canvas) return;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic/odd pointers */ }
+    // Self-heal: a missed pointerup (iOS system gestures) leaves a stale
+    // entry that makes every later touch look like a pinch — purge ghosts.
+    if (!state.pointers.has(e.pointerId) && state.pointers.size >= 2) {
+      resetGestureState();
+    }
     const pos = eventCss(e);
     state.pointers.set(e.pointerId, pos);
 
@@ -447,21 +467,9 @@
           redraw();
           return;
         }
-        if (state.selected) { state.selected = null; updateSelectionUI(); }
-      }
-      // Double-tap on empty canvas = fit the whole photo (escape hatch
-      // when zoomed deep into a dark/featureless region).
-      if (COARSE) {
-        const now2 = performance.now();
-        if (state.lastEmptyTap && now2 - state.lastEmptyTap.t < 350 &&
-            Math.hypot(pos.x - state.lastEmptyTap.x, pos.y - state.lastEmptyTap.y) < 30) {
-          state.lastEmptyTap = null;
-          state.pointers.delete(e.pointerId);
-          fitView();
-          redraw();
-          return;
-        }
-        state.lastEmptyTap = { t: now2, x: pos.x, y: pos.y };
+        // NOTE: selection intentionally survives pan/zoom — that is how the
+        // user aims the crosshair before pressing "Move here". A deliberate
+        // empty TAP (no movement) deselects — handled on pointerup.
       }
       state.pan = { start: pos, view: { tx: state.view.tx, ty: state.view.ty } };
       return;
@@ -510,6 +518,7 @@
       state.view.scale = newScale;
       state.view.tx = state.pinch.mid.x - (state.pinch.mid.x - v0.tx) * kk + (mid.x - state.pinch.mid.x);
       state.view.ty = state.pinch.mid.y - (state.pinch.mid.y - v0.ty) * kk + (mid.y - state.pinch.mid.y);
+      clampView();
       redraw();
       return;
     }
@@ -517,6 +526,7 @@
     if (state.pan) {
       state.view.tx = state.pan.view.tx + (pos.x - state.pan.start.x);
       state.view.ty = state.pan.view.ty + (pos.y - state.pan.start.y);
+      clampView();
       redraw();
       return;
     }
@@ -540,7 +550,29 @@
       if (state.pointers.size < 2) state.pinch = null;
       return;
     }
-    if (state.pan) { state.pan = null; return; }
+    if (state.pan) {
+      // Only a touch that never really moved counts as an empty TAP:
+      // single tap deselects; a quick second tap = Fit view (the escape
+      // hatch from deep zoom into featureless regions).
+      const moved = Math.hypot(state.view.tx - state.pan.view.tx, state.view.ty - state.pan.view.ty);
+      state.pan = null;
+      if (COARSE && moved < 8) {
+        const pos2 = eventCss(e);
+        const now3 = performance.now();
+        if (state.lastEmptyTap && now3 - state.lastEmptyTap.t < 350 &&
+            Math.hypot(pos2.x - state.lastEmptyTap.x, pos2.y - state.lastEmptyTap.y) < 30) {
+          state.lastEmptyTap = null;
+          fitView();
+          redraw();
+          return;
+        }
+        state.lastEmptyTap = { t: now3, x: pos2.x, y: pos2.y };
+        if (state.selected) { state.selected = null; updateSelectionUI(); redraw(); }
+      } else {
+        state.lastEmptyTap = null;
+      }
+      return;
+    }
 
     if (state.dragging) {
       state.dragging = null;
@@ -558,6 +590,18 @@
       }
       redraw();
     }
+  }
+
+  // Keep at least a corner of the photo on screen — being lost in an empty
+  // black viewport (with gestures consumed by the canvas) is a hard trap.
+  function clampView() {
+    if (!state.img) return;
+    const { w, h } = cssSize();
+    const iw = state.img.naturalWidth * state.view.scale;
+    const ih = state.img.naturalHeight * state.view.scale;
+    const M = 90; // px of image that must stay visible
+    state.view.tx = Math.min(w - M, Math.max(M - iw, state.view.tx));
+    state.view.ty = Math.min(h - M, Math.max(M - ih, state.view.ty));
   }
 
   function clampScale(s) {
@@ -579,6 +623,7 @@
     state.view.tx = pos.x - (pos.x - state.view.tx) * kk;
     state.view.ty = pos.y - (pos.y - state.view.ty) * kk;
     state.view.scale = newScale;
+    clampView();
     redraw();
   }
 
@@ -1735,7 +1780,11 @@
     deleteHit(hit);
   };
 
+  function blockGesture(e) { e.preventDefault(); }
+
   function enterFsFallback() {
+    document.addEventListener('gesturestart', blockGesture);
+    document.addEventListener('gesturechange', blockGesture);
     state.fsFallback = true;
     container.classList.add('fs-fallback');
     document.body.classList.add('fs-lock');
@@ -1743,6 +1792,8 @@
   }
 
   function exitFsFallback() {
+    document.removeEventListener('gesturestart', blockGesture);
+    document.removeEventListener('gesturechange', blockGesture);
     state.fsFallback = false;
     container.classList.remove('fs-fallback');
     document.body.classList.remove('fs-lock');
