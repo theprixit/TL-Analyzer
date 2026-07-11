@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.10.1-beta — 2026-07-11
+
+Field-feedback fixes for the span-free mode and beyond:
+
+- **Range inputs**: Span L and both tower heights now accept ranges — type `600-800` or `25-30` when the exact value isn't known. Headline figures use the midpoint; the Monte-Carlo band samples the full range, so uncertainty in your records becomes an honest tension band. Camera calibration also accepts a span range (stores the correction spread).
+- **Camera-mode guardrails**: the span field becomes an optional *expected range* — if the camera-solved span lands outside it, results are stamped **⛔ INVALID** with the likely cause (zoom/lens mismatch with the calibration). This catches the 2–3× tension errors a tester hit with an unmatched camera profile. Prominent EXPERIMENTAL disclaimers now sit in the results themselves, calibrated or not.
+- **Visualizer fixed for steep spans**: large hook-elevation differences (e.g. h = −83 m) pushed the conductor off the canvas; the sketch now auto-scales metres→pixels so slope and sag always fit.
+
 ## v0.10.0-beta — 2026-07-11
 
 **Span-free photo calibration (EXPERIMENTAL)** — measure a span without knowing its length:

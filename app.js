@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.10.0-beta';
+const APP_VERSION = '0.10.1-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -464,14 +464,27 @@ function calculateThreePoint() {
     
     // Scale slope height 'h' to screen pixels dynamically
     // Keep it proportionate to slope h/L (with a standard visual scale)
-    const hScreen = Math.max(-100, Math.min(100, (h / L) * 600));
+    // Unified metres->pixels scale so steep slopes (large ±h) and deep sags
+    // always fit the canvas. Tower A is fixed art at y=140; keep the whole
+    // conductor within y 40..265. down(r) = −h·r + 4·D_mid·r(1−r) [m below A].
+    let maxDown = 0, minDown = 0;
+    for (let i = 0; i <= 20; i++) {
+      const rr = i / 20;
+      const dwn = -h * rr + 4 * dMid * rr * (1 - rr);
+      if (dwn > maxDown) maxDown = dwn;
+      if (dwn < minDown) minDown = dwn;
+    }
+    let sPx = 10; // preferred scale: 10 px per metre
+    if (maxDown > 0) sPx = Math.min(sPx, 125 / maxDown);
+    if (minDown < 0) sPx = Math.min(sPx, 100 / -minDown);
+    const hScreen = h * sPx;
     const scaleX = 80 + ratio_p * 600;
     
     const supportA_Y = 140;
     const supportB_Y = 140 - hScreen;
     
     // Scale mid-span sag to screen: 1 meter = 10 visual pixels
-    const screenSag = Math.max(10, Math.min(160, dMid * 10));
+    const screenSag = Math.max(2, dMid * sPx);
 
     // Update Tower B on screen (including stretching support legs)
     document.getElementById('tower-b-center').setAttribute('y1', supportB_Y);

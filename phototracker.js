@@ -101,6 +101,32 @@
   // ======================================================================
   // IMAGE LOADING
   // ======================================================================
+  // Accept "700" or a field-range "600-800" (en/em dash and "to" ok) in the
+  // key calibration fields — the headline solve uses the midpoint and the
+  // Monte-Carlo band samples the full range.
+  function parseRangeStr(raw) {
+    if (raw == null) return null;
+    const s = String(raw).trim().replace(/[–—]/g, '-');
+    if (!s) return null;
+    const m = s.match(/^(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)$/i);
+    if (m) {
+      let lo = parseFloat(m[1]), hi = parseFloat(m[2]);
+      if (isNaN(lo) || isNaN(hi)) return null;
+      if (lo > hi) { const t = lo; lo = hi; hi = t; }
+      return { mid: (lo + hi) / 2, lo: lo, hi: hi, isRange: hi > lo };
+    }
+    const v = parseFloat(s);
+    return isNaN(v) ? null : { mid: v, lo: v, hi: v, isRange: false };
+  }
+
+  function fieldRange(id) {
+    const el = document.getElementById(id);
+    return el ? parseRangeStr(el.value) : null;
+  }
+
+  // Per-sample value overrides used while the Monte-Carlo loop runs.
+  let mcOverride = null;
+
   // Minimal JPEG/TIFF EXIF reader — only the tags the camera mode needs.
   // (Canvas re-encoding strips EXIF, so this must run on the ORIGINAL file.)
   function parseExif(buf) {
@@ -506,9 +532,14 @@
   // values silently.
   function primaryLh() {
     // Span L: photo panel field first, then primary inputs
-    const lEl = document.getElementById('photo-span-l');
-    let L = lEl ? parseFloat(lEl.value) : NaN;
+    let L = NaN;
     let lSrc = 'photo';
+    if (mcOverride && mcOverride.L > 0) {
+      L = mcOverride.L;
+    } else {
+      const lr = fieldRange('photo-span-l');
+      L = lr ? lr.mid : NaN;
+    }
     if (!(L > 0)) {
       L = parseFloat(document.getElementById('tp-span').value);
       lSrc = 'primary';
@@ -598,9 +629,11 @@
     if (!pts.baseA || !pts.baseB) return null; // still placing
     const g = primaryLh();
     if (!g) return { error: 'Perspective calibration needs the real Span Length L — enter it in the calibration settings on the left.' };
-    const HA = parseFloat(document.getElementById('photo-persp-ha').value);
+    const haR = fieldRange('photo-persp-ha');
+    const HA = (mcOverride && mcOverride.HA > 0) ? mcOverride.HA : (haR ? haR.mid : NaN);
     if (!(HA > 0)) return { error: 'Enter Tower A structural height (hook to base, from tower drawings) — required to rectify perspective.' };
-    const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+    const hbR = fieldRange('photo-persp-hb');
+    const HBraw = (mcOverride && mcOverride.HB > 0) ? mcOverride.HB : (hbR ? hbR.mid : NaN);
     const HB = HBraw > 0 ? HBraw : HA;
 
     const worldRefs = [
@@ -632,15 +665,18 @@
     if (!(f35 > 0)) {
       return { error: 'Camera mode needs the 35mm-equivalent focal length — read automatically from the photo EXIF, or enter it manually. (WhatsApp-forwarded images have EXIF stripped: use the original file.)' };
     }
-    const HA = parseFloat(document.getElementById('photo-persp-ha').value);
+    const haR = fieldRange('photo-persp-ha');
+    const HA = (mcOverride && mcOverride.HA > 0) ? mcOverride.HA : (haR ? haR.mid : NaN);
     if (!(HA > 0)) {
       return { error: 'Enter Tower A structural height (hook to base) — the one known length this mode needs.' };
     }
-    const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+    const hbR = fieldRange('photo-persp-hb');
+    const HBraw = (mcOverride && mcOverride.HB > 0) ? mcOverride.HB : (hbR ? hbR.mid : NaN);
     const HB = HBraw > 0 ? HBraw : HA;
 
     const prof = getCameraProfile();
-    const k = prof ? prof.k : 1;
+    let k = prof ? prof.k : 1;
+    if (mcOverride && mcOverride.kAbs > 0) k = mcOverride.kAbs;
     const fx = TLEngine.fxFrom35mm(f35, state.img.naturalWidth) * k * (opts.fxScale || 1);
     const cx = state.img.naturalWidth / 2, cy = state.img.naturalHeight / 2;
 
@@ -659,8 +695,20 @@
     const H = TLEngine.computeHomography(imgRefs, worldRefs);
     const Hinv = TLEngine.computeHomography(worldRefs, imgRefs);
     if (!H || !Hinv) return { error: 'Degenerate reference layout — re-place the points.' };
+    // Sanity prior: in camera mode the span field is an OPTIONAL expected
+    // range — a solve landing outside it means the calibration does not fit
+    // this photo (zoom/lens mismatch) and results must be treated as invalid.
+    let priorViolation = null;
+    if (!mcOverride) {
+      const prior = fieldRange('photo-span-l');
+      if (prior && prior.mid > 0) {
+        const lo = prior.isRange ? prior.lo : prior.lo * 0.9;
+        const hi = prior.isRange ? prior.hi : prior.hi * 1.1;
+        if (sol.L < lo || sol.L > hi) priorViolation = { lo: lo, hi: hi };
+      }
+    }
     return {
-      method: 'camera', angle: 0,
+      method: 'camera', angle: 0, priorViolation: priorViolation,
       L: sol.L, h: sol.h, hKnown: hFixed !== null, hSolved: hFixed === null,
       HA: HA, HB: HB, solvedL: true,
       calibrated: !!prof, profileK: k, f35: f35, _sol: { L: sol.L, h: sol.h },
@@ -768,8 +816,22 @@
     // jitters the focal — post-calibration ±2%, uncalibrated ±10%.
     const fxSigma = method === 'camera' ? (s.geo.calibrated ? 0.02 : 0.10) : 0;
     const runs = method === 'camera' ? 80 : MC_RUNS;
+    // Field ranges ("600-800") are sampled uniformly per run; a calibration
+    // done against a span RANGE contributes its stored k spread the same way.
+    const spanR = fieldRange('photo-span-l');
+    const haR2 = fieldRange('photo-persp-ha');
+    const hbR2 = fieldRange('photo-persp-hb');
+    const prof0 = method === 'camera' ? getCameraProfile() : null;
+    const kSpread = prof0 && prof0.kHi > prof0.kLo;
+    const uni = r => (r && r.isRange) ? r.lo + Math.random() * (r.hi - r.lo) : 0;
 
     for (let i = 0; i < runs; i++) {
+      mcOverride = {
+        L: method === 'camera' ? 0 : uni(spanR),
+        HA: uni(haR2),
+        HB: uni(hbR2),
+        kAbs: kSpread ? prof0.kLo + Math.random() * (prof0.kHi - prof0.kLo) : 0
+      };
       const jp = {
         A: jitterPt(state.points.A, MC_SIGMA_REF),
         B: jitterPt(state.points.B, MC_SIGMA_REF),
@@ -786,6 +848,7 @@
       if (!fit.ok) continue;
       Ts.push(w * fit.C);
     }
+    mcOverride = null;
 
     if (state.solved !== s) return; // a newer solve superseded this run
     if (Ts.length < 30) { s.mc = null; renderResults(); return; }
@@ -856,13 +919,25 @@
     const hNote = (s.geo && s.geo.hKnown === false)
       ? `• <span style="color: var(--warning);">Hook height difference h assumed 0 m — enter hook elevations (ZA/ZB or h) in Primary Inputs for slope correction.</span><br>`
       : '';
-    const scaleNote = s.geo.method === 'camera'
+    const anyRange = ['photo-span-l', 'photo-persp-ha', 'photo-persp-hb'].some(id => {
+      const r = fieldRange(id);
+      return r && r.isRange;
+    });
+    const rangeNote = anyRange
+      ? `• Inputs entered as <strong>ranges</strong> — headline figures use the midpoints; the probability band samples the full ranges.<br>`
+      : '';
+    const camDisclaimer = s.geo.method === 'camera'
+      ? (s.geo.priorViolation
+        ? `• <span style="color: var(--danger); font-weight: bold;">⛔ INVALID: solved span ${s.geo.L.toFixed(0)} m is OUTSIDE your expected ${s.geo.priorViolation.lo.toFixed(0)}–${s.geo.priorViolation.hi.toFixed(0)} m. The camera calibration does not fit this photo (different zoom/lens, or wrong heights). Do NOT use these figures — switch to Perspective 4-Point with your span estimate.</span><br>`
+        : `• <span style="color: var(--danger); font-weight: bold;">⚠ EXPERIMENTAL — do not act on these figures without cross-checking against a span of known length. ${s.geo.calibrated ? 'Valid only if this photo used the SAME camera and zoom as the calibration.' : 'Uncalibrated cameras have shown 2–3× tension errors.'}</span><br>`)
+      : '';
+    const scaleNote = camDisclaimer + rangeNote + (s.geo.method === 'camera'
       ? `• <strong style="color: var(--warning);">SPAN-FREE (EXPERIMENTAL)</strong> · Camera: ${s.geo.camLabel} · ${s.geo.f35} mm equiv ${s.geo.calibrated ? `· <span style="color: var(--success);">calibrated ×${s.geo.profileK.toFixed(3)}</span>` : `· <span style="color: var(--danger);">UNCALIBRATED — span may be off by ±25%; calibrate this camera on one known span</span>`}<br>` +
         `• Solved from camera geometry: <strong>Span L = ${s.geo.L.toFixed(1)} m</strong>${s.geo.hSolved ? `, hook diff h = ${s.geo.h.toFixed(1)} m <span style="color: var(--text-muted);">(h is only weakly constrained by the photo — enter it above if known)</span>` : ` (h = ${s.geo.h.toFixed(1)} m entered)`}<br>` +
         `• Tower heights used: <strong>A = ${s.geo.HA} m</strong>, <strong>B = ${s.geo.HB} m</strong><br>`
       : isPersp
       ? `• Tower heights used: <strong>A = ${s.geo.HA} m</strong>, <strong>B = ${s.geo.HB} m</strong><br>`
-      : `• Calibrated scale: <strong>${(1 / s.geo.S).toFixed(1)} px/m</strong><br>`;
+      : `• Calibrated scale: <strong>${(1 / s.geo.S).toFixed(1)} px/m</strong><br>`);
     const perspNote = isPersp
       ? `<span style="color: var(--text-muted); font-size: 0.75rem;">Assumes the conductor hangs in the vertical plane through the two towers (true except under strong wind blow-out).</span>`
       : `<span style="color: var(--text-muted); font-size: 0.75rem;">Assumes photo taken roughly perpendicular to the span plane. For oblique shots switch to Perspective 4-Point calibration.</span>`;
@@ -1024,7 +1099,8 @@
     const cm = calMethod();
     if (cm === 'perspective') {
       const HAv = parseFloat(document.getElementById('photo-persp-ha').value);
-      const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+      const hbR = fieldRange('photo-persp-hb');
+    const HBraw = (mcOverride && mcOverride.HB > 0) ? mcOverride.HB : (hbR ? hbR.mid : NaN);
       const HBv = HBraw > 0 ? HBraw : HAv;
       if (state.points.A && state.points.baseA && HAv > 0) {
         const a = i2c(state.points.A), ba = i2c(state.points.baseA);
@@ -1449,8 +1525,15 @@
     const vertBtn = document.getElementById('pt-vert-btn');
     if (vertBtn) vertBtn.style.display = isProj ? 'none' : '';
     if (isProj) state.placingVertRef = false;
-    // Tower-height and camera methods solve L from the image itself
-    if (spanGrp) spanGrp.style.display = (method === 'tower' || method === 'camera') ? 'none' : 'block';
+    // Tower-height solves L from the image; camera mode uses the span field
+    // as an OPTIONAL expected-range sanity prior instead of an input.
+    if (spanGrp) spanGrp.style.display = method === 'tower' ? 'none' : 'block';
+    const spanInput = document.getElementById('photo-span-l');
+    if (spanInput) {
+      spanInput.placeholder = method === 'camera'
+        ? 'optional expected range, e.g. 600-800 — flags bad solves'
+        : 'e.g. 700 or range 600-800 (falls back to Primary Inputs)';
+    }
     if (hGrp) hGrp.style.display = method === 'tower' ? 'none' : 'block';
     const camGrp = document.getElementById('photo-camera-group');
     if (camGrp) camGrp.style.display = method === 'camera' ? 'block' : 'none';
@@ -1522,15 +1605,18 @@
   // One-time camera calibration: solve the focal that makes the current
   // photo's solved span equal a KNOWN span; store it as a camera profile.
   window.calibrateCameraFromSpan = function () {
-    const LTrue = parseFloat(document.getElementById('photo-calib-span').value);
-    if (!(LTrue > 0)) { alert('Enter the known span length of THIS photo (from survey records) to calibrate the camera.'); return; }
+    const LR = fieldRange('photo-calib-span');
+    if (!LR || !(LR.mid > 0)) { alert('Enter the known span of THIS photo — exact ("788") or a range ("600-800") — to calibrate the camera.'); return; }
+    const LTrue = LR.mid;
     const pts = state.points;
     if (!(state.img && pts.A && pts.B && pts.baseA && pts.baseB)) { alert('Place all four reference points first (both hooks and both bases).'); return; }
     const f35 = parseFloat(document.getElementById('photo-f35').value);
     if (!(f35 > 0)) { alert('Camera focal (35mm equivalent) is needed — from EXIF or manual entry.'); return; }
-    const HA = parseFloat(document.getElementById('photo-persp-ha').value);
+    const haR = fieldRange('photo-persp-ha');
+    const HA = (mcOverride && mcOverride.HA > 0) ? mcOverride.HA : (haR ? haR.mid : NaN);
     if (!(HA > 0)) { alert('Enter Tower A height first.'); return; }
-    const HBraw = parseFloat(document.getElementById('photo-persp-hb').value);
+    const hbR = fieldRange('photo-persp-hb');
+    const HBraw = (mcOverride && mcOverride.HB > 0) ? mcOverride.HB : (hbR ? hbR.mid : NaN);
     const HB = HBraw > 0 ? HBraw : HA;
     const hEl = document.getElementById('photo-hook-h');
     const hv = hEl ? parseFloat(hEl.value) : NaN;
@@ -1538,12 +1624,19 @@
 
     const fx0 = TLEngine.fxFrom35mm(f35, state.img.naturalWidth);
     const cx = state.img.naturalWidth / 2, cy = state.img.naturalHeight / 2;
-    const fxCal = TLEngine.focalForSpan([pts.A, pts.B, pts.baseA, pts.baseB], HA, HB, LTrue, hFixed, cx, cy, fx0);
+    const refs4 = [pts.A, pts.B, pts.baseA, pts.baseB];
+    const fxCal = TLEngine.focalForSpan(refs4, HA, HB, LTrue, hFixed, cx, cy, fx0);
     if (!fxCal) { alert('Calibration failed — the known span could not be matched. Check the reference points and tower heights.'); return; }
+    let kLo = fxCal / fx0, kHi = fxCal / fx0;
+    if (LR.isRange) {
+      const fxL = TLEngine.focalForSpan(refs4, HA, HB, LR.lo, hFixed, cx, cy, fx0);
+      const fxH = TLEngine.focalForSpan(refs4, HA, HB, LR.hi, hFixed, cx, cy, fx0);
+      if (fxL && fxH) { kLo = Math.min(fxL, fxH) / fx0; kHi = Math.max(fxL, fxH) / fx0; }
+    }
 
     const key = cameraProfileKey();
     const profiles = getCameraProfiles();
-    profiles[key] = { k: fxCal / fx0, date: new Date().toISOString().slice(0, 10), note: 'calibrated on L = ' + LTrue + ' m' };
+    profiles[key] = { k: fxCal / fx0, kLo: kLo, kHi: kHi, date: new Date().toISOString().slice(0, 10), note: 'calibrated on L = ' + (LR.isRange ? LR.lo + '-' + LR.hi : LTrue) + ' m' };
     try { localStorage.setItem('tlsag_camera_profiles', JSON.stringify(profiles)); } catch (e) {}
     updateCameraStatus();
     solve();

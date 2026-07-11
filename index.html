@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.10.0-beta">
+  <link rel="stylesheet" href="style.css?v=0.10.1-beta">
 </head>
 <body>
 
@@ -156,7 +156,7 @@
                 </div>
                 <div class="form-group no-margin" id="photo-span-group">
                   <label style="font-weight: bold; color: var(--primary);">Span Length L (m):</label>
-                  <input type="number" id="photo-span-l" value="" placeholder="from survey (falls back to Primary Inputs)" step="0.01" oninput="photoTrackerResolve()">
+                  <input type="text" inputmode="decimal" id="photo-span-l" value="" placeholder="e.g. 700 or range 600-800 (falls back to Primary Inputs)" oninput="photoTrackerResolve()">
                 </div>
                 <div class="form-group no-margin" id="photo-h-group">
                   <label style="font-weight: bold; color: var(--primary);">Hook Elev. Difference h = B − A (m):</label>
@@ -167,7 +167,7 @@
                   <input type="number" id="photo-f35" value="" placeholder="auto from EXIF — or enter manually" step="0.1" oninput="photoCameraChanged()">
                   <div id="photo-camera-status" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.45;"></div>
                   <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem;">
-                    <input type="number" id="photo-calib-span" placeholder="known span of THIS photo (m)" step="0.01" style="flex: 1;">
+                    <input type="text" inputmode="decimal" id="photo-calib-span" placeholder="known span of THIS photo — e.g. 788 or 600-800" style="flex: 1;">
                     <button type="button" class="btn btn-outline" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; white-space: nowrap;" onclick="calibrateCameraFromSpan()">🎯 Calibrate camera</button>
                   </div>
                 </div>
@@ -177,11 +177,11 @@
                 </div>
                 <div class="form-group no-margin" id="photo-persp-ha-group" style="display: none;">
                   <label style="font-weight: bold; color: var(--primary);">Tower A Height — hook to base (m):</label>
-                  <input type="number" id="photo-persp-ha" value="" placeholder="e.g. 40.0" step="0.1" onchange="photoTrackerResolve()">
+                  <input type="text" inputmode="decimal" id="photo-persp-ha" value="" placeholder="e.g. 27.5 or range 25-30" oninput="photoTrackerResolve()">
                 </div>
                 <div class="form-group no-margin" id="photo-persp-hb-group" style="display: none;">
                   <label style="font-weight: bold; color: var(--primary);">Tower B Height (m): <span class="unit-label">(blank = same as A)</span></label>
-                  <input type="number" id="photo-persp-hb" value="" placeholder="= Tower A" step="0.1" onchange="photoTrackerResolve()">
+                  <input type="text" inputmode="decimal" id="photo-persp-hb" value="" placeholder="= Tower A, or range 25-30" oninput="photoTrackerResolve()">
                 </div>
                 <div class="form-group no-margin">
                   <button type="button" class="gps-toggle-btn" onclick="toggleGpsHelper('hh-panel')">📏 No tower drawings? Estimate hook height with a rangefinder…</button>
@@ -1558,8 +1558,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.10.0-beta"></script>
-  <script src="app.js?v=0.10.0-beta"></script>
-  <script src="phototracker.js?v=0.10.0-beta"></script>
+  <script src="engine.js?v=0.10.1-beta"></script>
+  <script src="app.js?v=0.10.1-beta"></script>
+  <script src="phototracker.js?v=0.10.1-beta"></script>
 </body>
 </html>
