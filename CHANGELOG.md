@@ -2,6 +2,14 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.2-beta — 2026-07-09
+
+Landing experience redesigned for first-time visitors:
+
+- **First visit** now opens on a proper landing: one line explaining what the app is, a 3-step "how it works" strip (Photograph → Calibrate → Results), and two big actions — **See it in action** (example project) and **Start your own project**. No empty "resume" list, no form demanding a name before the app has introduced itself.
+- **Returning visitors** (saved projects on the device) skip the hero and land straight on their project list.
+- Footer of the landing links to the physics sandbox and keeps import / quick-calculation escape hatches.
+
 ## v0.9.1-beta — 2026-07-09
 
 Temperature analysis redesigned around what the field can actually measure:

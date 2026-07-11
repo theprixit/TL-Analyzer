@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.9.1-beta';
+const APP_VERSION = '0.9.2-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -1811,6 +1811,13 @@ function initProjectWorkflow() {
 
 function openProjectGate() {
   renderGateProjectList();
+  // Landing persona: first-time visitors get the full "what is this" hero;
+  // returning users (saved projects exist) get straight to their list.
+  const gateEl = document.getElementById('project-gate');
+  const hasProjects = Object.keys(listProjects()).length > 0;
+  if (gateEl) gateEl.classList.toggle('returning', hasProjects);
+  const resume = document.getElementById('gate-resume-section');
+  if (resume) resume.style.display = hasProjects ? 'block' : 'none';
   const methods = document.getElementById('gate-step-methods');
   const start = document.getElementById('gate-step-start');
   const gate = document.getElementById('project-gate');
@@ -1834,7 +1841,7 @@ function renderGateProjectList() {
   const items = Object.values(listProjects())
     .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
   if (!items.length) {
-    listEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.4rem 0;">No saved projects on this device yet.</div>';
+    listEl.innerHTML = '';
     return;
   }
   listEl.innerHTML = items.map(p => `
@@ -1956,8 +1963,8 @@ function applyHookHeight(target) {
 // fastest way for a new tester to see a fully worked photo analysis.
 function loadExampleProject() {
   const btn = document.getElementById('gate-example-btn');
-  const original = btn ? btn.innerText : '';
-  if (btn) btn.innerText = '⏳ Loading example (~2 MB photo)…';
+  const original = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="gac-icon">⏳</span><strong>Loading example…</strong><small>Fetching the span photo (~2 MB)</small>'; }
   fetch('examples/kashang-bhaba-demo.json')
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(data => {
@@ -1971,7 +1978,7 @@ function loadExampleProject() {
       closeProjectGate();
     })
     .catch(e => alert('Could not load the example project (' + e.message + ').\nThe example needs the app served over http(s) — use the live site.'))
-    .finally(() => { if (btn) btn.innerText = original; });
+    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = original; } });
 }
 
 function gateSkipProject() {

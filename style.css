@@ -1216,6 +1216,76 @@ code {
 .gate-sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5; }
 .gate-list-title { font-size: 0.9rem; margin: 1.4rem 0 0.5rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* Landing-style gate (first visit) */
+.gate-tagline {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  max-width: 620px;
+  margin: 0 auto 1.3rem;
+}
+
+.gate-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 1.4rem;
+}
+
+.gate-step {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.gate-step .gs-icon { font-size: 1.3rem; }
+.gate-step strong { font-size: 0.88rem; }
+.gate-step small { color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; }
+
+.gate-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.gate-action-card {
+  text-align: left;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+button.gate-action-card:hover { border-color: var(--success); transform: translateY(-2px); }
+.gate-action-card .gac-icon { font-size: 1.6rem; }
+.gate-action-card strong { font-size: 1.02rem; }
+.gate-action-card small { color: var(--text-muted); font-size: 0.8rem; line-height: 1.45; }
+.gate-new-card { cursor: default; }
+.gate-new-card .gate-new-row { margin: 0.3rem 0 0.2rem; }
+
+/* Returning visitors already know the app: compact the marketing */
+.project-gate.returning .gate-tagline,
+.project-gate.returning .gate-steps { display: none; }
+.project-gate.returning .gate-actions { grid-template-columns: 1fr 1fr; }
+.project-gate.returning #gate-resume-section { order: -1; }
+
+@media (max-width: 720px) {
+  .gate-steps { grid-template-columns: 1fr; }
+  .gate-actions { grid-template-columns: 1fr; }
+}
+
 .gate-new-row { display: flex; gap: 0.6rem; }
 .gate-new-row input {
   flex: 1;
