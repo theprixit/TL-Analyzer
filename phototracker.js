@@ -784,6 +784,13 @@
       document.getElementById('tp-offset-d').value = s.D.toFixed(3);
     }
 
+    // Let the results panel reference the photo's own fitted figure.
+    window.photoAppliedRef = {
+      L: s.L, xp: s.xp, D: s.D,
+      T: (s.kind === 'trace' && s.an) ? s.an.T : null,
+      band: (s.kind === 'trace' && s.mc) ? [s.mc.p5, s.mc.p95] : null
+    };
+
     if (typeof calculateThreePoint === 'function') calculateThreePoint();
 
     const msg = s.kind === 'trace'

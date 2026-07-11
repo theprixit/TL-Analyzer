@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.9.4-beta';
+const APP_VERSION = '0.9.5-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -258,9 +258,13 @@ function calculateThreePoint() {
     return;
   }
 
-  // 5. Calculate mechanical horizontal tension T
-  // T = (w * xp * (L - xp)) / (2 * D)
-  const T = TLEngine.tensionThreePoint(w, L, xp, offsetD);
+  // 5. Horizontal tension. The parabolic field formula is kept for the
+  // calculation log, but the HEADLINE figure is the catenary-exact solution
+  // (hook-anchored) whenever solvable - on deep-sag spans the parabola
+  // under-reads by ~1%+, and one authoritative number beats three.
+  const T_par = TLEngine.tensionThreePoint(w, L, xp, offsetD);
+  const C_cat = TLEngine.catenaryCFromChordSag(L, h, xp, offsetD);
+  const T = C_cat ? w * C_cat : T_par;
   const T_kN = T / 1000;
 
   // 6. Calculate equivalent mid-span level-ground sag D_mid
@@ -278,11 +282,23 @@ function calculateThreePoint() {
     `   T = (w * xp * (L - xp)) / (2 * D)\n` +
     `   T = (${w.toFixed(3)} * ${xp.toFixed(2)} * (${L.toFixed(2)} - ${xp.toFixed(2)})) / (2 * ${offsetD.toFixed(3)})\n` +
     `   T = (${w.toFixed(3)} * ${xp.toFixed(2)} * ${(L - xp).toFixed(2)}) / ${(2 * offsetD).toFixed(3)}\n` +
-    `   T = ${(w * xp * (L - xp)).toFixed(1)} / ${(2 * offsetD).toFixed(3)} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN\n\n` +
+    `   T = ${(w * xp * (L - xp)).toFixed(1)} / ${(2 * offsetD).toFixed(3)} = ${T_par.toFixed(1)} N = ${(T_par / 1000).toFixed(2)} kN\n\n` +
     `${stepN + 1}. Calculate equivalent level-ground mid-span sag (D_mid):\n` +
     `   D_mid = (w * L^2) / (8 * T)\n` +
     `   D_mid = (${w.toFixed(3)} * ${L.toFixed(2)}^2) / (8 * ${T.toFixed(1)})\n` +
     `   D_mid = ${(w * L * L).toFixed(1)} / ${(8 * T).toFixed(1)} = ${dMid.toFixed(3)} m`;
+
+  if (C_cat) {
+    const gapPct = ((T / T_par) - 1) * 100;
+    calculationStepsText =
+      calculationStepsText.replace(
+        `${stepN}. Calculate horizontal tension (T) in the conductor:`,
+        `${stepN}. Parabolic field approximation of tension:`) +
+      `\n\n${stepN + 2}. Catenary-exact refinement (headline figure):\n` +
+      `   Solve C so the catenary through both hooks gives D at xp\n` +
+      `   C = ${C_cat.toFixed(1)} m  ->  T = w * C = ${w.toFixed(3)} * ${C_cat.toFixed(1)} = ${T.toFixed(1)} N = ${T_kN.toFixed(2)} kN` +
+      (Math.abs(gapPct) >= 0.1 ? `\n   (parabolic approximation is ${Math.abs(gapPct).toFixed(1)}% lower - it under-reads on deep-sag spans)` : `\n   (agrees with the parabolic approximation at this sag ratio)`);
+  }
 
   // Update UI Elements
   document.getElementById('tp-results-error').style.display = 'none';
@@ -291,21 +307,22 @@ function calculateThreePoint() {
 
   document.getElementById('tp-val-tension').innerText = `${T_kN.toFixed(2)} kN  ·  ${(T / 9.80665).toFixed(0)} kgf`;
 
-  // Catenary-exact cross-check: the parabolic field formula above
-  // overestimates tension on deep-sag spans; show the exact figure
-  // whenever the two models diverge noticeably.
+  // If these inputs came from a photo Apply, show the photo's own fitted
+  // figure alongside - it follows the traced wire, not the hook clicks.
   const catNote = document.getElementById('tp-catenary-note');
   if (catNote) {
-    const Ccat = TLEngine.catenaryCFromChordSag(L, h, xp, offsetD);
-    const Tcat = Ccat ? w * Ccat : null;
-    const divergence = Tcat ? (T / Tcat - 1) * 100 : 0;
-    if (Tcat && Math.abs(divergence) > 0.3) {
+    const ref = window.photoAppliedRef;
+    const near = (a, b) => Math.abs(a - b) < 0.05 + Math.abs(b) * 0.001;
+    if (ref && ref.T && near(L, ref.L) && near(xp, ref.xp) && near(offsetD, ref.D)) {
       catNote.style.display = 'block';
-      catNote.innerHTML = `Catenary-exact for these inputs: <strong>${(Tcat / 1000).toFixed(2)} kN · ${(Tcat / 9.80665).toFixed(0)} kgf</strong> — the parabolic field formula above under-reads by ${Math.abs(divergence).toFixed(1)}% at this sag ratio (D/L ≈ ${((offsetD / L) * 100).toFixed(1)}%). Prefer the catenary figure on deep-sag spans. (A photo catenary fit can differ slightly from both — it follows the traced wire rather than the hook clicks.)`;
+      catNote.innerHTML = `Photo catenary fit for this span: <strong>${(ref.T / 1000).toFixed(2)} kN</strong>` +
+        (ref.band ? ` (90% band ${(ref.band[0] / 1000).toFixed(2)} - ${(ref.band[1] / 1000).toFixed(2)} kN)` : '') +
+        ` - fitted through the traced wire itself; the small offset vs the hook-anchored figure above is hook-click uncertainty. For photo-measured spans, prefer the photo figure.`;
     } else {
       catNote.style.display = 'none';
     }
   }
+
   document.getElementById('tp-val-sag').innerText = dMid.toFixed(2) + " m";
   document.getElementById('tp-val-offset').innerText = offsetD.toFixed(2) + " m";
   document.getElementById('tp-val-sf').innerText = safetyFactor.toFixed(2);
@@ -350,8 +367,9 @@ function calculateThreePoint() {
       const steps = 95;
       for (let k = 0; k <= steps; k++) {
         const s = sMin + ((sMax - sMin) * k) / steps;
-        // Tension T = (w * xp * (L - xp)) / (2 * D(xp))
-        const tempT = (w * xp * (L - xp)) / (2 * s); // in Newtons
+        // Catenary-exact tension for sag s (parabolic fallback)
+        const Cs = TLEngine.catenaryCFromChordSag(L, h, xp, s);
+        const tempT = Cs ? w * Cs : (w * xp * (L - xp)) / (2 * s); // in Newtons
         const tempP = tempT / uts;
 
         const curX = 70 + 890 * (s - sMin) / (sMax - sMin);
@@ -404,11 +422,11 @@ function calculateThreePoint() {
     if (sensTable) {
       // Inputs: w, L, xp, Z_A, Z_B, Z_P, T
       // Tolerances: zp = 0.05m, xp = 0.50m, L = 0.20m, za = 0.10m, zb = 0.10m
-      const dT_dZP = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.05, 'zp') - T;
-      const dT_dXp = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.50, 'xp') - T;
-      const dT_dL = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.20, 'L') - T;
-      const dT_dZA = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.10, 'za') - T;
-      const dT_dZB = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.10, 'zb') - T;
+      const dT_dZP = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.05, 'zp') - T_par;
+      const dT_dXp = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.50, 'xp') - T_par;
+      const dT_dL = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.20, 'L') - T_par;
+      const dT_dZA = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.10, 'za') - T_par;
+      const dT_dZB = calculatePerturbedTension(w, L, xp, Z_A, Z_B, Z_P, 0.10, 'zb') - T_par;
       
       const dT_dHooks = Math.sqrt(dT_dZA * dT_dZA + dT_dZB * dT_dZB);
 

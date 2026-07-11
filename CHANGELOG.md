@@ -2,6 +2,15 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.5-beta — 2026-07-11
+
+One authoritative tension figure per panel (testers were seeing three competing numbers):
+
+- The Calculation Results **headline is now the catenary-exact tension** (best model); the classic parabolic field formula moved into the calculation log, labelled as the approximation it is, with the refinement step shown. Verdict, %UTS, safety chart and temperature analysis all follow the headline — the app is internally consistent.
+- The safety-curve chart is now computed catenary-exact too, so the operating point stays on the curve.
+- After **Apply from the photo tool**, the results card shows one connecting line — *"Photo catenary fit: X kN (90% band …)"* — and the band visibly contains the hook-anchored headline. The line disappears the moment inputs are edited away from the applied geometry.
+- Sensitivity percentages are computed against a consistent parabolic baseline.
+
 ## v0.9.4-beta — 2026-07-11
 
 - **Catenary-exact cross-check** in the Calculation Results panel: for the entered L/h/xp/D the engine now also solves the exact catenary (new `catenaryCFromChordSag`, bisection on the hook-anchored catenary), and whenever it diverges from the parabolic field formula by more than 0.3% a note shows both figures. On deep-sag spans (D/L ≳ 5%) the parabolic formula **under-reads** tension — ~1.2% on the 788 m example.
