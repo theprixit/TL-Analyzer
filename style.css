@@ -1458,3 +1458,12 @@ body.coarse-input .ct-btn { min-height: 42px; font-size: 0.9rem; padding: 0.5rem
   overscroll-behavior: none;
 }
 body.fs-lock { overflow: hidden; }
+
+/* Fullscreen editing on phones: keep the toolbar clear of the home-bar
+   inset and on ONE row (landscape height is precious) */
+body.coarse-input .canvas-workspace.fs-fallback .canvas-toolbar,
+body.coarse-input .canvas-workspace:fullscreen .canvas-toolbar {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  max-width: none;
+  flex-wrap: nowrap;
+}

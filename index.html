@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>TL-SAG | Transmission Line Sag & Tension Analyzer</title>
   
   <!-- Modern Font from Google Fonts -->
@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-title" content="TL-SAG">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=0.11.1-beta">
+  <link rel="stylesheet" href="style.css?v=0.11.2-beta">
 </head>
 <body>
 
@@ -129,7 +129,7 @@
 
     <!-- Focus Label -->
     <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.4rem;">
-      📷 FLAGSHIP TOOL: PHOTO CATENARY ANALYSIS — trace the conductor, fit the curve, extract tension
+      📷 PHOTO CATENARY ANALYSIS — trace the conductor, fit the curve, extract tension
     </div>
 
       <!-- STANDALONE PHOTO SAG TRACKER PANEL -->
@@ -256,6 +256,8 @@
               <canvas id="photo-tracker-canvas"></canvas>
               <div class="canvas-toolbar" id="photo-toolbar">
                 <button type="button" id="pt-crosshair-place" class="ct-btn ct-primary coarse-only" onclick="photoPlaceAtCrosshair()" title="Place the next point at the centre crosshair">＋ Place</button>
+                <button type="button" id="pt-move-btn" class="ct-btn ct-primary coarse-only" style="display: none;" onclick="photoMoveSelectedToCrosshair()" title="Move the selected point to the centre crosshair">✥ Move here</button>
+                <button type="button" id="pt-del-btn" class="ct-btn coarse-only" style="display: none;" onclick="photoDeleteSelected()" title="Delete the selected point">🗑 Point</button>
                 <button type="button" id="pt-tool-place" class="ct-btn active fine-only" onclick="setPhotoTool('place')" title="Place / drag points (right-click or double-tap a point to delete)">🎯 Place</button>
                 <button type="button" id="pt-tool-pan" class="ct-btn" onclick="setPhotoTool('pan')" title="Drag to pan the photo">🖐 Pan</button>
                 <span class="ct-sep"></span>
@@ -1246,7 +1248,7 @@
     <!-- FULL-WIDTH ANALYSIS SECTION: safety curve, accuracy & calculation log -->
     <div class="panel" id="tp-analysis-panel" style="margin-top: 2rem; padding: 1.5rem;">
       <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; margin-bottom: 1.2rem; font-size: 1.2rem;">📈 Analysis — Safety Curve, Accuracy &amp; Calculation Log</h2>
-      <!-- Dynamic Sag vs. Tension Chart Card: full width, flagship emphasis -->
+      <!-- Dynamic Sag vs. Tension Chart Card: full width -->
       <div class="chart-area" style="margin-bottom: 1.5rem;">
                 <div class="chart-title">
                   <span>📈 Sag vs. Tension Safety Curve (UTS Clearance)</span>
@@ -1575,8 +1577,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.11.1-beta"></script>
-  <script src="app.js?v=0.11.1-beta"></script>
-  <script src="phototracker.js?v=0.11.1-beta"></script>
+  <script src="engine.js?v=0.11.2-beta"></script>
+  <script src="app.js?v=0.11.2-beta"></script>
+  <script src="phototracker.js?v=0.11.2-beta"></script>
 </body>
 </html>

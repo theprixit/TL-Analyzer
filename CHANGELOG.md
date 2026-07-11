@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.2-beta — 2026-07-11
+
+Landscape editing + crosshair point-moving (real-iPhone feedback):
+
+- **Rotate to landscape → the photo editor goes fullscreen automatically** (the page layout can't fit the workspace plus chrome in ~390px of height; the ⛶ button exits as usual). Fullscreen toolbar keeps to a single row and respects the iPhone home-bar safe area.
+- **Moving points now uses the crosshair too**: tapping a point *selects* it (gold ring) — a dragging finger hides its own target — then aim the crosshair and press **✥ Move here**. A **🗑 Point** button deletes the selection; double-tap delete still works. The toolbar swaps between Place and Move/Delete automatically.
+- Removed the "FLAGSHIP" label from the photo tool banner.
+
 ## v0.11.1-beta — 2026-07-11
 
 First real-iPhone feedback fixes:

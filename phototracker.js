@@ -32,6 +32,7 @@
     pan: null,
     placing: null,               // { pos } candidate for a new point
     dragging: null,              // { kind, index }
+    selected: null,              // touch flow: point selected for crosshair-move
     pendingRestore: null
   };
 
@@ -61,7 +62,21 @@
     canvas.addEventListener('touchmove', e => {
       if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
-    window.addEventListener('resize', () => { resizeCanvas(); redraw(); });
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      redraw();
+      // Phone rotated to landscape with a photo loaded: the page layout
+      // cannot fit the workspace plus chrome — go straight to the
+      // fullscreen editor (exit via the same ⛶ button).
+      if (COARSE && state.img && window.innerWidth > window.innerHeight &&
+          window.innerHeight < 500 && !state.fsFallback && !document.fullscreenElement) {
+        enterFsFallback();
+      }
+    });
+    // Some mobile browsers fire orientationchange before/instead of resize.
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 250);
+    });
     document.addEventListener('fullscreenchange', () => {
       // Give the browser a frame to settle the new container size.
       setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
@@ -279,6 +294,8 @@
   }
 
   function clearAnnotations() {
+    state.selected = null;
+    if (typeof updateSelectionUI === 'function') updateSelectionUI();
     state.points = { A: null, B: null, P: null, baseA: null, baseB: null };
     state.trace = [];
     state.vertRef = [];
@@ -408,8 +425,9 @@
     if (!state.img) return;
 
     if (state.tool === 'pan') {
-      // Touch: a tap landing on an existing point grabs it for adjustment
-      // (with the loupe); anywhere else pans the photo.
+      // Touch: tapping a point SELECTS it (a dragging finger hides its own
+      // target) — move it precisely with the crosshair + "Move here" button.
+      // Double-tap on a point still deletes it.
       if (COARSE) {
         const hitP = hitTest(pos);
         if (hitP) {
@@ -418,14 +436,18 @@
               Math.hypot(pos.x - state.lastTap.x, pos.y - state.lastTap.y) < 24) {
             state.lastTap = null;
             state.pointers.delete(e.pointerId);
+            state.selected = null;
+            updateSelectionUI();
             deleteHit(hitP);
             return;
           }
           state.lastTap = { t: now, x: pos.x, y: pos.y };
-          state.dragging = hitP;
+          state.selected = hitP;
+          updateSelectionUI();
           redraw();
           return;
         }
+        if (state.selected) { state.selected = null; updateSelectionUI(); }
       }
       // Double-tap on empty canvas = fit the whole photo (escape hatch
       // when zoomed deep into a dark/featureless region).
@@ -1194,8 +1216,21 @@
       drawText(LABELS[kind], { x: c.x + 12, y: c.y - 6 }, COLORS[kind]);
     }
 
-    // Centre crosshair for touch placement (pairs with the ＋ Place button)
-    if (COARSE && expectedNext()) {
+    // Selection highlight (touch move flow)
+    if (state.selected) {
+      const sp = getDragPos(state.selected);
+      if (sp) {
+        const sc = i2c(sp);
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, 16, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    }
+
+    // Centre crosshair for touch placement/move (pairs with the toolbar buttons)
+    if (COARSE && (expectedNext() || state.selected)) {
       const { w: cw2, h: ch2 } = cssSize();
       drawCrosshair({ x: cw2 / 2, y: ch2 / 2 }, '#facc15');
       ctx.beginPath();
@@ -1657,6 +1692,18 @@
     redraw();
   };
 
+  // Toolbar buttons swap between "Place" and "Move/Delete" as a point is
+  // selected (touch flow).
+  function updateSelectionUI() {
+    const place = document.getElementById('pt-crosshair-place');
+    const move = document.getElementById('pt-move-btn');
+    const del = document.getElementById('pt-del-btn');
+    const sel = !!state.selected;
+    if (place) place.style.display = sel ? 'none' : '';
+    if (move) move.style.display = sel ? '' : 'none';
+    if (del) del.style.display = sel ? '' : 'none';
+  }
+
   // Place the next point exactly at the centre crosshair (touch flow: pan
   // and pinch the wire under the crosshair, then tap Place).
   window.photoPlaceAtCrosshair = function () {
@@ -1665,6 +1712,27 @@
     const { w, h } = cssSize();
     commitPoint(c2i({ x: w / 2, y: h / 2 }));
     redraw();
+  };
+
+  // Move the selected point to the crosshair — aiming instead of dragging,
+  // because a dragging finger hides its own target.
+  window.photoMoveSelectedToCrosshair = function () {
+    if (!state.selected || !state.img) return;
+    const { w, h } = cssSize();
+    setDragPos(state.selected, c2i({ x: w / 2, y: h / 2 }));
+    state.selected = null;
+    updateSelectionUI();
+    solve();
+    updateInstructions();
+    redraw();
+  };
+
+  window.photoDeleteSelected = function () {
+    if (!state.selected) return;
+    const hit = state.selected;
+    state.selected = null;
+    updateSelectionUI();
+    deleteHit(hit);
   };
 
   function enterFsFallback() {
