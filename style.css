@@ -1278,7 +1278,6 @@ button.gate-action-card:hover { border-color: var(--success); transform: transla
 /* Returning visitors already know the app: compact the marketing */
 .project-gate.returning .gate-tagline,
 .project-gate.returning .gate-steps { display: none; }
-.project-gate.returning .gate-actions { grid-template-columns: 1fr 1fr; }
 .project-gate.returning #gate-resume-section { order: -1; }
 
 @media (max-width: 720px) {

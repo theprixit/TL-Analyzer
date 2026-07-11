@@ -53,6 +53,14 @@
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', onContextMenu);
+    // iOS Safari can hijack a pinch that starts on the canvas as PAGE zoom,
+    // blowing the toolbar off-screen and trapping the user — block the
+    // native gesture on the canvas so OUR pinch handler owns it.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+      canvas.addEventListener(ev, e => e.preventDefault()));
+    canvas.addEventListener('touchmove', e => {
+      if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
     window.addEventListener('resize', () => { resizeCanvas(); redraw(); });
     document.addEventListener('fullscreenchange', () => {
       // Give the browser a frame to settle the new container size.
@@ -418,6 +426,20 @@
           redraw();
           return;
         }
+      }
+      // Double-tap on empty canvas = fit the whole photo (escape hatch
+      // when zoomed deep into a dark/featureless region).
+      if (COARSE) {
+        const now2 = performance.now();
+        if (state.lastEmptyTap && now2 - state.lastEmptyTap.t < 350 &&
+            Math.hypot(pos.x - state.lastEmptyTap.x, pos.y - state.lastEmptyTap.y) < 30) {
+          state.lastEmptyTap = null;
+          state.pointers.delete(e.pointerId);
+          fitView();
+          redraw();
+          return;
+        }
+        state.lastEmptyTap = { t: now2, x: pos.x, y: pos.y };
       }
       state.pan = { start: pos, view: { tx: state.view.tx, ty: state.view.ty } };
       return;
@@ -1546,7 +1568,26 @@
     event.target.value = '';
   };
 
+  function anyPointsPlaced() {
+    return state.trace.length > 0 || state.vertRef.length > 0 ||
+      Object.keys(state.points).some(k => state.points[k]);
+  }
+
+  window.photoClearPoints = function () {
+    if (!anyPointsPlaced()) return;
+    if (!confirm('Remove ALL placed points and the conductor trace? The photo stays loaded. This cannot be undone.')) return;
+    clearAnnotations();
+    solve();
+    updateInstructions();
+    updateToolButtons();
+    redraw();
+  };
+
   window.resetPhotoTracker = function () {
+    if (anyPointsPlaced() &&
+        !confirm('Remove ALL placed points and the conductor trace? The photo stays loaded. This cannot be undone.')) {
+      return;
+    }
     clearAnnotations();
     solve();
     updateInstructions();

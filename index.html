@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-title" content="TL-SAG">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=0.11.0-beta">
+  <link rel="stylesheet" href="style.css?v=0.11.1-beta">
 </head>
 <body>
 
@@ -261,6 +261,7 @@
                 <span class="ct-sep"></span>
                 <button type="button" id="pt-vert-btn" class="ct-btn" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">📐 Vert Ref</button>
                 <button type="button" class="ct-btn" onclick="photoUndo()" title="Undo last point">↩ Undo</button>
+                <button type="button" class="ct-btn" onclick="photoClearPoints()" title="Remove ALL placed points and traces (asks first)">🗑 Clear</button>
                 <span class="ct-sep"></span>
                 <button type="button" class="ct-btn" onclick="photoFitView()" title="Fit photo to view">⤢ Fit</button>
                 <button type="button" class="ct-btn" onclick="photoToggleFullscreen()" title="Edit in fullscreen">⛶</button>
@@ -1574,8 +1575,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.11.0-beta"></script>
-  <script src="app.js?v=0.11.0-beta"></script>
-  <script src="phototracker.js?v=0.11.0-beta"></script>
+  <script src="engine.js?v=0.11.1-beta"></script>
+  <script src="app.js?v=0.11.1-beta"></script>
+  <script src="phototracker.js?v=0.11.1-beta"></script>
 </body>
 </html>

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.1-beta — 2026-07-11
+
+First real-iPhone feedback fixes:
+
+- **Escaped the zoom trap**: iOS Safari could hijack a pinch that started on the photo canvas as *page* zoom, blowing the toolbar off-screen with no way back. The canvas now blocks the native gesture (our pinch handler owns it), and **double-tapping any empty area of the photo snaps back to Fit view** — a guaranteed escape hatch from deep zoom into dark regions.
+- **🗑 Clear button** on the canvas toolbar — removes all placed points and the trace (photo stays), with a confirmation prompt. The side-panel Reset Points now also asks before wiping.
+- Fixed the start-screen action cards rendering as squeezed columns on phones for returning users (a persona style overrode the mobile collapse).
+
 ## v0.11.0-beta — 2026-07-11
 
 **Phase 3: TL-SAG on your phone — installable, offline, touch-native.** No app store, no fees: open the live site once, *Add to Home Screen*, and it launches full-screen and works with no signal.
