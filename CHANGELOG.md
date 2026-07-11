@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.10.2-beta — 2026-07-11
+
+Whole-app QA sweep:
+
+- **Experimental context now follows applied results**: applying a span-free camera result stamps the Calculation Results panel with the EXPERIMENTAL/UNCALIBRATED warning (previously it showed a clean "SAFE" verdict with no caveat), and results stamped INVALID (outside the expected span range) **cannot be applied at all**.
+- **Mountain Helper & Laser Rangefinder tools brought up to app standards**: all 19 pre-filled sample values removed (they silently produced fake solutions), blank inputs now show "enter your readings" prompts instead of zeros, and the Apply buttons refuse to run before anything is solved — the mountain helper previously wrote sample values (L=300, h=35!) into the primary inputs when its fields were incomplete.
+- Custom-conductor fields no longer pre-fill Zebra's values.
+- Removed the dead detailed-CAD-results code (page was retired in v0.6). Duplicate-ID scan clean.
+
 ## v0.10.1-beta — 2026-07-11
 
 Field-feedback fixes for the span-free mode and beyond:

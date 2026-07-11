@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.10.1-beta">
+  <link rel="stylesheet" href="style.css?v=0.10.2-beta">
 </head>
 <body>
 
@@ -569,15 +569,15 @@
               <div class="input-grid-3">
                 <div class="form-group">
                   <label for="tp-custom-w">Weight w (N/m):</label>
-                  <input type="number" id="tp-custom-w" value="15.91" step="0.01" oninput="calculateThreePoint()">
+                  <input type="number" id="tp-custom-w" value="" placeholder="e.g. 15.91" step="0.01" oninput="calculateThreePoint()">
                 </div>
                 <div class="form-group">
                   <label for="tp-custom-mass">Mass m (kg/m):</label>
-                  <input type="number" id="tp-custom-mass" value="1.62" step="0.01">
+                  <input type="number" id="tp-custom-mass" value="" placeholder="e.g. 1.62" step="0.01">
                 </div>
                 <div class="form-group">
                   <label for="tp-custom-uts">UTS Strength (kN):</label>
-                  <input type="number" id="tp-custom-uts" value="130.3" step="0.1" oninput="calculateThreePoint()">
+                  <input type="number" id="tp-custom-uts" value="" placeholder="e.g. 130.3" step="0.1" oninput="calculateThreePoint()">
                 </div>
               </div>
             </div>
@@ -620,16 +620,16 @@
                     <div class="input-grid-2" style="margin-bottom: 0;">
                       <div class="form-group no-margin">
                         <label style="font-size: 0.85rem;">Hook A Z-Elev (ZA) (m):</label>
-                        <input type="number" id="mt-za" value="140.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        <input type="number" id="mt-za" value="" placeholder="e.g. 140.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
                       </div>
                       <div class="form-group no-margin">
                         <label style="font-size: 0.85rem;">Hook B Z-Elev (ZB) (m):</label>
-                        <input type="number" id="mt-zb" value="175.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                        <input type="number" id="mt-zb" value="" placeholder="e.g. 175.00" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
                       </div>
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook-to-Hook Slant Range (S) (m):</label>
-                      <input type="number" id="mt-slant-1" value="302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                      <input type="number" id="mt-slant-1" value="" placeholder="e.g. 302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
                       <span style="font-size: 0.82rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Formula: L = sqrt(S² - h²), where h = |ZB - ZA|</span>
                     </div>
                   </div>
@@ -638,11 +638,11 @@
                   <div id="mt-angle-slant-div" style="display: none; flex-direction: column; gap: 0.6rem;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook-to-Hook Slant Range (S) (m):</label>
-                      <input type="number" id="mt-slant-2" value="302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                      <input type="number" id="mt-slant-2" value="" placeholder="e.g. 302.04" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Sight Angle w.r.t Horizontal (θ) (deg):</label>
-                      <input type="number" id="mt-angle" value="6.66" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                      <input type="number" id="mt-angle" value="" placeholder="e.g. 6.66" step="0.01" oninput="calculateMountainSpan()" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
                       <span style="font-size: 0.82rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">Angle above (+) or below (-) horizontal. Formula: L = S·cos(θ), h = S·sin(θ)</span>
                     </div>
                   </div>
@@ -732,31 +732,31 @@
                   <div class="input-grid-2">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook A Horiz Dist HDA (m):</label>
-                      <input type="number" id="rf-hda" value="100.00" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-hda" value="" placeholder="e.g. 100.00" step="0.1" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook A Vert Height VDA (m):</label>
-                      <input type="number" id="rf-vda" value="40.00" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-vda" value="" placeholder="e.g. 40.00" step="0.1" oninput="calculateRangefinder()">
                     </div>
                   </div>
                   <div class="input-grid-2" style="margin-top: 0.6rem;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook B Horiz Dist HDB (m):</label>
-                      <input type="number" id="rf-hdb" value="200.00" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-hdb" value="" placeholder="e.g. 200.00" step="0.1" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Hook B Vert Height VDB (m):</label>
-                      <input type="number" id="rf-vdb" value="75.00" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-vdb" value="" placeholder="e.g. 75.00" step="0.1" oninput="calculateRangefinder()">
                     </div>
                   </div>
                   <div class="input-grid-2" style="margin-top: 0.6rem;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Sighted P Horiz Dist HDP (m):</label>
-                      <input type="number" id="rf-hdp" value="0.00" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-hdp" value="" placeholder="e.g. 0.00" step="0.1" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.88rem;">Sighted P Vert Height VDP (m):</label>
-                      <input type="number" id="rf-vdp" value="46.40" step="0.1" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-vdp" value="" placeholder="e.g. 46.40" step="0.1" oninput="calculateRangefinder()">
                     </div>
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; margin-bottom: 0.6rem;">
@@ -837,39 +837,39 @@
                   <div class="input-grid-2">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">Tower A Slant Range SA (m):</label>
-                      <input type="number" id="rf-ob-sa" value="250.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-sa" value="" placeholder="e.g. 250.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">Tower A Vert Angle θA (°):</label>
-                      <input type="number" id="rf-ob-theta-a" value="-5.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-theta-a" value="" placeholder="e.g. -5.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                   </div>
                   <div class="input-grid-3" style="margin-top: 0.6rem;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">Tower B Slant Range SB (m):</label>
-                      <input type="number" id="rf-ob-sb" value="320.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-sb" value="" placeholder="e.g. 320.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">Tower B Vert Angle θB (°):</label>
-                      <input type="number" id="rf-ob-theta-b" value="12.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-theta-b" value="" placeholder="e.g. 12.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary);">Sweep Angle α (°): <span class="unit-label">(A to B)</span></label>
-                      <input type="number" id="rf-ob-alpha" value="45.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-alpha" value="" placeholder="e.g. 45.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                   </div>
                   <div class="input-grid-3" style="margin-top: 0.6rem;">
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--success);">Conductor P Slant SP (m):</label>
-                      <input type="number" id="rf-ob-sp" value="220.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-sp" value="" placeholder="e.g. 220.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--success);">Conductor P Vert Angle θP (°):</label>
-                      <input type="number" id="rf-ob-theta-p" value="-2.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-theta-p" value="" placeholder="e.g. -2.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                     <div class="form-group no-margin">
                       <label style="font-size: 0.85rem; font-weight: bold; color: var(--success);">Sweep Angle β (°): <span class="unit-label">(A to P)</span></label>
-                      <input type="number" id="rf-ob-beta" value="20.00" step="0.01" oninput="calculateRangefinder()">
+                      <input type="number" id="rf-ob-beta" value="" placeholder="e.g. 20.00" step="0.01" oninput="calculateRangefinder()">
                     </div>
                   </div>
 
@@ -1558,8 +1558,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.10.1-beta"></script>
-  <script src="app.js?v=0.10.1-beta"></script>
-  <script src="phototracker.js?v=0.10.1-beta"></script>
+  <script src="engine.js?v=0.10.2-beta"></script>
+  <script src="app.js?v=0.10.2-beta"></script>
+  <script src="phototracker.js?v=0.10.2-beta"></script>
 </body>
 </html>

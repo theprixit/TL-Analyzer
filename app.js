@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.10.1-beta';
+const APP_VERSION = '0.10.2-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -317,7 +317,10 @@ function calculateThreePoint() {
       catNote.style.display = 'block';
       catNote.innerHTML = `Photo catenary fit for this span: <strong>${(ref.T / 1000).toFixed(2)} kN</strong>` +
         (ref.band ? ` (90% band ${(ref.band[0] / 1000).toFixed(2)} - ${(ref.band[1] / 1000).toFixed(2)} kN)` : '') +
-        ` - fitted through the traced wire itself; the small offset vs the hook-anchored figure above is hook-click uncertainty. For photo-measured spans, prefer the photo figure.`;
+        ` - fitted through the traced wire itself; the small offset vs the hook-anchored figure above is hook-click uncertainty. For photo-measured spans, prefer the photo figure.` +
+        (ref.experimental
+          ? `<br><span style="color: var(--danger); font-weight: bold;">⚠ Source: EXPERIMENTAL span-free camera mode${ref.calibrated ? '' : ' (UNCALIBRATED)'} — the span itself was solved from the photo. Cross-check against a known span before acting on ANY figure in this panel.</span>`
+          : '');
     } else {
       catNote.style.display = 'none';
     }
@@ -1182,7 +1185,14 @@ function calculateRangefinder() {
   const setupMode = document.getElementById('rf-setup-mode').value;
   const solvedDiv = document.getElementById('rf-solved-text');
   
+  const rfRaw = id => (document.getElementById(id).value || '').trim();
+
   if (setupMode === 'in-plane') {
+    if (!rfRaw('rf-hda') || !rfRaw('rf-hdb') || !rfRaw('rf-vda') || !rfRaw('rf-vdb') || !rfRaw('rf-hdp') || !rfRaw('rf-vdp')) {
+      rfSolvedL = 0;
+      if (solvedDiv) solvedDiv.innerHTML = 'Enter all six rangefinder readings (horizontal + vertical distances to Hook A, Hook B and the conductor point) to solve the span geometry.';
+      return;
+    }
     const hda = parseFloat(document.getElementById('rf-hda').value) || 0;
     const vda = parseFloat(document.getElementById('rf-vda').value) || 0;
     const hdb = parseFloat(document.getElementById('rf-hdb').value) || 0;
@@ -1208,6 +1218,11 @@ function calculateRangefinder() {
     }
   } else {
     // Oblique Transverse Setup (Valley-to-Valley)
+    if (!rfRaw('rf-ob-sa') || !rfRaw('rf-ob-sb') || !rfRaw('rf-ob-alpha') || !rfRaw('rf-ob-sp')) {
+      rfSolvedL = 0;
+      if (solvedDiv) solvedDiv.innerHTML = 'Enter the slant ranges, inclinations and horizontal swing angles measured from your standing position to solve the span geometry.';
+      return;
+    }
     const sa = parseFloat(document.getElementById('rf-ob-sa').value) || 0;
     const thetaA_deg = parseFloat(document.getElementById('rf-ob-theta-a').value) || 0;
     const sb = parseFloat(document.getElementById('rf-ob-sb').value) || 0;
@@ -1267,6 +1282,10 @@ function calculateRangefinder() {
 }
 
 function applyRangefinderReadings() {
+  if (!(rfSolvedL > 0)) {
+    alert('Fill in the rangefinder readings first — nothing has been solved yet.');
+    return;
+  }
   calculateRangefinder(); // ensure fresh calculation
 
   if (rfSolvedL <= 0 || rfSolvedXp <= 0 || rfSolvedXp >= rfSolvedL) {
@@ -1320,7 +1339,13 @@ function calculateMountainSpan() {
   const solvedDiv = document.getElementById('mt-solved-text');
   if (!solvedDiv) return;
 
+  const mtRaw = id => (document.getElementById(id).value || '').trim();
+
   if (mode === 'gps-slant') {
+    if (!mtRaw('mt-za') || !mtRaw('mt-zb') || !mtRaw('mt-slant-1')) {
+      solvedDiv.innerHTML = 'Enter both hook elevations and the slant range to solve the horizontal span.';
+      return;
+    }
     const za = parseFloat(document.getElementById('mt-za').value) || 0;
     const zb = parseFloat(document.getElementById('mt-zb').value) || 0;
     const slant = parseFloat(document.getElementById('mt-slant-1').value) || 0;
@@ -1339,6 +1364,10 @@ function calculateMountainSpan() {
       `• Height Difference h = ZB - ZA = <strong>${h.toFixed(3)} m</strong><br>` +
       `• Solved Span L = sqrt(S² - h²) = <strong>${L.toFixed(3)} m</strong>`;
   } else {
+    if (!mtRaw('mt-slant-2') || !mtRaw('mt-angle')) {
+      solvedDiv.innerHTML = 'Enter the slant range and its inclination angle to solve the horizontal span.';
+      return;
+    }
     const slant = parseFloat(document.getElementById('mt-slant-2').value) || 0;
     const angleDeg = parseFloat(document.getElementById('mt-angle').value) || 0;
     const angleRad = angleDeg * Math.PI / 180;
@@ -1361,9 +1390,9 @@ function calculateMountainSpan() {
 
 function applyMountainSpan() {
   const mode = document.getElementById('mt-input-mode').value;
-  let L = 300;
-  let h = 35;
-  let zb = 175;
+  let L = 0;
+  let h = 0;
+  let zb = 0;
 
   if (mode === 'gps-slant') {
     const za = parseFloat(document.getElementById('mt-za').value) || 0;
@@ -1387,6 +1416,11 @@ function applyMountainSpan() {
     zb = za + h;
   }
 
+  if (!(L > 0)) {
+    alert('Fill in the mountain-helper readings first — nothing has been solved yet.');
+    return;
+  }
+
   // Set primary span length
   document.getElementById('tp-span').value = L.toFixed(2);
 
@@ -1402,126 +1436,9 @@ function applyMountainSpan() {
   calculateThreePoint();
 }
 
-function openDetailedResults() {
-  // Let's gather all inputs and computed parameters from active fields and DOM elements
-  // 1. Get Conductor mechanical properties
-  const condSelect = document.getElementById('tp-conductor');
-  const condName = condSelect ? condSelect.options[condSelect.selectedIndex].text : "Custom";
-  const condKey = condSelect ? condSelect.value : "custom";
-  const cond = getConductorSpecs('tp');
-  const w = cond.w;
-  const uts = cond.uts;
+// (Detailed CAD results page removed in v0.6 — the printed report now
+// carries the sketch, charts and distribution.)
 
-  // 2. Read basic dimensions
-  const L = parseFloat(document.getElementById('tp-span').value) || 0;
-  const xp = parseFloat(document.getElementById('tp-xp').value) || 0;
-  
-  // 3. Resolve input mode and calculate intermediate sag parameters
-  const inputMode = document.getElementById('tp-input-mode').value;
-  let h = 0;
-  let offsetD = 0;
-  let Z_A = 0, Z_B = 0, Z_P = 0;
-
-  if (inputMode === 'z-coords') {
-    Z_A = parseFloat(document.getElementById('tp-za').value) || 0;
-    Z_B = parseFloat(document.getElementById('tp-zb').value) || 0;
-    Z_P = parseFloat(document.getElementById('tp-zp').value) || 0;
-    h = Z_B - Z_A;
-    const yChord = Z_A + (h / L) * xp;
-    offsetD = yChord - Z_P;
-  } else {
-    h = parseFloat(document.getElementById('tp-height-diff').value) || 0;
-    offsetD = parseFloat(document.getElementById('tp-offset-d').value) || 0;
-    Z_A = 140.000;
-    Z_B = Z_A + h;
-    const yChord = Z_A + (h / L) * xp;
-    Z_P = yChord - offsetD;
-  }
-
-  // Get active ground base elevations for terrain profile visualization
-  const Z_A_base = parseFloat(document.getElementById('tp-za-gps-base').value) || (Z_A - 40.0);
-  const Z_B_base = parseFloat(document.getElementById('tp-zb-gps-base').value) || (Z_B - 45.0);
-  const Z_P_base = parseFloat(document.getElementById('tp-zp-gps-base').value) || (Z_P - 16.4);
-
-  // 4. Validate
-  if (L <= 0 || xp <= 0 || xp >= L || w <= 0 || offsetD <= 0) {
-    alert("Please enter valid geometrical and conductor specifications first.");
-    return;
-  }
-
-  // 5. Calculate mechanical horizontal tension T
-  const T = (w * xp * (L - xp)) / (2 * offsetD);
-  const T_kN = T / 1000;
-  const dMid = (w * L * L) / (8 * T);
-
-  // 6. Safety evaluations
-  const pctUTS = (T / uts) * 100;
-  const safetyFactor = uts / T;
-
-  // 7. Get line configurations
-  const lineVoltage = document.getElementById('line-voltage').value || "132 kV";
-  const towerA = document.getElementById('tower-a-id').value || "Tower A";
-  const towerB = document.getElementById('tower-b-id').value || "Tower B";
-  const lineCircuits = document.getElementById('line-circuits').value || "Double Circuit";
-  const lineConfig = document.getElementById('line-config').value || "Vertical";
-  const lineBundling = document.getElementById('line-bundling').value || "Twin (2-Bundle)";
-  const linePeaks = document.getElementById('line-peaks').value || "2 Peaks";
-  const lineOpgwSize = document.getElementById('line-opgw-size').value || "7/3.15 mm Earthwire";
-
-  // Gather calculated sensitivity values
-  const sensZpText = document.getElementById('sens-zp') ? document.getElementById('sens-zp').innerText : "-";
-  const sensXpText = document.getElementById('sens-xp') ? document.getElementById('sens-xp').innerText : "-";
-  const sensLText = document.getElementById('sens-L') ? document.getElementById('sens-L').innerText : "-";
-  const sensHooksText = document.getElementById('sens-hooks') ? document.getElementById('sens-hooks').innerText : "-";
-  const sensConfidenceRange = document.getElementById('sens-confidence-range') ? document.getElementById('sens-confidence-range').innerText : "-";
-  const sensVerdictText = document.getElementById('sens-verdict') ? document.getElementById('sens-verdict').innerText : "-";
-  const stepsText = document.getElementById('tp-steps') ? document.getElementById('tp-steps').innerText : "";
-
-  // Store in localStorage
-  const data = {
-    L,
-    xp,
-    inputMode,
-    Z_A,
-    Z_B,
-    Z_P,
-    Z_A_base,
-    Z_B_base,
-    Z_P_base,
-    h,
-    offsetD,
-    condKey,
-    condName,
-    w,
-    uts,
-    T,
-    T_kN,
-    dMid,
-    pctUTS,
-    safetyFactor,
-    lineVoltage,
-    towerA,
-    towerB,
-    lineCircuits,
-    lineConfig,
-    lineBundling,
-    linePeaks,
-    lineOpgwSize,
-    sensZpText,
-    sensXpText,
-    sensLText,
-    sensHooksText,
-    sensConfidenceRange,
-    sensVerdictText,
-    stepsText,
-    timestamp: new Date().toISOString()
-  };
-
-  localStorage.setItem('tlsag_last_run', JSON.stringify(data));
-
-  // Open results.html in a new tab
-  window.open('results.html', '_blank');
-}
 
 // ==========================================================================
 // 7. PHOTO SAG TRACKER — moved to phototracker.js (catenary tracing tool).

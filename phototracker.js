@@ -987,6 +987,10 @@
   // ======================================================================
   function applyToInputs() {
     const s = state.solved;
+    if (s && s.geo && s.geo.method === 'camera' && s.geo.priorViolation) {
+      alert('These results are stamped INVALID — the camera-solved span is outside your expected range, so the calibration does not fit this photo. Fix the calibration (or use Perspective 4-Point with your span estimate) before applying.');
+      return;
+    }
     if (!s || s.error || !(s.D > 0) || !(s.xp > 0) || !(s.xp < s.L)) {
       alert('Load a photo and complete the point placement / trace first (sag point must lie below the chord, between the hooks).');
       return;
@@ -1017,7 +1021,9 @@
     window.photoAppliedRef = {
       L: s.L, xp: s.xp, D: s.D,
       T: (s.kind === 'trace' && s.an) ? s.an.T : null,
-      band: (s.kind === 'trace' && s.mc) ? [s.mc.p5, s.mc.p95] : null
+      band: (s.kind === 'trace' && s.mc) ? [s.mc.p5, s.mc.p95] : null,
+      experimental: s.geo && s.geo.method === 'camera',
+      calibrated: !(s.geo && s.geo.method === 'camera') || !!s.geo.calibrated
     };
 
     if (typeof calculateThreePoint === 'function') calculateThreePoint();
