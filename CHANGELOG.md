@@ -2,6 +2,12 @@
 
 All notable user-visible changes to TL-SAG. Version numbers follow [semantic versioning](https://semver.org/); the app is currently in **beta** — calculation results should be cross-checked before safety-critical use.
 
+## v0.9.3-beta — 2026-07-11
+
+- Example project refreshed with a recalibrated Kashang–Bhaba trace (36 points, per-tower heights 27.5 m / 24 m, fit RMS under 1 m); the example download is now version-cache-busted so updates reach returning browsers.
+- Base-point instructions now teach the plumb rule explicitly: click the ground point **directly below the hook** (under the crossarm tip — not a tower leg), and the entered tower height must be the hook's height above that same point.
+- The Vertical Reference tool is hidden in Perspective 4-Point mode — the homography corrects camera roll exactly, so the tool only applies to the chord / tower-height calibrations.
+
 ## v0.9.2-beta — 2026-07-09
 
 Landing experience redesigned for first-time visitors:

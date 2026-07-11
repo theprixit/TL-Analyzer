@@ -1051,8 +1051,8 @@
     }
     if (next === 'A') { el.innerHTML = '🎯 <strong>Step 1:</strong> Click the <strong>Tower A hook point</strong> (conductor attachment).' + hint; return; }
     if (next === 'B') { el.innerHTML = '🎯 <strong>Step 2:</strong> Click the <strong>Tower B hook point</strong>.' + hint; return; }
-    if (next === 'baseA') { el.innerHTML = '🎯 <strong>Step 3:</strong> Click the <strong>Tower A ground base</strong> (bottom of the tower body, directly under its hook).' + hint; return; }
-    if (next === 'baseB') { el.innerHTML = '🎯 <strong>Step 4:</strong> Click the <strong>Tower B ground base</strong> — completes the 4-point perspective rectification.' + hint; return; }
+    if (next === 'baseA') { el.innerHTML = '🎯 <strong>Step 3:</strong> Click the ground point <strong>plumb below Hook A</strong> — where a stone dropped from the hook would land (usually under the crossarm tip, NOT a tower leg). The tower height you enter must be the hook\'s height above this same point.' + hint; return; }
+    if (next === 'baseB') { el.innerHTML = '🎯 <strong>Step 4:</strong> Click the ground point <strong>plumb below Hook B</strong> (same rule: below the hook, not a leg) — completes the 4-point perspective rectification.' + hint; return; }
     if (next === 'P') { el.innerHTML = '🎯 <strong>Final step:</strong> Click the <strong>conductor at its lowest visible point</strong>.' + hint; return; }
     if (next === 'trace') {
       const n = state.trace.length;
@@ -1275,6 +1275,11 @@
     if (towerGrp) towerGrp.style.display = method === 'tower' ? 'block' : 'none';
     if (haGrp) haGrp.style.display = method === 'perspective' ? 'block' : 'none';
     if (hbGrp) hbGrp.style.display = method === 'perspective' ? 'block' : 'none';
+    // The vertical-reference (roll correction) tool only affects the scale
+    // calibrations — perspective mode handles roll exactly via the homography.
+    const vertBtn = document.getElementById('pt-vert-btn');
+    if (vertBtn) vertBtn.style.display = method === 'perspective' ? 'none' : '';
+    if (method === 'perspective') state.placingVertRef = false;
     // Tower-height method solves L and h from the image itself
     if (spanGrp) spanGrp.style.display = method === 'tower' ? 'none' : 'block';
     if (hGrp) hGrp.style.display = method === 'tower' ? 'none' : 'block';
