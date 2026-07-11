@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.10.2-beta';
+const APP_VERSION = '0.11.0-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -42,6 +42,11 @@ window.onload = function() {
   }
   // Project-first workflow: autosave hooks + open the project gate
   initProjectWorkflow();
+  // Offline-first PWA: register the service worker (https or localhost only)
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  }
   // Version badge, footer meta and "app updated" notice
   initVersionInfo();
 };

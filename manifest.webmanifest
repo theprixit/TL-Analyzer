@@ -1,0 +1,16 @@
+{
+  "name": "TL-SAG — Transmission Line Sag-Tension Analyzer",
+  "short_name": "TL-SAG",
+  "description": "Estimate overhead conductor tension from a span photograph or field measurements. Works fully offline.",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1e40af",
+  "background_color": "#f1f5f9",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

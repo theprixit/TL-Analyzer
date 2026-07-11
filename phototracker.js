@@ -11,7 +11,8 @@
   'use strict';
 
   const MAX_IMG_DIM = 3200;      // downscale huge photos for memory + save size
-  const HIT_RADIUS = 14;         // css px for grabbing an existing point
+  const COARSE = (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) || /[?&]touch=1/.test(location.search);
+  const HIT_RADIUS = COARSE ? 24 : 14; // css px for grabbing an existing point
   const MIN_TRACE_PTS = 5;
 
   const state = {
@@ -57,6 +58,14 @@
       // Give the browser a frame to settle the new container size.
       setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
     });
+
+    // Touch devices: navigation-first — one-finger drag pans, pinch zooms,
+    // and points are placed with the centre crosshair + Place button.
+    // The body class keys the touch CSS so JS and styles always agree.
+    if (COARSE) {
+      state.tool = 'pan';
+      document.body.classList.add('coarse-input');
+    }
 
     resizeCanvas();
     updateToolButtons();
@@ -369,7 +378,7 @@
   // ======================================================================
   function onPointerDown(e) {
     if (!canvas) return;
-    canvas.setPointerCapture(e.pointerId);
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic/odd pointers */ }
     const pos = eventCss(e);
     state.pointers.set(e.pointerId, pos);
 
@@ -391,6 +400,25 @@
     if (!state.img) return;
 
     if (state.tool === 'pan') {
+      // Touch: a tap landing on an existing point grabs it for adjustment
+      // (with the loupe); anywhere else pans the photo.
+      if (COARSE) {
+        const hitP = hitTest(pos);
+        if (hitP) {
+          const now = performance.now();
+          if (state.lastTap && now - state.lastTap.t < 350 &&
+              Math.hypot(pos.x - state.lastTap.x, pos.y - state.lastTap.y) < 24) {
+            state.lastTap = null;
+            state.pointers.delete(e.pointerId);
+            deleteHit(hitP);
+            return;
+          }
+          state.lastTap = { t: now, x: pos.x, y: pos.y };
+          state.dragging = hitP;
+          redraw();
+          return;
+        }
+      }
       state.pan = { start: pos, view: { tx: state.view.tx, ty: state.view.ty } };
       return;
     }
@@ -1144,6 +1172,17 @@
       drawText(LABELS[kind], { x: c.x + 12, y: c.y - 6 }, COLORS[kind]);
     }
 
+    // Centre crosshair for touch placement (pairs with the ＋ Place button)
+    if (COARSE && expectedNext()) {
+      const { w: cw2, h: ch2 } = cssSize();
+      drawCrosshair({ x: cw2 / 2, y: ch2 / 2 }, '#facc15');
+      ctx.beginPath();
+      ctx.arc(cw2 / 2, ch2 / 2, 22, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
     // Placement candidate + loupe
     const active = state.placing ? state.placing.pos : (state.dragging ? getDragPos(state.dragging) : null);
     if (active) {
@@ -1577,13 +1616,39 @@
     redraw();
   };
 
+  // Place the next point exactly at the centre crosshair (touch flow: pan
+  // and pinch the wire under the crosshair, then tap Place).
+  window.photoPlaceAtCrosshair = function () {
+    if (!state.img) return;
+    if (!expectedNext()) return;
+    const { w, h } = cssSize();
+    commitPoint(c2i({ x: w / 2, y: h / 2 }));
+    redraw();
+  };
+
+  function enterFsFallback() {
+    state.fsFallback = true;
+    container.classList.add('fs-fallback');
+    document.body.classList.add('fs-lock');
+    setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
+  }
+
+  function exitFsFallback() {
+    state.fsFallback = false;
+    container.classList.remove('fs-fallback');
+    document.body.classList.remove('fs-lock');
+    setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
+  }
+
   window.photoToggleFullscreen = function () {
     if (!container) return;
-    if (!document.fullscreenElement) {
-      if (container.requestFullscreen) container.requestFullscreen();
-      else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+    if (state.fsFallback) { exitFsFallback(); return; }
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    if (container.requestFullscreen) {
+      // iOS Safari lacks element fullscreen — fall back to a fixed overlay.
+      container.requestFullscreen().catch(enterFsFallback);
     } else {
-      document.exitFullscreen();
+      enterFsFallback();
     }
   };
 

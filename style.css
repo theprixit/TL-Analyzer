@@ -1383,3 +1383,79 @@ button.gate-action-card:hover { border-color: var(--success); transform: transla
 
 
 
+
+/* ==========================================================================
+   MOBILE RESPONSIVE PASS (v0.11) — compact chrome, scrollable charts
+   ========================================================================== */
+@media (max-width: 768px) {
+  body { padding: 0.5rem; }
+  .container { padding: 0 0.4rem; }
+  .panel { padding: 0.9rem; }
+
+  header { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+  .header-title h1 { font-size: 1.45rem; }
+  .header-title p { font-size: 0.8rem; }
+  .header-actions { gap: 0.4rem; }
+  .header-actions .btn { padding: 0.45rem 0.6rem; font-size: 0.78rem; }
+  #project-badge { max-width: 100%; font-size: 0.78rem; }
+
+  .panel h2 { font-size: 1.05rem; flex-wrap: wrap; }
+  .panel h2 span:last-child { font-size: 0.72rem !important; }
+
+  /* Charts keep legible text by scrolling horizontally instead of shrinking */
+  .chart-area { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-svg { min-width: 640px; }
+  .visualizer-area { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #svg-threepoint { min-width: 560px; }
+  .mc-cell { overflow-x: auto; }
+  .mc-cell svg { min-width: 480px; }
+
+  /* Tables scroll instead of clipping */
+  .analysis-grid > div { min-width: 0; }
+  #tp-analysis-panel table.report-table,
+  #temp-plot-wrap table.report-table { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* Photo workspace: fit the phone viewport; fullscreen is the power tool */
+  .canvas-workspace { height: 62vh !important; min-height: 340px; }
+
+  .gate-card { padding: 1.2rem; }
+  .update-notice { font-size: 0.8rem; }
+  .flagship-panel { margin-left: 0; margin-right: 0; }
+}
+
+@media (max-width: 480px) {
+  .header-title h1 { font-size: 1.25rem; }
+  .results-val { font-size: 1.4rem; }
+  .gate-brand h1 { font-size: 1.25rem; }
+}
+
+/* ==========================================================================
+   TOUCH ERGONOMICS (pointer: coarse) — crosshair placement, thumb toolbar
+   ========================================================================== */
+.coarse-only { display: none; }
+body.coarse-input .coarse-only { display: inline-flex; }
+body.coarse-input .fine-only { display: none !important; }
+body.coarse-input .canvas-toolbar {
+  top: auto;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 6px;
+  padding: 6px 8px;
+}
+body.coarse-input .ct-btn { min-height: 42px; font-size: 0.9rem; padding: 0.5rem 0.75rem; }
+.ct-btn.ct-primary { background: var(--success); color: #ffffff; font-weight: 700; }
+
+/* Pseudo-fullscreen fallback (iOS Safari has no element fullscreen API) */
+.canvas-workspace.fs-fallback {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  overscroll-behavior: none;
+}
+body.fs-lock { overflow: hidden; }

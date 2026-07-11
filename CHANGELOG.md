@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.11.0-beta — 2026-07-11
+
+**Phase 3: TL-SAG on your phone — installable, offline, touch-native.** No app store, no fees: open the live site once, *Add to Home Screen*, and it launches full-screen and works with no signal.
+
+- **PWA**: web app manifest + service worker (offline-first app shell with background refresh), app icons, iOS/Android install metas. A "📷 Camera" button captures span photos straight from the phone camera (EXIF intact).
+- **Mobile-responsive UI**: the desktop layout previously broke on phones (98px sideways overflow, unreadable 2px chart text, a photo canvas taller than the screen). Now: compact stacked header, charts keep legible text and scroll horizontally instead of shrinking, tables scroll, the photo canvas fits the viewport.
+- **Touch-native photo workspace** (the flagship flow, rethought for fingers): one finger pans, pinch zooms — native photo-viewer feel — and points are placed with a **centre crosshair + big "＋ Place" button** (steer the wire under the crosshair at any zoom; pixel-precise, no fat-finger error). Tapping an existing point still grabs it with the magnifier loupe; double-tap deletes. The toolbar docks to the bottom of the canvas with thumb-sized buttons.
+- **iPhone fullscreen fixed**: iOS Safari has no fullscreen API for page elements — the ⛶ button now falls back to an equivalent fixed overlay (in the installed app it is true fullscreen).
+- Install/backup guidance on the start screen (iOS can clear browser storage after weeks of disuse — Export what matters).
+
+Desktop behaviour is unchanged.
+
 ## v0.10.2-beta — 2026-07-11
 
 Whole-app QA sweep:

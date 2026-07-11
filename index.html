@@ -11,7 +11,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet Link -->
-  <link rel="stylesheet" href="style.css?v=0.10.2-beta">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1e40af">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TL-SAG">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css?v=0.11.0-beta">
 </head>
 <body>
 
@@ -61,6 +69,9 @@
           <button type="button" class="btn btn-outline" onclick="document.getElementById('project-file-input').click()">📥 Import project JSON…</button>
           <a href="explanations.html" target="_blank" class="gate-skip" style="text-decoration: underline;">How the physics works →</a>
           <button type="button" class="gate-skip" onclick="gateSkipProject()">Quick calculation without a project →</button>
+        </div>
+        <div style="margin-top: 0.7rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+          📱 On a phone: open in Safari/Chrome → <strong>Add to Home Screen</strong> for a full-screen, offline app. On iPhone, <strong>Export</strong> projects you care about — iOS may clear browser storage after weeks of disuse.
         </div>
       </div>
 
@@ -224,6 +235,10 @@
                 📁 Upload Span Photo
               </button>
               <input type="file" id="photo-tracker-uploader" style="display: none;" accept="image/*" onchange="loadPhotoTrackerImage(event)">
+              <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem; color: var(--primary); border-color: var(--primary);" onclick="document.getElementById('photo-camera-uploader').click()">
+                📷 Camera
+              </button>
+              <input type="file" id="photo-camera-uploader" style="display: none;" accept="image/*" capture="environment" onchange="loadPhotoTrackerImage(event)">
               <button type="button" class="btn btn-outline" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" onclick="resetPhotoTracker()">
                 🔄 Reset Points
               </button>
@@ -240,7 +255,8 @@
             <div class="canvas-workspace" style="height: 660px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block; position: relative;">
               <canvas id="photo-tracker-canvas"></canvas>
               <div class="canvas-toolbar" id="photo-toolbar">
-                <button type="button" id="pt-tool-place" class="ct-btn active" onclick="setPhotoTool('place')" title="Place / drag points (right-click or double-tap a point to delete)">🎯 Place</button>
+                <button type="button" id="pt-crosshair-place" class="ct-btn ct-primary coarse-only" onclick="photoPlaceAtCrosshair()" title="Place the next point at the centre crosshair">＋ Place</button>
+                <button type="button" id="pt-tool-place" class="ct-btn active fine-only" onclick="setPhotoTool('place')" title="Place / drag points (right-click or double-tap a point to delete)">🎯 Place</button>
                 <button type="button" id="pt-tool-pan" class="ct-btn" onclick="setPhotoTool('pan')" title="Drag to pan the photo">🖐 Pan</button>
                 <span class="ct-sep"></span>
                 <button type="button" id="pt-vert-btn" class="ct-btn" onclick="photoToggleVertRef()" title="Mark a plumb-vertical edge (e.g. tower centreline) to correct camera roll">📐 Vert Ref</button>
@@ -1558,8 +1574,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.10.2-beta"></script>
-  <script src="app.js?v=0.10.2-beta"></script>
-  <script src="phototracker.js?v=0.10.2-beta"></script>
+  <script src="engine.js?v=0.11.0-beta"></script>
+  <script src="app.js?v=0.11.0-beta"></script>
+  <script src="phototracker.js?v=0.11.0-beta"></script>
 </body>
 </html>
