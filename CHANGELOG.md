@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.4-beta — 2026-07-12
+
+**The photo tool on phones is now preview → editor** (the definitive fix for the scroll-hijack trap):
+
+- In the page, the photo canvas is a **passive preview** — it captures no touches, so page scrolling works normally over it, and portrait no longer shows a sprawling half-broken toolbar. One prominent **"✎ Edit photo"** button opens the editor.
+- **All editing happens in the fullscreen editor** (portrait or landscape): gestures navigate, crosshair + toolbar act, an on-canvas hint says what to aim at next, and a **✓ Done** button always returns you to the page. There is no state without an exit.
+- Desktop is completely unchanged (mouse tools, in-page editing).
+
 ## v0.11.3-beta — 2026-07-11
 
 Touch fixes from continued iPhone testing:

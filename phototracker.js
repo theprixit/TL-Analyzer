@@ -86,7 +86,7 @@
     });
     document.addEventListener('fullscreenchange', () => {
       // Give the browser a frame to settle the new container size.
-      setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
+      setTimeout(() => { resizeCanvas(); fitView(); syncFsUi(); }, 60);
     });
 
     // Touch devices: navigation-first — one-finger drag pans, pinch zooms,
@@ -296,6 +296,7 @@
       solve();
       updateInstructions();
       redraw();
+      if (typeof syncFsUi === 'function') syncFsUi();
     };
     img.src = src;
   }
@@ -418,6 +419,8 @@
 
   function onPointerDown(e) {
     if (!canvas) return;
+    // Touch preview mode: the page owns scrolling; editing only in fullscreen.
+    if (COARSE && !isFsActive()) return;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic/odd pointers */ }
     // Self-heal: a missed pointerup (iOS system gestures) leaves a stale
     // entry that makes every later touch look like a pinch — purge ghosts.
@@ -1274,8 +1277,17 @@
       }
     }
 
+    // On-canvas hint inside the touch editor (the page banner is not visible)
+    if (COARSE && isFsActive()) {
+      const { w: hw } = cssSize();
+      const nxt = expectedNext();
+      const hintMap = { A: 'Aim at TOWER A HOOK, press ＋ Place', B: 'Aim at TOWER B HOOK, press ＋ Place', baseA: 'Aim at TOWER A BASE (plumb below hook)', baseB: 'Aim at TOWER B BASE (plumb below hook)', P: 'Aim at the LOWEST conductor point', trace: 'Trace the wire: aim, press ＋ Place (' + state.trace.length + ' pts)', vert: 'Mark the vertical reference' };
+      const hint = state.selected ? 'Point selected — aim, then ✥ Move here' : (nxt ? hintMap[nxt] : 'All points placed — press ✓ Done');
+      drawText(hint, { x: hw / 2 - ctx.measureText(hint).width / 2, y: 24 }, '#ffffff');
+    }
+
     // Centre crosshair for touch placement/move (pairs with the toolbar buttons)
-    if (COARSE && (expectedNext() || state.selected)) {
+    if (COARSE && isFsActive() && (expectedNext() || state.selected)) {
       const { w: cw2, h: ch2 } = cssSize();
       drawCrosshair({ x: cw2 / 2, y: ch2 / 2 }, '#facc15');
       ctx.beginPath();
@@ -1782,13 +1794,29 @@
 
   function blockGesture(e) { e.preventDefault(); }
 
+  function isFsActive() {
+    return !!(state.fsFallback || document.fullscreenElement);
+  }
+
+  // Touch model: in the page the canvas is a passive PREVIEW (page scroll
+  // works normally over it); editing happens only in the fullscreen editor.
+  function syncFsUi() {
+    const fs = isFsActive();
+    if (container) container.classList.toggle('fs-active', fs);
+    if (canvas && COARSE) canvas.style.touchAction = fs ? 'none' : 'auto';
+    const editBtn = document.getElementById('pt-edit-fs');
+    if (editBtn) editBtn.style.display = (COARSE && state.img && !fs) ? '' : 'none';
+    redraw();
+  }
+
   function enterFsFallback() {
     document.addEventListener('gesturestart', blockGesture);
     document.addEventListener('gesturechange', blockGesture);
     state.fsFallback = true;
     container.classList.add('fs-fallback');
     document.body.classList.add('fs-lock');
-    setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
+    syncFsUi();
+    setTimeout(() => { resizeCanvas(); fitView(); syncFsUi(); }, 60);
   }
 
   function exitFsFallback() {
@@ -1797,7 +1825,8 @@
     state.fsFallback = false;
     container.classList.remove('fs-fallback');
     document.body.classList.remove('fs-lock');
-    setTimeout(() => { resizeCanvas(); fitView(); redraw(); }, 60);
+    syncFsUi();
+    setTimeout(() => { resizeCanvas(); fitView(); syncFsUi(); }, 60);
   }
 
   window.photoToggleFullscreen = function () {

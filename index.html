@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-title" content="TL-SAG">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=0.11.3-beta">
+  <link rel="stylesheet" href="style.css?v=0.11.4-beta">
 </head>
 <body>
 
@@ -254,6 +254,7 @@
           <div>
             <div class="canvas-workspace" style="height: 660px; max-height: none; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-input); display: block; position: relative;">
               <canvas id="photo-tracker-canvas"></canvas>
+              <button type="button" id="pt-edit-fs" class="pt-edit-btn" style="display: none;" onclick="photoToggleFullscreen()">✎ Edit photo</button>
               <div class="canvas-toolbar" id="photo-toolbar">
                 <button type="button" id="pt-crosshair-place" class="ct-btn ct-primary coarse-only" onclick="photoPlaceAtCrosshair()" title="Place the next point at the centre crosshair">＋ Place</button>
                 <button type="button" id="pt-move-btn" class="ct-btn ct-primary coarse-only" style="display: none;" onclick="photoMoveSelectedToCrosshair()" title="Move the selected point to the centre crosshair">✥ Move here</button>
@@ -266,7 +267,8 @@
                 <button type="button" class="ct-btn" onclick="photoClearPoints()" title="Remove ALL placed points and traces (asks first)">🗑 Clear</button>
                 <span class="ct-sep"></span>
                 <button type="button" class="ct-btn" onclick="photoFitView()" title="Fit photo to view">⤢ Fit</button>
-                <button type="button" class="ct-btn" onclick="photoToggleFullscreen()" title="Edit in fullscreen">⛶</button>
+                <button type="button" class="ct-btn fine-only" onclick="photoToggleFullscreen()" title="Edit in fullscreen">⛶</button>
+                <button type="button" id="pt-done-btn" class="ct-btn ct-primary coarse-only" onclick="photoToggleFullscreen()" title="Finish editing and return to the page">✓ Done</button>
               </div>
             </div>
           </div>
@@ -1577,8 +1579,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.11.3-beta"></script>
-  <script src="app.js?v=0.11.3-beta"></script>
-  <script src="phototracker.js?v=0.11.3-beta"></script>
+  <script src="engine.js?v=0.11.4-beta"></script>
+  <script src="app.js?v=0.11.4-beta"></script>
+  <script src="phototracker.js?v=0.11.4-beta"></script>
 </body>
 </html>

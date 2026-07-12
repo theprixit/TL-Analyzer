@@ -1459,6 +1459,35 @@ body.coarse-input .ct-btn { min-height: 42px; font-size: 0.9rem; padding: 0.5rem
 }
 body.fs-lock { overflow: hidden; }
 
+/* Touch: the in-page canvas is a scroll-friendly PREVIEW — no gesture
+   capture, no toolbar; one prominent button opens the fullscreen editor. */
+.pt-edit-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 6;
+  background: var(--success);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+body.coarse-input .canvas-toolbar { display: none; }
+body.coarse-input .canvas-workspace.fs-active .canvas-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: calc(100% - 16px);
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Fullscreen editing on phones: keep the toolbar clear of the home-bar
    inset and on ONE row (landscape height is precious) */
 body.coarse-input .canvas-workspace.fs-fallback .canvas-toolbar,
