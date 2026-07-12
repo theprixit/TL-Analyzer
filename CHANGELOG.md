@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.10-beta — 2026-07-12
+
+**Updates now announce themselves** (fixes "my installed app didn't update"):
+
+- The installed app checks for a new version on every launch **and every return to the foreground** (iOS resumes the app from memory instead of relaunching it, so updates used to go unnoticed until a full kill-and-reopen).
+- When an update finishes downloading in the background, a **"🔄 New version ready — Refresh now"** toast appears; one tap loads it. Dismissing it is fine too — the update loads on the next launch.
+
 ## v0.11.9-beta — 2026-07-12
 
 **Conductor database: 5 → 23 standard conductors** (LT distribution to 765 kV / ±800 kV HVDC), every value cross-verified against at least two sources — the IS 398 tables themselves (Parts 1, 2, 4) plus utility purchase specs (TSTRANSCO, CSPDCL, WBSEDCL, MSEDCL) and manufacturer datasheets:

@@ -1389,6 +1389,42 @@ button.gate-action-card:hover { border-color: var(--success); transform: transla
   line-height: 1.5;
 }
 
+/* New-version-ready toast (bottom bar, above safe area) */
+#update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: calc(100vw - 24px);
+  padding: 0.7rem 1rem;
+  background: var(--text-primary, #0f172a);
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 0.9rem;
+}
+#update-toast button {
+  background: var(--success);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+#update-toast .ut-dismiss {
+  background: transparent;
+  padding: 0.45rem 0.3rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
 .gate-skip {
   background: none;
   border: none;

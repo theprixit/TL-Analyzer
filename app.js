@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.11.9-beta';
+const APP_VERSION = '0.11.10-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -82,7 +82,24 @@ window.onload = function() {
   // Offline-first PWA: register the service worker (https or localhost only)
   if ('serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Installed PWAs (especially iOS) resume from memory instead of
+      // re-navigating, so updates go unnoticed — check explicitly on every
+      // launch and whenever the app returns to the foreground.
+      reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+      // When a new version finishes installing, offer a one-tap refresh.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          // controller null = very first install (page not SW-controlled yet) — no toast.
+          if (nw.state === 'activated' && navigator.serviceWorker.controller) showUpdateToast();
+        });
+      });
+    }).catch(err => console.warn('SW registration failed:', err));
   }
   // Version badge, footer meta and "app updated" notice
   initVersionInfo();
@@ -181,6 +198,19 @@ function initVersionInfo() {
     }
     localStorage.setItem('tlsag_seen_version', APP_VERSION);
   } catch (e) { /* storage unavailable — skip the notice */ }
+}
+
+// New-version-ready toast: shown when the service worker has finished
+// downloading an update in the background; one tap loads it.
+function showUpdateToast() {
+  if (document.getElementById('update-toast')) return;
+  const toast = document.createElement('div');
+  toast.id = 'update-toast';
+  toast.innerHTML =
+    `<span>🔄 A new version of TL-SAG is ready.</span>` +
+    `<button type="button" onclick="location.reload()">Refresh now</button>` +
+    `<button type="button" class="ut-dismiss" onclick="this.parentElement.remove()" title="Later — it loads on the next launch">✕</button>`;
+  document.body.appendChild(toast);
 }
 
 // Collapsible Section Toggle
