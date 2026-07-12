@@ -3,21 +3,58 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.11.8-beta';
+const APP_VERSION = '0.11.9-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
-// Standard ACSR Conductor Database (IS 398 Part-II Reference Specs)
-// area: total cross-section mm² | E: typical FINAL modulus GPa |
-// alpha: coefficient of thermal expansion /°C.
-// E and alpha are typical published values — verify against the actual
-// conductor datasheet for critical temperature studies.
+// Standard Conductor Database — IS 398 reference values, LT distribution
+// up to 765 kV / ±800 kV HVDC.
+//   w: weight N/m (= mass × 9.80665) | mass: kg/m | uts: rated breaking
+//   load N | area: TOTAL cross-section mm² (Al + steel) | E: final modulus
+//   GPa | alpha: /°C | str: stranding | volt: typical Indian usage |
+//   cat: dropdown group.
+// Sources (each value cross-checked against ≥2): IS 398 Part 1:1996 /
+// Part 2:1996 / Part 4:1994 tables & annexes; utility purchase specs
+// (TSTRANSCO, CSPDCL, WBSEDCL, MSEDCL); manufacturer datasheets (Apar,
+// Sterlite, Dicabs, Prysmian, Midal). UTS figures are the IS calculated/
+// minimum breaking loads — some manufacturer GTPs quote slightly higher
+// BS/ASTM ratings. Bersimis (CSA) and Lapwing (ASTM) are not IS 398 sizes
+// but are POWERGRID practice at 765 kV / ±800 kV HVDC.
+const CAT_ACSR_DIST = 'ACSR — Distribution (LT–33 kV)';
+const CAT_ACSR_TX = 'ACSR — Transmission (33–220 kV)';
+const CAT_ACSR_EHV = 'ACSR — EHV / UHV (400–765 kV & HVDC)';
+const CAT_AAC = 'AAC — LT / 11 kV Distribution';
+const CAT_AAAC = 'AAAC — 11–33 kV Distribution';
 const conductorDatabase = {
-  "dog": { name: "ACSR Dog", w: 3.865, mass: 0.394, uts: 32700, area: 118.5, E: 73.5, alpha: 19.8e-6 },
-  "wolf": { name: "ACSR Wolf", w: 7.122, mass: 0.726, uts: 56400, area: 194.9, E: 79.0, alpha: 17.8e-6 },
-  "panther": { name: "ACSR Panther", w: 9.555, mass: 0.974, uts: 79700, area: 261.5, E: 79.0, alpha: 17.8e-6 },
-  "zebra": { name: "ACSR Zebra", w: 15.912, mass: 1.622, uts: 130300, area: 484.5, E: 68.5, alpha: 19.3e-6 },
-  "moose": { name: "ACSR Moose", w: 19.600, mass: 1.998, uts: 161200, area: 597.0, E: 68.5, alpha: 19.3e-6 },
+  // ---- ACSR distribution (IS 398 Part 2) ----
+  "squirrel": { name: "ACSR Squirrel", str: "6/1 × 2.11", w: 0.834, mass: 0.085, uts: 7610, area: 24.48, E: 79, alpha: 19.1e-6, volt: "LT & 11 kV", cat: CAT_ACSR_DIST },
+  "weasel":   { name: "ACSR Weasel", str: "6/1 × 2.59", w: 1.255, mass: 0.128, uts: 11120, area: 36.88, E: 79, alpha: 19.1e-6, volt: "LT & 11 kV", cat: CAT_ACSR_DIST },
+  "rabbit":   { name: "ACSR Rabbit", str: "6/1 × 3.35", w: 2.099, mass: 0.214, uts: 18250, area: 61.70, E: 79, alpha: 19.1e-6, volt: "11 & 33 kV", cat: CAT_ACSR_DIST },
+  "raccoon":  { name: "ACSR Raccoon", str: "6/1 × 4.09", w: 3.128, mass: 0.319, uts: 26910, area: 91.97, E: 79, alpha: 19.1e-6, volt: "11 & 33 kV", cat: CAT_ACSR_DIST },
+  // ---- ACSR transmission (IS 398 Part 2) ----
+  "dog":     { name: "ACSR Dog", str: "6/4.72 + 7/1.57", w: 3.864, mass: 0.394, uts: 32410, area: 118.5, E: 75, alpha: 19.8e-6, volt: "33 & 66 kV", cat: CAT_ACSR_TX },
+  "wolf":    { name: "ACSR Wolf", str: "30/7 × 2.59", w: 7.120, mass: 0.726, uts: 67340, area: 194.9, E: 80, alpha: 17.8e-6, volt: "66 & 132 kV", cat: CAT_ACSR_TX },
+  "panther": { name: "ACSR Panther", str: "30/7 × 3.00", w: 9.552, mass: 0.974, uts: 89670, area: 261.5, E: 80, alpha: 17.8e-6, volt: "132 kV (also 66/220)", cat: CAT_ACSR_TX },
+  "kundah":  { name: "ACSR Kundah", str: "42/3.50 + 7/1.96", w: 12.562, mass: 1.281, uts: 88790, area: 425.2, E: 62, alpha: 21.5e-6, volt: "220/230 kV (southern grid)", cat: CAT_ACSR_TX },
+  "zebra":   { name: "ACSR Zebra", str: "54/7 × 3.18", w: 15.897, mass: 1.621, uts: 130320, area: 484.5, E: 69, alpha: 19.3e-6, volt: "220 kV; 400 kV quad", cat: CAT_ACSR_TX },
+  // ---- ACSR EHV / UHV ----
+  "moose":    { name: "ACSR Moose", str: "54/7 × 3.53", w: 19.594, mass: 1.998, uts: 159600, area: 597.0, E: 69, alpha: 19.3e-6, volt: "400 kV twin/quad", cat: CAT_ACSR_EHV },
+  "bersimis": { name: "ACSR Bersimis", str: "42/4.57 + 7/2.54", w: 21.447, mass: 2.187, uts: 154000, area: 724.4, E: 62, alpha: 21.5e-6, volt: "765 kV quad (POWERGRID)", cat: CAT_ACSR_EHV },
+  "lapwing":  { name: "ACSR Lapwing", str: "45/4.78 + 7/3.18", w: 26.125, mass: 2.664, uts: 187800, area: 861.6, E: 64, alpha: 20.7e-6, volt: "±800 kV HVDC hexa", cat: CAT_ACSR_EHV },
+  // ---- AAC (IS 398 Part 1 — designated by area; insect names are BS 215 usage) ----
+  "gnat":   { name: "AAC 25 mm² (Gnat)", str: "7 × 2.21", w: 0.726, mass: 0.074, uts: 4520, area: 26.85, E: 59, alpha: 23.0e-6, volt: "LT", cat: CAT_AAC },
+  "ant":    { name: "AAC 50 mm² (Ant)", str: "7 × 3.10", w: 1.422, mass: 0.145, uts: 8250, area: 52.83, E: 59, alpha: 23.0e-6, volt: "LT & 11 kV", cat: CAT_AAC },
+  "wasp":   { name: "AAC 100 mm² (Wasp)", str: "7 × 4.39", w: 2.844, mass: 0.290, uts: 15960, area: 106.0, E: 59, alpha: 23.0e-6, volt: "LT & 11 kV", cat: CAT_AAC },
+  "spider": { name: "AAC 240 mm² (Spider)", str: "19 × 3.99", w: 6.414, mass: 0.654, uts: 35740, area: 237.6, E: 60, alpha: 23.0e-6, volt: "11 kV urban feeders", cat: CAT_AAC },
+  // ---- AAAC (IS 398 Part 4) ----
+  "aaac22":  { name: "AAAC 22 mm²", str: "7 × 2.00", w: 0.590, mass: 0.0602, uts: 6450, area: 21.99, E: 62, alpha: 23.0e-6, volt: "LT & 11 kV rural", cat: CAT_AAAC },
+  "aaac34":  { name: "AAAC 34 mm²", str: "7 × 2.50", w: 0.922, mass: 0.094, uts: 10110, area: 34.36, E: 62, alpha: 23.0e-6, volt: "11 kV rural", cat: CAT_AAAC },
+  "aaac55":  { name: "AAAC 55 mm²", str: "7 × 3.15", w: 1.463, mass: 0.1492, uts: 16030, area: 54.55, E: 62, alpha: 23.0e-6, volt: "11 kV (most common)", cat: CAT_AAAC },
+  "aaac80":  { name: "AAAC 80 mm²", str: "7 × 3.81", w: 2.140, mass: 0.2183, uts: 23410, area: 79.81, E: 62, alpha: 23.0e-6, volt: "11–22 kV", cat: CAT_AAAC },
+  "aaac100": { name: "AAAC 100 mm²", str: "7 × 4.26", w: 2.676, mass: 0.2729, uts: 29260, area: 99.77, E: 62, alpha: 23.0e-6, volt: "11/22/33 kV", cat: CAT_AAAC },
+  "aaac148": { name: "AAAC 148 mm²", str: "19 × 3.15", w: 3.990, mass: 0.4069, uts: 43500, area: 148.1, E: 60, alpha: 23.0e-6, volt: "33 kV", cat: CAT_AAAC },
+  "aaac232": { name: "AAAC 232 mm²", str: "19 × 3.94", w: 6.244, mass: 0.6367, uts: 68050, area: 231.7, E: 60, alpha: 23.0e-6, volt: "33 kV feeders", cat: CAT_AAAC },
+  // ---- Manual entry ----
   "custom": { name: "Custom Conductor", w: 0.0, mass: 0.0, uts: 0.0 }
 };
 
@@ -179,20 +216,35 @@ function calculateGpsHookElev(targetId) {
   }
 }
 
-// Populate Dropdown Menus
+// Populate Dropdown Menus — grouped by conductor family / voltage class
 function populateConductorSelectors() {
   const tpSelect = document.getElementById('tp-conductor');
   if (!tpSelect) return;
-  
+
   // Clear options
   tpSelect.innerHTML = "";
 
+  const groups = new Map(); // insertion order follows the database
   for (const [key, value] of Object.entries(conductorDatabase)) {
-    const opt1 = document.createElement('option');
-    opt1.value = key;
-    opt1.text = value.name + (key !== 'custom' ? ` (w: ${value.w} N/m, UTS: ${(value.uts/1000).toFixed(1)} kN)` : '');
-    tpSelect.appendChild(opt1);
+    if (key === 'custom') continue;
+    const cat = value.cat || 'Other';
+    if (!groups.has(cat)) {
+      const og = document.createElement('optgroup');
+      og.label = cat;
+      groups.set(cat, og);
+      tpSelect.appendChild(og);
+    }
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.text = `${value.name} ${value.str || ''} — ${(value.uts / 1000).toFixed(1)} kN`;
+    opt.title = `${value.volt || ''} · w ${value.w} N/m · ${value.area} mm²`;
+    groups.get(cat).appendChild(opt);
   }
+
+  const optCustom = document.createElement('option');
+  optCustom.value = 'custom';
+  optCustom.text = 'Custom Conductor (enter your own values)';
+  tpSelect.appendChild(optCustom);
 
   // Pre-select Zebra as default primary conductor
   tpSelect.value = "zebra";

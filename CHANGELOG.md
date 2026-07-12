@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.11.9-beta — 2026-07-12
+
+**Conductor database: 5 → 23 standard conductors** (LT distribution to 765 kV / ±800 kV HVDC), every value cross-verified against at least two sources — the IS 398 tables themselves (Parts 1, 2, 4) plus utility purchase specs (TSTRANSCO, CSPDCL, WBSEDCL, MSEDCL) and manufacturer datasheets:
+
+- **ACSR distribution**: Squirrel, Weasel, Rabbit, Raccoon
+- **ACSR transmission**: Dog, Wolf, Panther, Kundah, Zebra
+- **ACSR EHV/UHV**: Moose (400 kV), Bersimis (765 kV quad, POWERGRID), Lapwing (±800 kV HVDC hexa)
+- **AAC**: 25/50/100/240 mm² (Gnat, Ant, Wasp, Spider)
+- **AAAC**: 22–232 mm² (the 11–33 kV DISCOM range)
+- The dropdown is now grouped by family and voltage class, with stranding and UTS in each label.
+
+⚠️ **Corrections to existing entries** (results for saved projects using these conductors will change — the new values are the correct ones):
+
+- **ACSR Wolf UTS: 56.4 → 67.34 kN** and **ACSR Panther UTS: 79.7 → 89.67 kN** — the old values were wrong (no standard supports them); corrected per IS 398 (Part 2) Table 3, confirmed by WBSEDCL/CSPDCL/TSTRANSCO specifications. Safety-margin (%UTS) verdicts for these conductors were previously too pessimistic.
+- Dog UTS 32.7 → 32.41 kN, Moose UTS 161.2 → 159.60 kN, Zebra mass 1622 → 1621 kg/km — aligned to the IS 398 values (some manufacturer sheets quote the slightly higher BS/ASTM ratings).
+- E/alpha refreshed per IS 398 annex stranding classes.
+
 ## v0.11.8-beta — 2026-07-12
 
 - **Anonymous visit counting** via GoatCounter (owner statistics only — nothing visible on the page): counts unique visitors, no cookies, no personal data, and none of the engineering data, which never leaves the device. Declared openly in the page footer. localhost visits are ignored, so development never skews the numbers.
