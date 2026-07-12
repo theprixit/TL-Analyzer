@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.6-beta — 2026-07-12
+
+- **iOS Home Screen icon cache busted**: iOS caches the Home Screen icon by its URL, so even after v0.11.5 the installed web-clip could keep the old artwork (the Add-to-Home-Screen preview showed the new one, the Home Screen kept the old). The icon file is renamed (`apple-touch-icon-v2.png`), which forces iOS to fetch it fresh. Remove the old Home Screen icon and add again.
+
 ## v0.11.5-beta — 2026-07-12
 
 **App icon redesigned** (the one on your browser tab and phone Home Screen):

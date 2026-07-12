@@ -2,7 +2,7 @@
  * RELEASE CHECKLIST: bump SW_VERSION together with APP_VERSION and the
  * ?v= asset tags in index.html — the cache name derives from it.
  */
-const SW_VERSION = '0.11.5-beta';
+const SW_VERSION = '0.11.6-beta';
 const CACHE_NAME = 'tlsag-' + SW_VERSION;
 const FONT_CACHE = 'tlsag-fonts';
 
@@ -17,7 +17,7 @@ const PRECACHE = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png',
+  './icons/apple-touch-icon-v2.png',
   './explanations.html'
 ];
 
