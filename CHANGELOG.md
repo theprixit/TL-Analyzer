@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.5-beta — 2026-07-12
+
+**App icon redesigned** (the one on your browser tab and phone Home Screen):
+
+- The conductor now **sags** between the towers (the old icon arched upward — the one curve a sag analyzer must not draw), with the amber lowest-point marker from the measurement workflow.
+- The iOS Home Screen icon is now a full-bleed opaque square — iOS rounds the corners itself; the old transparent corners rendered black on the Home Screen.
+- To see the new icon on an already-installed app: remove it from the Home Screen and Add to Home Screen again (iOS snapshots the icon at install time).
+
 ## v0.11.4-beta — 2026-07-12
 
 **The photo tool on phones is now preview → editor** (the definitive fix for the scroll-hijack trap):
