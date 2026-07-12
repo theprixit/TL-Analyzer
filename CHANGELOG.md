@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.7-beta — 2026-07-12
+
+**One-tap app install** — ready for the wider mobile beta:
+
+- The landing gate now shows a green **📲 Install as app** banner (plus an Install button in the header). On Android and desktop Chrome it opens the browser's native install dialog directly; on iPhone/iPad — where Apple provides no install API — it shows the exact two-step instructions (Share ⬆️ → Add to Home Screen).
+- The banner appears only when installation is actually possible and disappears once the app is installed (or when already running as the installed app).
+
 ## v0.11.6-beta — 2026-07-12
 
 - **iOS Home Screen icon cache busted**: iOS caches the Home Screen icon by its URL, so even after v0.11.5 the installed web-clip could keep the old artwork (the Add-to-Home-Screen preview showed the new one, the Home Screen kept the old). The icon file is renamed (`apple-touch-icon-v2.png`), which forces iOS to fetch it fresh. Remove the old Home Screen icon and add again.

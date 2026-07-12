@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-title" content="TL-SAG">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-v2.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=0.11.6-beta">
+  <link rel="stylesheet" href="style.css?v=0.11.7-beta">
 </head>
 <body>
 
@@ -70,8 +70,15 @@
           <a href="explanations.html" target="_blank" class="gate-skip" style="text-decoration: underline;">How the physics works →</a>
           <button type="button" class="gate-skip" onclick="gateSkipProject()">Quick calculation without a project →</button>
         </div>
+        <div id="gate-install" style="display: none;">
+          <button type="button" id="gate-install-btn" onclick="installApp()">📲 Install as app</button>
+          <span>Full-screen, works offline, opens straight from your Home Screen — free, ~2 MB.</span>
+          <div id="gate-install-ios" style="display: none;">
+            On iPhone/iPad: tap the <strong>Share ⬆️</strong> button in Safari's toolbar (the square with the arrow), scroll down and choose <strong>➕ Add to Home Screen</strong>, then <strong>Add</strong>.
+          </div>
+        </div>
         <div style="margin-top: 0.7rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
-          📱 On a phone: open in Safari/Chrome → <strong>Add to Home Screen</strong> for a full-screen, offline app. On iPhone, <strong>Export</strong> projects you care about — iOS may clear browser storage after weeks of disuse.
+          On iPhone, <strong>Export</strong> projects you care about — iOS may clear browser storage after weeks of disuse.
         </div>
       </div>
 
@@ -115,6 +122,7 @@
         <span id="project-badge" title="Active project">📁 <span id="project-name-display">No project</span></span>
         <button type="button" id="project-save-btn" class="btn btn-outline" onclick="saveCurrentProject(true)" title="Save this project on this device (also auto-saves as you work)">💾 Save</button>
         <button type="button" class="btn btn-outline" onclick="openProjectGate()" title="Create, switch, resume or delete projects">📂 Projects</button>
+        <button type="button" id="header-install-btn" class="btn btn-outline" style="display: none;" onclick="installApp()" title="Install TL-SAG as an app — full-screen, works offline">📲 Install</button>
         <button type="button" class="btn btn-outline" onclick="exportProjectJSON()" title="Export this project to a local JSON file (backup / share)">📤 Export</button>
         <input type="file" id="project-file-input" style="display: none;" accept=".json" onchange="importProjectJSON(event)">
         <button class="btn btn-success" onclick="printEngineeringReport()">Print Engineering Report</button>
@@ -1579,8 +1587,8 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.11.6-beta"></script>
-  <script src="app.js?v=0.11.6-beta"></script>
-  <script src="phototracker.js?v=0.11.6-beta"></script>
+  <script src="engine.js?v=0.11.7-beta"></script>
+  <script src="app.js?v=0.11.7-beta"></script>
+  <script src="phototracker.js?v=0.11.7-beta"></script>
 </body>
 </html>

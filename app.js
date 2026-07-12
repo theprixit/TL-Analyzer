@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.11.6-beta';
+const APP_VERSION = '0.11.7-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -49,7 +49,68 @@ window.onload = function() {
   }
   // Version badge, footer meta and "app updated" notice
   initVersionInfo();
+  // Install-as-app UI (Android/Chrome native prompt; iOS instruction sheet)
+  updateInstallUi();
 };
+
+// ==========================================================================
+// INSTALL AS APP (PWA)
+// Android/desktop Chrome fire `beforeinstallprompt` — stash it and offer a
+// real install button. iPhone Safari has no API, so the button reveals the
+// two-step Share → Add to Home Screen instructions instead. Everything
+// hides when already running as an installed app.
+// ==========================================================================
+let deferredInstallPrompt = null;
+
+function isStandaloneApp() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
+function isIosBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS masquerades as Mac
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updateInstallUi();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  updateInstallUi();
+});
+
+function updateInstallUi() {
+  const installable = !isStandaloneApp() && (!!deferredInstallPrompt || isIosBrowser());
+  const banner = document.getElementById('gate-install');
+  if (banner) banner.style.display = installable ? '' : 'none';
+  const headerBtn = document.getElementById('header-install-btn');
+  if (headerBtn) headerBtn.style.display = installable ? '' : 'none';
+}
+
+function installApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      deferredInstallPrompt = null;
+      updateInstallUi();
+    });
+    return;
+  }
+  // iOS: no install API — show the instructions on the gate (open it if needed)
+  const gate = document.getElementById('project-gate');
+  if (gate && gate.style.display === 'none' && typeof openProjectGate === 'function') {
+    openProjectGate();
+  }
+  const steps = document.getElementById('gate-install-ios');
+  if (steps) {
+    steps.style.display = '';
+    steps.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
 
 // ==========================================================================
 // APP VERSION DISPLAY & UPDATE NOTICE
