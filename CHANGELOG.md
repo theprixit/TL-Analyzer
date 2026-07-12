@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.8-beta — 2026-07-12
+
+- **Anonymous visit counting** via GoatCounter (owner statistics only — nothing visible on the page): counts unique visitors, no cookies, no personal data, and none of the engineering data, which never leaves the device. Declared openly in the page footer. localhost visits are ignored, so development never skews the numbers.
+
 ## v0.11.7-beta — 2026-07-12
 
 **One-tap app install** — ready for the wider mobile beta:

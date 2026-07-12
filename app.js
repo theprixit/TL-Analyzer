@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.11.7-beta';
+const APP_VERSION = '0.11.8-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
