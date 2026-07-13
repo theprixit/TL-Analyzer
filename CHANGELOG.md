@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.11-beta — 2026-07-13
+
+**"⚠ Save failed" fixed — project storage moved to IndexedDB:**
+
+- Projects were stored in localStorage, whose ~5 MB quota can't hold more than one or two photo-bearing projects — the second photo project made every save fail. Storage now uses IndexedDB, which comfortably holds hundreds of megabytes.
+- Existing saved projects migrate over automatically on first launch (nothing to do, nothing lost), and the old storage is freed.
+- Bonus reliability: the app now also saves the moment it goes to the background (mobile browsers often kill background tabs without warning — previously that could lose the last edits).
+
 ## v0.11.10-beta — 2026-07-12
 
 **Updates now announce themselves** (fixes "my installed app didn't update"):

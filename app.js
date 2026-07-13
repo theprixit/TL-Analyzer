@@ -3,7 +3,7 @@
 // Single source of truth for the app version — shown in the header/footer,
 // stamped into printed reports and project JSON exports.
 // Bump on every user-visible release and add an entry to CHANGELOG.md.
-const APP_VERSION = '0.11.10-beta';
+const APP_VERSION = '0.11.11-beta';
 const APP_VERSION_DATE = '2026-07-09';
 const APP_REPO_URL = 'https://github.com/theprixit/TL-Analyzer';
 
@@ -1863,18 +1863,91 @@ function applyProjectData(data) {
 // 9. PROJECT WORKFLOW — named project context with device autosave
 // ==========================================================================
 let currentProject = { id: null, name: "" };
-const PROJECTS_LS_KEY = 'tlsag_projects_v1';
+const PROJECTS_LS_KEY = 'tlsag_projects_v1'; // legacy localStorage key (pre-v0.11.11) + fallback
 
-function listProjects() {
-  try { return JSON.parse(localStorage.getItem(PROJECTS_LS_KEY)) || {}; }
-  catch (e) { return {}; }
+// --- Project storage: IndexedDB with an in-memory cache -------------------
+// localStorage's ~5 MB quota cannot hold more than one or two photo-bearing
+// projects ("⚠ Save failed"). IndexedDB has no such practical limit. The
+// cache keeps every existing caller synchronous; writes go to IDB in the
+// background. Legacy localStorage projects migrate over once, then the old
+// key is removed to free the quota.
+let projectsCache = {};
+let idbOk = false;
+
+function openProjectsDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('tlsag', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
 
+function idbReadProjects() {
+  return openProjectsDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readonly');
+    const get = tx.objectStore('kv').get(PROJECTS_LS_KEY);
+    get.onsuccess = () => { db.close(); resolve(get.result || null); };
+    get.onerror = () => { db.close(); reject(get.error); };
+  }));
+}
+
+function idbWriteProjects(map) {
+  return openProjectsDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(map, PROJECTS_LS_KEY);
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
+  }));
+}
+
+function readLegacyLocalStorage() {
+  try { return JSON.parse(localStorage.getItem(PROJECTS_LS_KEY)) || null; }
+  catch (e) { return null; }
+}
+
+// Loads the cache (and migrates legacy localStorage projects) before the
+// project gate renders. Falls back to localStorage if IDB is unavailable.
+function initProjectStorage() {
+  if (!('indexedDB' in window)) {
+    projectsCache = readLegacyLocalStorage() || {};
+    return Promise.resolve();
+  }
+  return idbReadProjects().then(idbMap => {
+    idbOk = true;
+    const legacy = readLegacyLocalStorage();
+    // Merge: IDB wins per project id; legacy fills anything not yet migrated.
+    projectsCache = Object.assign({}, legacy || {}, idbMap || {});
+    if (legacy) {
+      return idbWriteProjects(projectsCache).then(() => {
+        localStorage.removeItem(PROJECTS_LS_KEY); // free the old quota
+      });
+    }
+  }).catch(e => {
+    console.warn('IndexedDB unavailable, falling back to localStorage:', e);
+    idbOk = false;
+    projectsCache = readLegacyLocalStorage() || {};
+  });
+}
+
+function listProjects() {
+  return projectsCache;
+}
+
+// Returns a Promise<boolean> — the cache updates instantly (all reads stay
+// consistent); the promise reports whether the durable write landed.
 function persistProjects(map) {
-  try { localStorage.setItem(PROJECTS_LS_KEY, JSON.stringify(map)); return true; }
+  projectsCache = map;
+  if (idbOk) {
+    return idbWriteProjects(map).then(() => true).catch(e => {
+      console.warn('Project save failed (IndexedDB write error):', e);
+      return false;
+    });
+  }
+  try { localStorage.setItem(PROJECTS_LS_KEY, JSON.stringify(map)); return Promise.resolve(true); }
   catch (e) {
     console.warn('Project save failed (browser storage quota exceeded?):', e);
-    return false;
+    return Promise.resolve(false);
   }
 }
 
@@ -1895,13 +1968,15 @@ function saveCurrentProject(notify) {
     savedAt: new Date().toISOString(),
     data: collectProjectData()
   };
-  const ok = persistProjects(map);
+  const done = persistProjects(map);
   if (notify) {
     const btn = document.getElementById('project-save-btn');
     if (btn) {
       const original = '💾 Save';
-      btn.innerText = ok ? '✓ Saved' : '⚠ Save failed';
-      setTimeout(() => { btn.innerText = original; }, 1600);
+      done.then(ok => {
+        btn.innerText = ok ? '✓ Saved' : '⚠ Save failed';
+        setTimeout(() => { btn.innerText = original; }, 1600);
+      });
     }
   }
 }
@@ -1919,8 +1994,21 @@ function initProjectWorkflow() {
   window.addEventListener('beforeunload', () => {
     if (currentProject.id) saveCurrentProject(false);
   });
+  // Mobile browsers kill background tabs without beforeunload — flush the
+  // pending autosave the moment the app goes to the background instead.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && currentProject.id) {
+      clearTimeout(autosaveTimer);
+      saveCurrentProject(false);
+    }
+  });
   updateProjectBadge();
-  openProjectGate();
+  // Project list loads from IndexedDB (migrating any legacy localStorage
+  // projects) before the gate renders it.
+  initProjectStorage().then(() => {
+    updateProjectBadge();
+    openProjectGate();
+  });
 }
 
 function openProjectGate() {
