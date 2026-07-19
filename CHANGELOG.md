@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.12.1-beta — 2026-07-19
+
+**Second conductor promoted to a full independent analysis** (beta feedback):
+
+- Conductor ② now has its own guided sequence — **Hook A₂ → Hook B₂ → trace** — so the catenary is anchored at its attachments instead of floating on trace points alone. Much more trustworthy physics on sparse traces.
+- Full mirror of the main analysis: tension T₂ with **90% Monte-Carlo band**, %UTS, max sag D₂ (own chord) with on-image indicator, mid-span sag, fit-quality verdict, hook-deviation warning.
+- Full annotations: Hook A₂/B₂ labels, dashed chord, dashed pink catenary, D₂ sag tie-line — on canvas and in the printed report.
+- **Min phase separation now also carries a 90% uncertainty band** (both conductors re-fitted per Monte-Carlo run).
+- Editing isolation: while editing conductor ②, conductor ①'s layer fades to 30% and its points become unselectable (and vice versa) — no more accidental grabs of the wrong phase.
+
 ## v0.12.0-beta — 2026-07-19
 
 **Second conductor + phase clearance check** (field-unit request):

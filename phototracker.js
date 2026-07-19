@@ -23,6 +23,7 @@
     points: { A: null, B: null, P: null, baseA: null, baseB: null }, // image px
     trace: [],                   // image px
     trace2: [],                  // second conductor (phase-clearance check)
+    points2: { A: null, B: null }, // second conductor hook attachments
     vertRef: [],                 // 0..2 image px
     placingVertRef: false,
     editCond: 1,                 // 1 = main conductor, 2 = second conductor
@@ -289,6 +290,7 @@
         state.points = Object.assign({ A: null, B: null, P: null, baseA: null, baseB: null }, d.points || {});
         state.trace = d.trace || [];
         state.trace2 = d.trace2 || [];
+        state.points2 = Object.assign({ A: null, B: null }, d.points2 || {});
         state.vertRef = d.vertRef || [];
         state.mode = d.mode || state.mode;
         syncModeSelect();
@@ -312,6 +314,7 @@
     state.points = { A: null, B: null, P: null, baseA: null, baseB: null };
     state.trace = [];
     state.trace2 = [];
+    state.points2 = { A: null, B: null };
     state.editCond = 1;
     state.vertRef = [];
     state.placingVertRef = false;
@@ -331,7 +334,11 @@
   // What does the next tap place?
   function expectedNext() {
     if (state.placingVertRef && state.vertRef.length < 2) return 'vert';
-    if (state.editCond === 2) return 'trace2';
+    if (state.editCond === 2) {
+      if (!state.points2.A) return 'A2';
+      if (!state.points2.B) return 'B2';
+      return 'trace2';
+    }
     if (!state.points.A) return 'A';
     if (!state.points.B) return 'B';
     const cm = calMethod();
@@ -351,6 +358,10 @@
       state.trace.push(ip);
     } else if (next === 'trace2') {
       state.trace2.push(ip);
+    } else if (next === 'A2') {
+      state.points2.A = ip;
+    } else if (next === 'B2') {
+      state.points2.B = ip;
     } else {
       state.points[next] = ip;
     }
@@ -364,6 +375,16 @@
       const c = i2c(p);
       return Math.hypot(c.x - cssPos.x, c.y - cssPos.y) <= HIT_RADIUS;
     };
+    // Only the ACTIVE conductor's points are selectable — the other layer
+    // is faded in the drawing and inert to clicks.
+    if (state.editCond === 2) {
+      if (tryPt(state.points2.A)) return { kind: 'A2', index: -1 };
+      if (tryPt(state.points2.B)) return { kind: 'B2', index: -1 };
+      for (let i = state.trace2.length - 1; i >= 0; i--) {
+        if (tryPt(state.trace2[i])) return { kind: 'trace2', index: i };
+      }
+      return null;
+    }
     for (const kind of ['A', 'B', 'P', 'baseA', 'baseB']) {
       if (tryPt(state.points[kind])) return { kind: kind, index: -1 };
     }
@@ -373,9 +394,6 @@
     for (let i = state.trace.length - 1; i >= 0; i--) {
       if (tryPt(state.trace[i])) return { kind: 'trace', index: i };
     }
-    for (let i = state.trace2.length - 1; i >= 0; i--) {
-      if (tryPt(state.trace2[i])) return { kind: 'trace2', index: i };
-    }
     return null;
   }
 
@@ -383,6 +401,8 @@
   function deleteHit(hit) {
     if (hit.kind === 'trace') state.trace.splice(hit.index, 1);
     else if (hit.kind === 'trace2') state.trace2.splice(hit.index, 1);
+    else if (hit.kind === 'A2') state.points2.A = null;
+    else if (hit.kind === 'B2') state.points2.B = null;
     else if (hit.kind === 'vert') state.vertRef.splice(hit.index, 1);
     else state.points[hit.kind] = null;
     solve();
@@ -400,6 +420,8 @@
   function setDragPos(drag, ip) {
     if (drag.kind === 'trace') state.trace[drag.index] = ip;
     else if (drag.kind === 'trace2') state.trace2[drag.index] = ip;
+    else if (drag.kind === 'A2') state.points2.A = ip;
+    else if (drag.kind === 'B2') state.points2.B = ip;
     else if (drag.kind === 'vert') state.vertRef[drag.index] = ip;
     else state.points[drag.kind] = ip;
   }
@@ -407,13 +429,23 @@
   function getDragPos(drag) {
     if (drag.kind === 'trace') return state.trace[drag.index];
     if (drag.kind === 'trace2') return state.trace2[drag.index];
+    if (drag.kind === 'A2') return state.points2.A;
+    if (drag.kind === 'B2') return state.points2.B;
     if (drag.kind === 'vert') return state.vertRef[drag.index];
     return state.points[drag.kind];
   }
 
   function undoLast() {
-    if (state.editCond === 2 && state.trace2.length) state.trace2.pop();
-    else if (state.trace.length) state.trace.pop();
+    if (state.editCond === 2) {
+      if (state.trace2.length) state.trace2.pop();
+      else if (state.points2.B) state.points2.B = null;
+      else if (state.points2.A) state.points2.A = null;
+      solve();
+      updateInstructions();
+      redraw();
+      return;
+    }
+    if (state.trace.length) state.trace.pop();
     else if (state.points.P) state.points.P = null;
     else if (state.points.baseB) state.points.baseB = null;
     else if (state.points.baseA) state.points.baseA = null;
@@ -879,14 +911,19 @@
     // in the SAME calibrated world plane. Assumes both phases hang in (or
     // near) the span's vertical plane — exact for vertically stacked
     // circuits, approximate for horizontally offset phases in oblique shots.
-    if (state.trace2.length >= MIN_TRACE_PTS) {
+    if (state.points2.A && state.points2.B && state.trace2.length >= MIN_TRACE_PTS) {
+      const A2w = geo.imgToWorld(state.points2.A);
+      const B2w = geo.imgToWorld(state.points2.B);
       const t2w = state.trace2.map(geo.imgToWorld);
       const fit2 = TLEngine.fitCatenary(t2w);
       if (fit2.ok) {
+        // Full independent analysis against ITS OWN hook chord — same
+        // treatment as the main conductor (sag, %UTS, hook deviation).
+        const an2 = TLEngine.analyzeCatenary(fit2, A2w, B2w, cond.w, cond.uts);
         state.solved2 = {
-          fit: fit2, geo: geo, T: cond.w * fit2.C, n: state.trace2.length,
-          xLo: Math.min.apply(null, t2w.map(p => p.x)),
-          xHi: Math.max.apply(null, t2w.map(p => p.x))
+          fit: fit2, an: an2, geo: geo, T: an2.T, n: state.trace2.length,
+          A2w: A2w, B2w: B2w,
+          xLo: Math.min(A2w.x, B2w.x), xHi: Math.max(A2w.x, B2w.x)
         };
       } else {
         state.solved2 = { error: fit2.reason };
@@ -992,7 +1029,8 @@
     if (!s || s.error || s.kind !== 'trace') return;
     const method = calMethod();
     const w = s.cond.w;
-    const Ts = [];
+    const Ts = [], T2s = [], Seps = [];
+    const mc2 = !!(state.solved2 && !state.solved2.error);
     // Camera mode: each resample re-solves the span (warm-started) and also
     // jitters the focal — post-calibration ±2%, uncalibrated ±10%.
     const fxSigma = method === 'camera' ? (s.geo.calibrated ? 0.02 : 0.10) : 0;
@@ -1028,6 +1066,29 @@
       const fit = TLEngine.fitCatenary(traceW);
       if (!fit.ok) continue;
       Ts.push(w * fit.C);
+
+      // Second conductor: same jitter treatment, plus the min-separation
+      // sample so clearance gets an uncertainty band of its own.
+      if (mc2) {
+        const A2j = geo.imgToWorld(jitterPt(state.points2.A, MC_SIGMA_REF));
+        const B2j = geo.imgToWorld(jitterPt(state.points2.B, MC_SIGMA_REF));
+        const t2j = state.trace2.map(p => geo.imgToWorld(jitterPt(p, MC_SIGMA_TRACE)));
+        const f2 = TLEngine.fitCatenary(t2j);
+        if (f2.ok) {
+          T2s.push(w * f2.C);
+          const xa2 = Math.max(Math.min(geo.Am.x, geo.Bm.x), Math.min(A2j.x, B2j.x));
+          const xb2 = Math.min(Math.max(geo.Am.x, geo.Bm.x), Math.max(A2j.x, B2j.x));
+          if (xb2 > xa2) {
+            let mn = Infinity;
+            for (let k = 0; k <= 80; k++) {
+              const xk = xa2 + ((xb2 - xa2) * k) / 80;
+              const d = Math.abs(TLEngine.catenaryY(fit.C, fit.x0, fit.y0, xk) - TLEngine.catenaryY(f2.C, f2.x0, f2.y0, xk));
+              if (d < mn) mn = d;
+            }
+            if (isFinite(mn)) Seps.push(mn);
+          }
+        }
+      }
     }
     mcOverride = null;
 
@@ -1044,6 +1105,15 @@
       hist[Math.min(BINS - 1, Math.floor(((t - lo) / ((hi - lo) || 1)) * BINS))]++;
     }
     s.mc = { n: Ts.length, p5: q(0.05), p50: q(0.5), p95: q(0.95), lo: lo, hi: hi, hist: hist };
+    const qArr = (arr, f) => arr[Math.min(arr.length - 1, Math.max(0, Math.round(f * (arr.length - 1))))];
+    if (T2s.length >= 30) {
+      T2s.sort((a, b) => a - b);
+      s.mc.t2 = { p5: qArr(T2s, 0.05), p50: qArr(T2s, 0.5), p95: qArr(T2s, 0.95) };
+    }
+    if (Seps.length >= 30) {
+      Seps.sort((a, b) => a - b);
+      s.mc.sep = { p5: qArr(Seps, 0.05), p50: qArr(Seps, 0.5), p95: qArr(Seps, 0.95) };
+    }
     renderResults();
   }
 
@@ -1162,25 +1232,40 @@
         perspNote;
     }
 
-    // Second conductor / phase clearance
+    // Second conductor: independent single-phase analysis, then overlap
     if (state.solved2) {
       const s2 = state.solved2;
       if (s2.error) {
         out.innerHTML += `<div style="margin-top: 0.6rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">` +
-          `<strong style="color: var(--danger);">Second conductor fit failed:</strong> ${s2.error}</div>`;
+          `<strong style="color: var(--danger);">② Second conductor fit failed:</strong> ${s2.error}</div>`;
       } else {
         const KGF2 = 9.80665;
+        const q2v = qualityVerdict(s2.an.rmse, s2.an.sagMax);
+        const dev2 = (Math.abs(s2.an.endDevA) > Math.max(0.5, 0.05 * s2.an.sagMax) || Math.abs(s2.an.endDevB) > Math.max(0.5, 0.05 * s2.an.sagMax))
+          ? `<br><span style="color: var(--warning);">⚠ Fitted curve misses Hook A₂/B₂ by up to ${Math.max(Math.abs(s2.an.endDevA), Math.abs(s2.an.endDevB)).toFixed(2)} m — check the hook clicks, or add trace points near the towers.</span>`
+          : '';
+        const t2band = (s.mc && s.mc.t2)
+          ? `• Probable T₂ range (90% band): <strong>${(s.mc.t2.p5 / 1000).toFixed(2)} – ${(s.mc.t2.p95 / 1000).toFixed(2)} kN</strong> (${(s.mc.t2.p5 / KGF2).toFixed(0)} – ${(s.mc.t2.p95 / KGF2).toFixed(0)} kgf)<br>`
+          : '';
         const dT = (s.kind === 'trace' && s.an && s.an.T > 0)
-          ? ` · tension difference vs main: <strong>${(100 * (s2.T - s.an.T) / s.an.T).toFixed(1)}%</strong>`
+          ? `• Tension difference vs main phase: <strong>${(100 * (s2.T - s.an.T) / s.an.T).toFixed(1)}%</strong> <span style="color: var(--text-muted); font-size: 0.75rem;">(uneven stringing indicator)</span><br>`
+          : '';
+        const sepBand = (s.mc && s.mc.sep)
+          ? ` · 90% band <strong>${s.mc.sep.p5.toFixed(2)} – ${s.mc.sep.p95.toFixed(2)} m</strong>`
           : '';
         const clr = state.clearance
-          ? `• <span style="font-size: 0.95rem;">⚡ Min phase separation: <strong style="color: ${state.clearance.sep < 2 ? 'var(--danger)' : 'var(--success)'};">${state.clearance.sep.toFixed(2)} m</strong></span> at x = ${state.clearance.xRel.toFixed(1)} m from Hook A (vertical, in the span plane)<br>` +
-            `• <span style="color: var(--text-muted); font-size: 0.75rem;">Judge the figure against your voltage's required phase spacing. Clearance carries the same click/calibration uncertainty as the tensions — treat margins tighter than ~0.5 m with caution. Exact for vertically stacked phases; approximate if the second phase hangs in a horizontally offset plane (oblique shots).</span>`
-          : `• <span style="color: var(--text-muted);">Clearance appears once the main conductor trace is fitted and the two traces overlap along the span.</span>`;
-        out.innerHTML += `<div style="margin-top: 0.6rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">` +
-          `<strong style="color: #ec4899;">② Second Conductor (${s2.n} traced points):</strong><br>` +
-          `• Catenary constant C₂: <strong>${s2.fit.C.toFixed(1)} m</strong> · T₂ = w·C₂ = <strong>${(s2.T / 1000).toFixed(2)} kN</strong> ≈ ${(s2.T / KGF2).toFixed(0)} kgf${dT} <span style="color: var(--text-muted); font-size: 0.75rem;">(same conductor type assumed)</span><br>` +
-          `• Fit RMS residual: ${s2.fit.rmse.toFixed(3)} m<br>` + clr + `</div>`;
+          ? `• <span style="font-size: 0.95rem;">⚡ Min phase separation: <strong style="color: ${state.clearance.sep < 2 ? 'var(--danger)' : 'var(--success)'};">${state.clearance.sep.toFixed(2)} m</strong></span> at x = ${state.clearance.xRel.toFixed(1)} m from Hook A${sepBand} (vertical, in the span plane)<br>` +
+            `• <span style="color: var(--text-muted); font-size: 0.75rem;">Judge against your voltage's required phase spacing. Exact for vertically stacked phases; approximate if the second phase hangs in a horizontally offset plane (oblique shots).</span>`
+          : `• <span style="color: var(--text-muted);">Min separation appears once the main conductor is also fitted and the two spans overlap.</span>`;
+        out.innerHTML +=
+          `<div style="margin-top: 0.6rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">` +
+          `<strong style="color: #ec4899;">② Second Conductor — independent analysis (${s2.n} traced points):</strong><br>` +
+          `• Catenary constant C₂ = T₂/w: <strong>${s2.fit.C.toFixed(1)} m</strong><br>` +
+          `• <span style="font-size: 0.95rem;">Horizontal Tension T₂ = w·C₂ = <strong>${(s2.T / 1000).toFixed(2)} kN</strong> ≈ <strong>${(s2.T / KGF2).toFixed(0)} kgf</strong></span> (${(s.cond && s.cond.name) || ''}, ${s2.an.pctUTS.toFixed(1)}% UTS, same conductor type assumed)<br>` +
+          t2band + dT +
+          `• Max sag D₂ from its chord: <strong>${s2.an.sagMax.toFixed(3)} m</strong> at x = ${s2.an.xMaxSag.toFixed(1)} m from Hook A₂ · mid-span ${s2.an.sagMid.toFixed(3)} m<br>` +
+          `• Fit quality: <strong style="color: ${q2v.color};">${q2v.label}</strong> (RMS residual ${s2.an.rmse.toFixed(3)} m)` + dev2 + `<br>` +
+          clr + `</div>`;
       }
     }
   }
@@ -1242,7 +1327,7 @@
   // ======================================================================
   // Trace = bright cyan with white ring — stays visible against rock,
   // vegetation and sky (pink was getting lost on real terrain photos).
-  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#22d3ee', vert: '#a3e635', fit: '#facc15', sag: '#ef4444', trace2: '#f472b6', fit2: '#ec4899', clr: '#fbbf24' };
+  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#22d3ee', vert: '#a3e635', fit: '#facc15', sag: '#ef4444', trace2: '#f472b6', fit2: '#ec4899', A2: '#d946ef', B2: '#a21caf', sag2: '#fb7185', clr: '#fbbf24' };
   const LABELS = { A: 'Hook A', B: 'Hook B', P: 'Point P', baseA: 'Base A', baseB: 'Base B' };
 
   function redraw() {
@@ -1270,6 +1355,11 @@
     ctx.drawImage(state.img, 0, 0);
     ctx.restore();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Layer fading: the INACTIVE conductor is dimmed so the one being
+    // edited reads clearly (its points are also unselectable — see hitTest).
+    const hasC2 = state.trace2.length > 0 || state.points2.A || state.points2.B;
+    ctx.globalAlpha = state.editCond === 2 ? 0.30 : 1;
 
     // Vertical reference
     if (state.vertRef.length >= 1) {
@@ -1329,7 +1419,6 @@
 
     // Trace points (white ring keeps them visible on any background)
     state.trace.forEach(p => drawMarker(i2c(p), COLORS.trace, 3.5, true));
-    state.trace2.forEach(p => drawMarker(i2c(p), COLORS.trace2, 3.5, true));
 
     // Fitted catenary + sag indicator
     if (state.solved && !state.solved.error && state.solved.kind === 'trace') {
@@ -1338,13 +1427,6 @@
     if (state.solved && !state.solved.error && state.solved.kind === 'quick') {
       drawQuickSag(state.solved);
     }
-    if (state.solved2 && !state.solved2.error) {
-      drawSecondCurve(state.solved2);
-    }
-    if (state.clearance && state.solved2 && !state.solved2.error) {
-      drawClearance(state.solved2.geo, state.clearance);
-    }
-
     // Named points
     for (const kind of ['A', 'B', 'baseA', 'baseB', 'P']) {
       const p = state.points[kind];
@@ -1352,6 +1434,33 @@
       const c = i2c(p);
       drawMarker(c, COLORS[kind], 5.5, true);
       drawText(LABELS[kind], { x: c.x + 12, y: c.y - 6 }, COLORS[kind]);
+    }
+
+    // ---- Second conductor layer (dimmed while editing the main one) ----
+    if (hasC2) {
+      ctx.globalAlpha = state.editCond === 1 ? 0.40 : 1;
+      if (state.points2.A && state.points2.B) {
+        drawLine(i2c(state.points2.A), i2c(state.points2.B), 'rgba(255, 255, 255, 0.85)', 1.2, [5, 4]);
+      }
+      state.trace2.forEach(p => drawMarker(i2c(p), COLORS.trace2, 3.5, true));
+      if (state.solved2 && !state.solved2.error) drawSecondCurve(state.solved2);
+      if (state.points2.A) {
+        const cA2 = i2c(state.points2.A);
+        drawMarker(cA2, COLORS.A2, 5.5, true);
+        drawText('Hook A₂', { x: cA2.x + 12, y: cA2.y - 6 }, COLORS.A2);
+      }
+      if (state.points2.B) {
+        const cB2 = i2c(state.points2.B);
+        drawMarker(cB2, COLORS.B2, 5.5, true);
+        drawText('Hook B₂', { x: cB2.x + 12, y: cB2.y - 6 }, COLORS.B2);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Clearance tie-line always renders at full strength — it is the
+    // joint result of both conductors.
+    if (state.clearance && state.solved2 && !state.solved2.error) {
+      drawClearance(state.solved2.geo, state.clearance);
     }
 
     // Selection highlight (touch move flow)
@@ -1371,7 +1480,7 @@
     if (COARSE && isFsActive()) {
       const { w: hw } = cssSize();
       const nxt = expectedNext();
-      const hintMap = { A: 'Aim at TOWER A HOOK, press ＋ Place', B: 'Aim at TOWER B HOOK, press ＋ Place', baseA: 'Aim at TOWER A BASE (plumb below hook)', baseB: 'Aim at TOWER B BASE (plumb below hook)', P: 'Aim at the LOWEST conductor point', trace: 'Trace the wire: aim, press ＋ Place (' + state.trace.length + ' pts)', trace2: '② Trace the SECOND wire (' + state.trace2.length + ' pts)', vert: 'Mark the vertical reference' };
+      const hintMap = { A: 'Aim at TOWER A HOOK, press ＋ Place', B: 'Aim at TOWER B HOOK, press ＋ Place', baseA: 'Aim at TOWER A BASE (plumb below hook)', baseB: 'Aim at TOWER B BASE (plumb below hook)', P: 'Aim at the LOWEST conductor point', trace: 'Trace the wire: aim, press ＋ Place (' + state.trace.length + ' pts)', A2: '② Aim at the SECOND wire hook on TOWER A', B2: '② Aim at the SECOND wire hook on TOWER B', trace2: '② Trace the SECOND wire (' + state.trace2.length + ' pts)', vert: 'Mark the vertical reference' };
       const hint = state.selected ? 'Point selected — aim, then ✥ Move here' : (nxt ? hintMap[nxt] : 'All points placed — press ✓ Done');
       drawText(hint, { x: hw / 2 - ctx.measureText(hint).width / 2, y: 24 }, '#ffffff');
     }
@@ -1514,6 +1623,19 @@
     ctx.setLineDash([7, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Its own max-sag indicator, exactly like the main conductor's.
+    if (s2.an && s2.A2w && s2.B2w) {
+      const xAbs = Math.min(s2.A2w.x, s2.B2w.x) + s2.an.xMaxSag;
+      const m2 = (s2.B2w.y - s2.A2w.y) / (s2.B2w.x - s2.A2w.x);
+      const chordY = s2.A2w.y + m2 * (xAbs - s2.A2w.x);
+      const curveY = TLEngine.catenaryY(s2.fit.C, s2.fit.x0, s2.fit.y0, xAbs);
+      const cTop = i2c(s2.geo.worldToImg({ x: xAbs, y: chordY }));
+      const cBot = i2c(s2.geo.worldToImg({ x: xAbs, y: curveY }));
+      drawLine(cTop, cBot, COLORS.sag2, 2.5);
+      drawMarker(cBot, COLORS.sag2, 4);
+      drawText(`D₂ = ${s2.an.sagMax.toFixed(2)} m`, { x: cBot.x + 10, y: (cTop.y + cBot.y) / 2 }, COLORS.sag2);
+    }
   }
 
   function drawClearance(geo, cl) {
@@ -1565,11 +1687,20 @@
     if (next === 'baseA') { el.innerHTML = '🎯 <strong>Step 3:</strong> Click the ground point <strong>plumb below Hook A</strong> — where a stone dropped from the hook would land (usually under the crossarm tip, NOT a tower leg). The tower height you enter must be the hook\'s height above this same point.' + hint; return; }
     if (next === 'baseB') { el.innerHTML = '🎯 <strong>Step 4:</strong> Click the ground point <strong>plumb below Hook B</strong> (same rule: below the hook, not a leg) — completes the 4-point perspective rectification.' + hint; return; }
     if (next === 'P') { el.innerHTML = '🎯 <strong>Final step:</strong> Click the <strong>conductor at its lowest visible point</strong>.' + hint; return; }
+    if (next === 'A2') {
+      const calWarn = (!state.points.A || !state.points.B) ? ' <span style="color: var(--warning);">Complete the MAIN conductor first — it carries the calibration.</span>' : '';
+      el.innerHTML = `② <strong>Second conductor — Step 1:</strong> Click the second phase's <strong>attachment at Tower A</strong> (Hook A₂).` + calWarn + hint;
+      return;
+    }
+    if (next === 'B2') {
+      el.innerHTML = `② <strong>Second conductor — Step 2:</strong> Click the second phase's <strong>attachment at Tower B</strong> (Hook B₂).` + hint;
+      return;
+    }
     if (next === 'trace2') {
       const n2 = state.trace2.length;
       el.innerHTML = n2 < MIN_TRACE_PTS
-        ? `② <strong>Second conductor:</strong> click along the <strong>other phase</strong> — <strong>${n2}/${MIN_TRACE_PTS} minimum</strong> points. Min phase clearance appears once fitted. (Press <strong>②</strong> again to return to the main conductor.)` + hint
-        : `✅ <strong>② Second conductor fitted (${n2} points)</strong> — min phase clearance shown in the results and on the image. Add points to tighten it, or press <strong>②</strong> to switch back.` + hint;
+        ? `② <strong>Second conductor — Step 3:</strong> trace along the second phase — <strong>${n2}/${MIN_TRACE_PTS} minimum</strong> points, spread across the whole span. Full analysis + min clearance appear once fitted. (Press <strong>②</strong> to switch back.)` + hint
+        : `✅ <strong>② Second conductor fitted (${n2} points)</strong> — its full analysis and the min phase clearance are in the results and on the image. Add points to tighten the fit, or press <strong>②</strong> to return to the main conductor.` + hint;
       return;
     }
     if (next === 'trace') {
@@ -1643,7 +1774,6 @@
     if (state.points.B && state.points.baseB) line(P(state.points.B), P(state.points.baseB), COLORS.baseB, lw);
 
     state.trace.forEach(p => dot(P(p), COLORS.trace, lw * 1.8));
-    state.trace2.forEach(p => dot(P(p), COLORS.trace2, lw * 1.8));
 
     const s = state.solved;
     if (s && !s.error && s.kind === 'trace') {
@@ -1667,6 +1797,7 @@
     }
     const s2r = state.solved2;
     if (s2r && !s2r.error) {
+      if (state.points2.A && state.points2.B) line(P(state.points2.A), P(state.points2.B), 'rgba(255,255,255,0.85)', lw * 0.8, [8, 6]);
       g.beginPath();
       for (let i = 0; i <= 120; i++) {
         const xm = s2r.xLo + ((s2r.xHi - s2r.xLo) * i) / 120;
@@ -1674,6 +1805,16 @@
         i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y);
       }
       g.strokeStyle = COLORS.fit2; g.lineWidth = lw; g.setLineDash([10, 6]); g.stroke(); g.setLineDash([]);
+      if (s2r.an && s2r.A2w && s2r.B2w) {
+        const xAbs2 = Math.min(s2r.A2w.x, s2r.B2w.x) + s2r.an.xMaxSag;
+        const m2 = (s2r.B2w.y - s2r.A2w.y) / (s2r.B2w.x - s2r.A2w.x);
+        const t2 = P(s2r.geo.worldToImg({ x: xAbs2, y: s2r.A2w.y + m2 * (xAbs2 - s2r.A2w.x) }));
+        const b2 = P(s2r.geo.worldToImg({ x: xAbs2, y: TLEngine.catenaryY(s2r.fit.C, s2r.fit.x0, s2r.fit.y0, xAbs2) }));
+        line(t2, b2, COLORS.sag2, lw * 1.2);
+        label(`D₂ = ${s2r.an.sagMax.toFixed(2)} m`, { x: b2.x + fs * 0.7, y: (t2.y + b2.y) / 2 }, COLORS.sag2);
+      }
+      if (state.points2.A) { dot(P(state.points2.A), COLORS.A2, lw * 2.6); label('Hook A₂', { x: P(state.points2.A).x + fs * 0.8, y: P(state.points2.A).y - fs * 0.4 }, COLORS.A2); }
+      if (state.points2.B) { dot(P(state.points2.B), COLORS.B2, lw * 2.6); label('Hook B₂', { x: P(state.points2.B).x + fs * 0.8, y: P(state.points2.B).y - fs * 0.4 }, COLORS.B2); }
       if (state.clearance) {
         const cl = state.clearance;
         const t = P(s2r.geo.worldToImg({ x: cl.x, y: Math.max(cl.y1, cl.y2) }));
@@ -1682,6 +1823,7 @@
         label(`clearance ${cl.sep.toFixed(2)} m`, { x: b.x + fs * 0.7, y: (t.y + b.y) / 2 }, COLORS.clr);
       }
     }
+    state.trace2.forEach(p => dot(P(p), COLORS.trace2, lw * 1.6));
     if (s && !s.error && s.kind === 'quick' && s.Pw) {
       const top = P(s.geo.worldToImg({ x: s.Pw.x, y: s.Pw.y + s.D }));
       const bot = P(s.geo.worldToImg(s.Pw));
@@ -1733,9 +1875,11 @@
       const s2l = state.solved2;
       if (s2l && !s2l.error) {
         const KGF2 = 9.80665;
-        lines.push(`2nd conductor (\u2461)   : C2 = ${s2l.fit.C.toFixed(1)} m, T2 = ${(s2l.T / 1000).toFixed(2)} kN = ${(s2l.T / KGF2).toFixed(0)} kgf (${s2l.n} pts, RMS ${s2l.fit.rmse.toFixed(3)} m, same conductor type assumed)`);
+        lines.push(`2nd conductor (\u2461)   : C2 = ${s2l.fit.C.toFixed(1)} m, T2 = ${(s2l.T / 1000).toFixed(2)} kN = ${(s2l.T / KGF2).toFixed(0)} kgf (${s2l.an.pctUTS.toFixed(1)}% UTS, same conductor type assumed)`);
+        if (s.mc && s.mc.t2) lines.push(`T2 probable (90%)     : ${(s.mc.t2.p5 / 1000).toFixed(2)} - ${(s.mc.t2.p95 / 1000).toFixed(2)} kN`);
+        lines.push(`2nd conductor sag D2  : ${s2l.an.sagMax.toFixed(3)} m at x = ${s2l.an.xMaxSag.toFixed(1)} m from Hook A2; mid-span ${s2l.an.sagMid.toFixed(3)} m (${s2l.n} pts, RMS ${s2l.an.rmse.toFixed(3)} m)`);
         if (s.an && s.an.T > 0) lines.push(`Tension difference    : ${(100 * (s2l.T - s.an.T) / s.an.T).toFixed(1)}% (2nd vs main phase)`);
-        if (state.clearance) lines.push(`Min phase separation  : ${state.clearance.sep.toFixed(2)} m at x = ${state.clearance.xRel.toFixed(1)} m from Hook A (vertical, span plane)`);
+        if (state.clearance) lines.push(`Min phase separation  : ${state.clearance.sep.toFixed(2)} m at x = ${state.clearance.xRel.toFixed(1)} m from Hook A (vertical, span plane)${(s.mc && s.mc.sep) ? ', 90% band ' + s.mc.sep.p5.toFixed(2) + ' - ' + s.mc.sep.p95.toFixed(2) + ' m' : ''}`);
       }
     } else {
       lines.push(`Position xp           : ${s.xp.toFixed(2)} m from Hook A`);
@@ -1764,6 +1908,7 @@
       points: state.points,
       trace: state.trace,
       trace2: state.trace2,
+      points2: state.points2,
       vertRef: state.vertRef
     };
   }
@@ -1784,6 +1929,7 @@
       points: data.points,
       trace: data.trace,
       trace2: data.trace2,
+      points2: data.points2,
       vertRef: data.vertRef,
       mode: data.mode
     };
@@ -1812,7 +1958,8 @@
   };
 
   function anyPointsPlaced() {
-    return state.trace.length > 0 || state.trace2.length > 0 || state.vertRef.length > 0 ||
+    return state.trace.length > 0 || state.trace2.length > 0 ||
+      !!state.points2.A || !!state.points2.B || state.vertRef.length > 0 ||
       Object.keys(state.points).some(k => state.points[k]);
   }
 
@@ -1820,6 +1967,8 @@
   window.photoToggleCond2 = function () {
     if (!state.img) return;
     state.editCond = state.editCond === 2 ? 1 : 2;
+    state.selected = null; // selection never crosses conductor layers
+    if (typeof updateSelectionUI === 'function') updateSelectionUI();
     updateToolButtons();
     updateInstructions();
     redraw();
