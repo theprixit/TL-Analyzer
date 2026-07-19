@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.12.0-beta — 2026-07-19
+
+**Second conductor + phase clearance check** (field-unit request):
+
+- New **②** button in the photo toolbar: trace a second conductor on the same photo (pink, dashed fit). It gets its own catenary fit and tension T₂ using the same calibration.
+- **Minimum phase separation** is computed between the two fitted curves, shown in the results and marked on the image (⚡ amber tie-line at the tightest point) — plus the tension difference between phases, the tell-tale of disproportionate stringing.
+- Works with all calibration methods; included in the printed report (annotated image + figures). Exact for vertically stacked phases; approximate when the second phase hangs in a horizontally offset plane on oblique shots.
+- Points of either conductor drag/delete/undo like always; projects save and restore both traces.
+
 ## v0.11.11-beta — 2026-07-13
 
 **"⚠ Save failed" fixed — project storage moved to IndexedDB:**

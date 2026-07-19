@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-title" content="TL-SAG">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-v2.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=0.11.11-beta">
+  <link rel="stylesheet" href="style.css?v=0.12.0-beta">
 </head>
 <body>
 
@@ -275,6 +275,7 @@
                 <button type="button" class="ct-btn" onclick="photoClearPoints()" title="Remove ALL placed points and traces (asks first)">🗑 Clear</button>
                 <span class="ct-sep"></span>
                 <button type="button" class="ct-btn" onclick="photoFitView()" title="Fit photo to view">⤢ Fit</button>
+                <button type="button" id="pt-cond2-btn" class="ct-btn" onclick="photoToggleCond2()" title="Trace a second conductor to check phase-to-phase clearance (tap again to switch back)">②</button>
                 <button type="button" class="ct-btn fine-only" onclick="photoToggleFullscreen()" title="Edit in fullscreen">⛶</button>
                 <button type="button" id="pt-done-btn" class="ct-btn ct-primary coarse-only" onclick="photoToggleFullscreen()" title="Finish editing and return to the page">✓ Done</button>
               </div>
@@ -1588,9 +1589,9 @@
   </div>
 
   <!-- JavaScript Application Bundle -->
-  <script src="engine.js?v=0.11.11-beta"></script>
-  <script src="app.js?v=0.11.11-beta"></script>
-  <script src="phototracker.js?v=0.11.11-beta"></script>
+  <script src="engine.js?v=0.12.0-beta"></script>
+  <script src="app.js?v=0.12.0-beta"></script>
+  <script src="phototracker.js?v=0.12.0-beta"></script>
   <!-- Anonymous visit counting (GoatCounter): page-view ping only — no
        cookies, no personal data, and none of the engineering data, which
        never leaves the device. count.js skips localhost by itself. -->

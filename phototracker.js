@@ -22,9 +22,13 @@
     tool: 'place',               // 'place' | 'pan'
     points: { A: null, B: null, P: null, baseA: null, baseB: null }, // image px
     trace: [],                   // image px
+    trace2: [],                  // second conductor (phase-clearance check)
     vertRef: [],                 // 0..2 image px
     placingVertRef: false,
+    editCond: 1,                 // 1 = main conductor, 2 = second conductor
     solved: null,                // last successful solve
+    solved2: null,               // second-conductor fit (independent trace)
+    clearance: null,             // min separation between the two catenaries
     view: { scale: 1, tx: 0, ty: 0 },
     // transient interaction
     pointers: new Map(),
@@ -284,6 +288,7 @@
         state.pendingRestore = null;
         state.points = Object.assign({ A: null, B: null, P: null, baseA: null, baseB: null }, d.points || {});
         state.trace = d.trace || [];
+        state.trace2 = d.trace2 || [];
         state.vertRef = d.vertRef || [];
         state.mode = d.mode || state.mode;
         syncModeSelect();
@@ -306,9 +311,13 @@
     if (typeof updateSelectionUI === 'function') updateSelectionUI();
     state.points = { A: null, B: null, P: null, baseA: null, baseB: null };
     state.trace = [];
+    state.trace2 = [];
+    state.editCond = 1;
     state.vertRef = [];
     state.placingVertRef = false;
     state.solved = null;
+    state.solved2 = null;
+    state.clearance = null;
   }
 
   // ======================================================================
@@ -322,6 +331,7 @@
   // What does the next tap place?
   function expectedNext() {
     if (state.placingVertRef && state.vertRef.length < 2) return 'vert';
+    if (state.editCond === 2) return 'trace2';
     if (!state.points.A) return 'A';
     if (!state.points.B) return 'B';
     const cm = calMethod();
@@ -339,6 +349,8 @@
       if (state.vertRef.length >= 2) state.placingVertRef = false;
     } else if (next === 'trace') {
       state.trace.push(ip);
+    } else if (next === 'trace2') {
+      state.trace2.push(ip);
     } else {
       state.points[next] = ip;
     }
@@ -361,12 +373,16 @@
     for (let i = state.trace.length - 1; i >= 0; i--) {
       if (tryPt(state.trace[i])) return { kind: 'trace', index: i };
     }
+    for (let i = state.trace2.length - 1; i >= 0; i--) {
+      if (tryPt(state.trace2[i])) return { kind: 'trace2', index: i };
+    }
     return null;
   }
 
   // Delete a hit point (right-click, or double-tap on touch)
   function deleteHit(hit) {
     if (hit.kind === 'trace') state.trace.splice(hit.index, 1);
+    else if (hit.kind === 'trace2') state.trace2.splice(hit.index, 1);
     else if (hit.kind === 'vert') state.vertRef.splice(hit.index, 1);
     else state.points[hit.kind] = null;
     solve();
@@ -383,18 +399,21 @@
 
   function setDragPos(drag, ip) {
     if (drag.kind === 'trace') state.trace[drag.index] = ip;
+    else if (drag.kind === 'trace2') state.trace2[drag.index] = ip;
     else if (drag.kind === 'vert') state.vertRef[drag.index] = ip;
     else state.points[drag.kind] = ip;
   }
 
   function getDragPos(drag) {
     if (drag.kind === 'trace') return state.trace[drag.index];
+    if (drag.kind === 'trace2') return state.trace2[drag.index];
     if (drag.kind === 'vert') return state.vertRef[drag.index];
     return state.points[drag.kind];
   }
 
   function undoLast() {
-    if (state.trace.length) state.trace.pop();
+    if (state.editCond === 2 && state.trace2.length) state.trace2.pop();
+    else if (state.trace.length) state.trace.pop();
     else if (state.points.P) state.points.P = null;
     else if (state.points.baseB) state.points.baseB = null;
     else if (state.points.baseA) state.points.baseA = null;
@@ -842,6 +861,8 @@
 
   function solve() {
     state.solved = null;
+    state.solved2 = null;
+    state.clearance = null;
 
     if (!state.img || !state.points.A || !state.points.B) { renderResults(); return; }
 
@@ -853,6 +874,24 @@
     if (geo.error) { state.solved = { error: geo.error }; renderResults(); return; }
 
     const cond = (typeof getConductorSpecs === 'function') ? getConductorSpecs('tp') : { w: 0, uts: 0, name: '' };
+
+    // Second conductor (phase-clearance check): an independent trace fitted
+    // in the SAME calibrated world plane. Assumes both phases hang in (or
+    // near) the span's vertical plane — exact for vertically stacked
+    // circuits, approximate for horizontally offset phases in oblique shots.
+    if (state.trace2.length >= MIN_TRACE_PTS) {
+      const t2w = state.trace2.map(geo.imgToWorld);
+      const fit2 = TLEngine.fitCatenary(t2w);
+      if (fit2.ok) {
+        state.solved2 = {
+          fit: fit2, geo: geo, T: cond.w * fit2.C, n: state.trace2.length,
+          xLo: Math.min.apply(null, t2w.map(p => p.x)),
+          xHi: Math.max.apply(null, t2w.map(p => p.x))
+        };
+      } else {
+        state.solved2 = { error: fit2.reason };
+      }
+    }
 
     if (state.mode === 'trace') {
       if (state.trace.length < MIN_TRACE_PTS) { renderResults(); return; }
@@ -886,6 +925,28 @@
         const mk = geo.worldToImg({ x: xAbs, y: cat(xAbs) });
         state.solved.visualLowOffsetPx = Math.round(Math.hypot(mk.x - low.x, mk.y - low.y));
       }
+      // Phase clearance: minimum separation between the two fitted
+      // catenaries over the x-range where BOTH are constrained by clicks.
+      if (state.solved2 && !state.solved2.error) {
+        const s2 = state.solved2;
+        const xa = Math.max(Math.min(geo.Am.x, geo.Bm.x), s2.xLo);
+        const xb = Math.min(Math.max(geo.Am.x, geo.Bm.x), s2.xHi);
+        if (xb > xa) {
+          let best = null;
+          for (let i = 0; i <= 240; i++) {
+            const x = xa + ((xb - xa) * i) / 240;
+            const y1 = TLEngine.catenaryY(fit.C, fit.x0, fit.y0, x);
+            const y2 = TLEngine.catenaryY(s2.fit.C, s2.fit.x0, s2.fit.y0, x);
+            const sep = Math.abs(y1 - y2);
+            if (!best || sep < best.sep) best = { sep: sep, x: x, y1: y1, y2: y2 };
+          }
+          if (best) {
+            best.xRel = Math.abs(best.x - geo.Am.x);
+            state.clearance = best;
+          }
+        }
+      }
+
       scheduleMonteCarlo();
     } else {
       // Quick mode: single conductor point P against the hook chord.
@@ -1100,6 +1161,28 @@
         `• Vertical sag offset D(xp): <strong>${s.D.toFixed(3)} m</strong><br>` +
         perspNote;
     }
+
+    // Second conductor / phase clearance
+    if (state.solved2) {
+      const s2 = state.solved2;
+      if (s2.error) {
+        out.innerHTML += `<div style="margin-top: 0.6rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">` +
+          `<strong style="color: var(--danger);">Second conductor fit failed:</strong> ${s2.error}</div>`;
+      } else {
+        const KGF2 = 9.80665;
+        const dT = (s.kind === 'trace' && s.an && s.an.T > 0)
+          ? ` · tension difference vs main: <strong>${(100 * (s2.T - s.an.T) / s.an.T).toFixed(1)}%</strong>`
+          : '';
+        const clr = state.clearance
+          ? `• <span style="font-size: 0.95rem;">⚡ Min phase separation: <strong style="color: ${state.clearance.sep < 2 ? 'var(--danger)' : 'var(--success)'};">${state.clearance.sep.toFixed(2)} m</strong></span> at x = ${state.clearance.xRel.toFixed(1)} m from Hook A (vertical, in the span plane)<br>` +
+            `• <span style="color: var(--text-muted); font-size: 0.75rem;">Judge the figure against your voltage's required phase spacing. Clearance carries the same click/calibration uncertainty as the tensions — treat margins tighter than ~0.5 m with caution. Exact for vertically stacked phases; approximate if the second phase hangs in a horizontally offset plane (oblique shots).</span>`
+          : `• <span style="color: var(--text-muted);">Clearance appears once the main conductor trace is fitted and the two traces overlap along the span.</span>`;
+        out.innerHTML += `<div style="margin-top: 0.6rem; border-top: 1px dashed var(--border); padding-top: 0.5rem;">` +
+          `<strong style="color: #ec4899;">② Second Conductor (${s2.n} traced points):</strong><br>` +
+          `• Catenary constant C₂: <strong>${s2.fit.C.toFixed(1)} m</strong> · T₂ = w·C₂ = <strong>${(s2.T / 1000).toFixed(2)} kN</strong> ≈ ${(s2.T / KGF2).toFixed(0)} kgf${dT} <span style="color: var(--text-muted); font-size: 0.75rem;">(same conductor type assumed)</span><br>` +
+          `• Fit RMS residual: ${s2.fit.rmse.toFixed(3)} m<br>` + clr + `</div>`;
+      }
+    }
   }
 
   // ======================================================================
@@ -1159,7 +1242,7 @@
   // ======================================================================
   // Trace = bright cyan with white ring — stays visible against rock,
   // vegetation and sky (pink was getting lost on real terrain photos).
-  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#22d3ee', vert: '#a3e635', fit: '#facc15', sag: '#ef4444' };
+  const COLORS = { A: '#3b82f6', B: '#f59e0b', P: '#10b981', baseA: '#ec4899', baseB: '#8b5cf6', trace: '#22d3ee', vert: '#a3e635', fit: '#facc15', sag: '#ef4444', trace2: '#f472b6', fit2: '#ec4899', clr: '#fbbf24' };
   const LABELS = { A: 'Hook A', B: 'Hook B', P: 'Point P', baseA: 'Base A', baseB: 'Base B' };
 
   function redraw() {
@@ -1246,6 +1329,7 @@
 
     // Trace points (white ring keeps them visible on any background)
     state.trace.forEach(p => drawMarker(i2c(p), COLORS.trace, 3.5, true));
+    state.trace2.forEach(p => drawMarker(i2c(p), COLORS.trace2, 3.5, true));
 
     // Fitted catenary + sag indicator
     if (state.solved && !state.solved.error && state.solved.kind === 'trace') {
@@ -1253,6 +1337,12 @@
     }
     if (state.solved && !state.solved.error && state.solved.kind === 'quick') {
       drawQuickSag(state.solved);
+    }
+    if (state.solved2 && !state.solved2.error) {
+      drawSecondCurve(state.solved2);
+    }
+    if (state.clearance && state.solved2 && !state.solved2.error) {
+      drawClearance(state.solved2.geo, state.clearance);
     }
 
     // Named points
@@ -1281,7 +1371,7 @@
     if (COARSE && isFsActive()) {
       const { w: hw } = cssSize();
       const nxt = expectedNext();
-      const hintMap = { A: 'Aim at TOWER A HOOK, press ＋ Place', B: 'Aim at TOWER B HOOK, press ＋ Place', baseA: 'Aim at TOWER A BASE (plumb below hook)', baseB: 'Aim at TOWER B BASE (plumb below hook)', P: 'Aim at the LOWEST conductor point', trace: 'Trace the wire: aim, press ＋ Place (' + state.trace.length + ' pts)', vert: 'Mark the vertical reference' };
+      const hintMap = { A: 'Aim at TOWER A HOOK, press ＋ Place', B: 'Aim at TOWER B HOOK, press ＋ Place', baseA: 'Aim at TOWER A BASE (plumb below hook)', baseB: 'Aim at TOWER B BASE (plumb below hook)', P: 'Aim at the LOWEST conductor point', trace: 'Trace the wire: aim, press ＋ Place (' + state.trace.length + ' pts)', trace2: '② Trace the SECOND wire (' + state.trace2.length + ' pts)', vert: 'Mark the vertical reference' };
       const hint = state.selected ? 'Point selected — aim, then ✥ Move here' : (nxt ? hintMap[nxt] : 'All points placed — press ✓ Done');
       drawText(hint, { x: hw / 2 - ctx.measureText(hint).width / 2, y: 24 }, '#ffffff');
     }
@@ -1410,6 +1500,31 @@
     drawText(`D = ${s.an.sagMax.toFixed(2)} m`, { x: cBot.x + 10, y: (cTop.y + cBot.y) / 2 }, COLORS.sag);
   }
 
+  function drawSecondCurve(s2) {
+    const N = 90;
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const xm = s2.xLo + ((s2.xHi - s2.xLo) * i) / N;
+      const ym = TLEngine.catenaryY(s2.fit.C, s2.fit.x0, s2.fit.y0, xm);
+      const c = i2c(s2.geo.worldToImg({ x: xm, y: ym }));
+      if (i === 0) ctx.moveTo(c.x, c.y); else ctx.lineTo(c.x, c.y);
+    }
+    ctx.strokeStyle = COLORS.fit2;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawClearance(geo, cl) {
+    const cTop = i2c(geo.worldToImg({ x: cl.x, y: Math.max(cl.y1, cl.y2) }));
+    const cBot = i2c(geo.worldToImg({ x: cl.x, y: Math.min(cl.y1, cl.y2) }));
+    drawLine(cTop, cBot, COLORS.clr, 2.5, [4, 3]);
+    drawMarker(cTop, COLORS.clr, 3.5);
+    drawMarker(cBot, COLORS.clr, 3.5);
+    drawText(`⚡ ${cl.sep.toFixed(2)} m`, { x: cBot.x + 10, y: (cTop.y + cBot.y) / 2 + 4 }, COLORS.clr);
+  }
+
   function drawQuickSag(s) {
     const top = i2c(s.geo.worldToImg({ x: s.Pw.x, y: s.Pw.y + s.D }));
     const bot = i2c(s.geo.worldToImg(s.Pw));
@@ -1450,6 +1565,13 @@
     if (next === 'baseA') { el.innerHTML = '🎯 <strong>Step 3:</strong> Click the ground point <strong>plumb below Hook A</strong> — where a stone dropped from the hook would land (usually under the crossarm tip, NOT a tower leg). The tower height you enter must be the hook\'s height above this same point.' + hint; return; }
     if (next === 'baseB') { el.innerHTML = '🎯 <strong>Step 4:</strong> Click the ground point <strong>plumb below Hook B</strong> (same rule: below the hook, not a leg) — completes the 4-point perspective rectification.' + hint; return; }
     if (next === 'P') { el.innerHTML = '🎯 <strong>Final step:</strong> Click the <strong>conductor at its lowest visible point</strong>.' + hint; return; }
+    if (next === 'trace2') {
+      const n2 = state.trace2.length;
+      el.innerHTML = n2 < MIN_TRACE_PTS
+        ? `② <strong>Second conductor:</strong> click along the <strong>other phase</strong> — <strong>${n2}/${MIN_TRACE_PTS} minimum</strong> points. Min phase clearance appears once fitted. (Press <strong>②</strong> again to return to the main conductor.)` + hint
+        : `✅ <strong>② Second conductor fitted (${n2} points)</strong> — min phase clearance shown in the results and on the image. Add points to tighten it, or press <strong>②</strong> to switch back.` + hint;
+      return;
+    }
     if (next === 'trace') {
       const n = state.trace.length;
       if (n < MIN_TRACE_PTS) {
@@ -1469,6 +1591,8 @@
     if (place) place.classList.toggle('active', state.tool === 'place');
     if (pan) pan.classList.toggle('active', state.tool === 'pan');
     if (vert) vert.classList.toggle('active', state.placingVertRef);
+    const c2 = document.getElementById('pt-cond2-btn');
+    if (c2) c2.classList.toggle('active', state.editCond === 2);
     if (canvas) canvas.style.cursor = state.tool === 'pan' ? 'grab' : 'crosshair';
   }
 
@@ -1519,6 +1643,7 @@
     if (state.points.B && state.points.baseB) line(P(state.points.B), P(state.points.baseB), COLORS.baseB, lw);
 
     state.trace.forEach(p => dot(P(p), COLORS.trace, lw * 1.8));
+    state.trace2.forEach(p => dot(P(p), COLORS.trace2, lw * 1.8));
 
     const s = state.solved;
     if (s && !s.error && s.kind === 'trace') {
@@ -1539,6 +1664,23 @@
       const cBot = P(s.geo.worldToImg({ x: xAbs, y: TLEngine.catenaryY(s.fit.C, s.fit.x0, s.fit.y0, xAbs) }));
       line(cTop, cBot, COLORS.sag, lw * 1.2);
       label(`D = ${s.an.sagMax.toFixed(2)} m`, { x: cBot.x + fs * 0.7, y: (cTop.y + cBot.y) / 2 }, COLORS.sag);
+    }
+    const s2r = state.solved2;
+    if (s2r && !s2r.error) {
+      g.beginPath();
+      for (let i = 0; i <= 120; i++) {
+        const xm = s2r.xLo + ((s2r.xHi - s2r.xLo) * i) / 120;
+        const p = P(s2r.geo.worldToImg({ x: xm, y: TLEngine.catenaryY(s2r.fit.C, s2r.fit.x0, s2r.fit.y0, xm) }));
+        i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y);
+      }
+      g.strokeStyle = COLORS.fit2; g.lineWidth = lw; g.setLineDash([10, 6]); g.stroke(); g.setLineDash([]);
+      if (state.clearance) {
+        const cl = state.clearance;
+        const t = P(s2r.geo.worldToImg({ x: cl.x, y: Math.max(cl.y1, cl.y2) }));
+        const b = P(s2r.geo.worldToImg({ x: cl.x, y: Math.min(cl.y1, cl.y2) }));
+        line(t, b, COLORS.clr, lw * 1.2, [6, 4]);
+        label(`clearance ${cl.sep.toFixed(2)} m`, { x: b.x + fs * 0.7, y: (t.y + b.y) / 2 }, COLORS.clr);
+      }
     }
     if (s && !s.error && s.kind === 'quick' && s.Pw) {
       const top = P(s.geo.worldToImg({ x: s.Pw.x, y: s.Pw.y + s.D }));
@@ -1588,6 +1730,13 @@
       lines.push(`Max sag from chord    : ${s.an.sagMax.toFixed(3)} m at x = ${s.xp.toFixed(1)} m from Hook A`);
       lines.push(`Mid-span sag          : ${s.an.sagMid.toFixed(3)} m`);
       lines.push(`Fit RMS residual      : ${s.an.rmse.toFixed(3)} m`);
+      const s2l = state.solved2;
+      if (s2l && !s2l.error) {
+        const KGF2 = 9.80665;
+        lines.push(`2nd conductor (\u2461)   : C2 = ${s2l.fit.C.toFixed(1)} m, T2 = ${(s2l.T / 1000).toFixed(2)} kN = ${(s2l.T / KGF2).toFixed(0)} kgf (${s2l.n} pts, RMS ${s2l.fit.rmse.toFixed(3)} m, same conductor type assumed)`);
+        if (s.an && s.an.T > 0) lines.push(`Tension difference    : ${(100 * (s2l.T - s.an.T) / s.an.T).toFixed(1)}% (2nd vs main phase)`);
+        if (state.clearance) lines.push(`Min phase separation  : ${state.clearance.sep.toFixed(2)} m at x = ${state.clearance.xRel.toFixed(1)} m from Hook A (vertical, span plane)`);
+      }
     } else {
       lines.push(`Position xp           : ${s.xp.toFixed(2)} m from Hook A`);
       lines.push(`Vertical sag D(xp)    : ${s.D.toFixed(3)} m`);
@@ -1614,6 +1763,7 @@
       mode: state.mode,
       points: state.points,
       trace: state.trace,
+      trace2: state.trace2,
       vertRef: state.vertRef
     };
   }
@@ -1633,6 +1783,7 @@
     state.pendingRestore = {
       points: data.points,
       trace: data.trace,
+      trace2: data.trace2,
       vertRef: data.vertRef,
       mode: data.mode
     };
@@ -1661,9 +1812,18 @@
   };
 
   function anyPointsPlaced() {
-    return state.trace.length > 0 || state.vertRef.length > 0 ||
+    return state.trace.length > 0 || state.trace2.length > 0 || state.vertRef.length > 0 ||
       Object.keys(state.points).some(k => state.points[k]);
   }
+
+  // Toggle which conductor the next clicks trace (phase-clearance check).
+  window.photoToggleCond2 = function () {
+    if (!state.img) return;
+    state.editCond = state.editCond === 2 ? 1 : 2;
+    updateToolButtons();
+    updateInstructions();
+    redraw();
+  };
 
   window.photoClearPoints = function () {
     if (!anyPointsPlaced()) return;
