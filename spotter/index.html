@@ -14,7 +14,7 @@ button.sec{background:#e6edf5;color:#0b5fa5}label{display:flex;gap:8px;align-ite
 <input id="pw" type="password" placeholder="passkey" autocomplete="current-password" autocapitalize="off">
 <label><input id="rem" type="checkbox" checked> remember on this phone (no passkey next time)</label>
 <button id="go">Unlock</button><button class="sec" id="forget" hidden>Forget this phone</button>
-<div id="st"></div><small id="ver">build 20260904-1643</small></div>
+<div id="st"></div><small id="ver">build 20260904-1649</small></div>
 <script>
 const st = document.getElementById('st'); const say = (m, c) => { st.className = c || ''; st.textContent = m; };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
