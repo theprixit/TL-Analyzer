@@ -1,6 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0b5fa5">
-<title>Tower Spotter</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon-192.png"><link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Spotter">
+<title>Tower Spotter</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon-192.png"><link rel="apple-touch-icon" href="./icon-180.png">
 <style>
 body{margin:0;background:#f4f6f8;color:#1a1f24;font:15px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
 .box{background:#fff;border:1px solid #d6dbe1;border-radius:12px;padding:22px;width:min(92vw,380px);box-shadow:0 2px 10px rgba(0,0,0,.05)}
@@ -14,7 +15,9 @@ button.sec{background:#e6edf5;color:#0b5fa5}label{display:flex;gap:8px;align-ite
 <input id="pw" type="password" placeholder="passkey" autocomplete="current-password" autocapitalize="off">
 <label><input id="rem" type="checkbox" checked> remember on this phone (no passkey next time)</label>
 <button id="go">Unlock</button><button class="sec" id="forget" hidden>Forget this phone</button>
-<div id="st"></div><small id="ver">build 20260904-1649</small></div>
+<div id="st"></div>
+<div id="inst" hidden style="margin-top:14px;padding:10px;border-radius:8px;background:#eef4fb;font-size:13px;color:#1a1f24"></div>
+<small id="ver">build 20260904-1655</small></div>
 <script>
 const st = document.getElementById('st'); const say = (m, c) => { st.className = c || ''; st.textContent = m; };
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -35,6 +38,13 @@ async function unlock() { const pw = document.getElementById('pw').value; if (!p
   try { const m = await meta(); const key = await derive(pw, m); say('decrypting...'); if (document.getElementById('rem').checked) await kput(key); await open(key, m); }
   catch (e) { say(e.name === 'OperationError' ? 'Wrong passkey.' : ('Could not open: ' + (e.message || e)), 'err'); } }
 document.getElementById('go').onclick = unlock; document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+// install as a home-screen app: Android/desktop Chrome offer a prompt; iPhone needs Share > Add to Home Screen from Safari
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let installPrompt = null; const inst = document.getElementById('inst');
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (!isStandalone) { inst.hidden = false; inst.innerHTML = '<b>Install as an app</b> for a home-screen icon and full offline use. <button id="doinst" style="margin-top:8px">Install</button>'; document.getElementById('doinst').onclick = async () => { installPrompt.prompt(); await installPrompt.userChoice; inst.hidden = true; }; } });
+if (!isStandalone && isIOS) { inst.hidden = false; inst.innerHTML = '<b>Put it on the home screen</b> like TL-SAG: in Safari tap the Share button, then <b>Add to Home Screen</b>, then Add. Open it from the icon and enter the passkey once more there; the installed app keeps its own storage and is exempt from Safari&#39;s seven-day clean-up.'; }
+if (isStandalone) document.title = 'Spotter';
 document.getElementById('forget').onclick = async () => { await kdel(); document.getElementById('forget').hidden = true; say('Forgotten. The passkey is needed next time.', 'ok'); };
 (async () => { const k = await kget(); if (!k) return; document.getElementById('forget').hidden = false; say('opening...'); try { await open(k, await meta()); } catch (e) { say('Stored key no longer fits this build; enter the passkey.', 'err'); await kdel(); } })();
 </script></body></html>
